@@ -3,35 +3,17 @@
 # These names will be "persistent" which are to remain in Command.
 # Anything not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+import requests
 
-load_dotenv()
+ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
+API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
 
-# API credentials
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
-
-# Set logger
-log = logging.getLogger()
-logging.basicConfig(
-    level = logging.INFO,
-    format = "%(levelname)s: %(message)s"
-)
-
-# This will help prevent exceeding the call limit
-CALL_COUNT = 0
-CALL_COUNT_LOCK = threading.Lock()
-
-# Set the full name for which plates & PoIs are to be persistent
-PERSISTENT_PLATES = []
-PERSISTENT_PERSONS = []
-# Must use full name
-PERSISTENT_USERS = ["Ian Young", "Austin Griffith", "Brian Avrit", 
-                    "Hans Robertson", "John Lawrence", "Lisa Sulmasy",
-                    "Rhett Hatch", "test three", "Travis Bauer",
-                    "Greg Popiel"]
+# Set the full name for which plates are to be persistent
+PERSISTENT_PLATES = ["Random"]
+PERSISTENT_PERSONS = ["PoI"]
+PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
+                    "Jane Doe", "Tony Stark",
+                    "Ray Raymond", "John Doe"] # Must use full name
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
@@ -45,27 +27,22 @@ USER_CONTROL_URL = "https://api.verkada.com/core/v1/user"
 ##############################################################################
 
 
-class APIThrottleException(Exception):
-    """
-    Exception raised when the API request rate limit is exceeded.
+def warn():
+    """Prints a warning message before continuing"""
+    print("-------------------------------")
+    print("WARNING!!!")
+    print("Please make sure you have changed the persistent plates variable.")
+    print("Otherwise all of your plates will be deleted.")
+    print("Please double-check spelling, as well!")
+    print("-------------------------------")
+    cont = None
 
-    :param message: A human-readable description of the exception.
-    :type message: str
-    """
-    def __init__(self, message="API throttle limit exceeded."):
-        self.message = message
-        super.__init__(self.message)
+    while cont not in ["", " "]:
+        cont = str(input("Press enter to continue\n")).strip()
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
 
@@ -75,19 +52,78 @@ def cleanList(list):
 ##############################################################################
 
 
-def getPeople(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted persons in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of people in an organization.
-    :rtype: list
-    """
-    global CALL_COUNT
+def checkPeople(safe, to_delete, persons):
+    """Checks with the user before continuing with the purge"""
+    trust_level = None  # Pre-define
+    ok = None  # Pre-define
 
+    while trust_level not in ['1', '2', '3']:
+        print("1. Check marked persistent persons against what the \
+application found.")
+        print("2. Check what is marked for deletion by the application.")
+        print("3. Trust the process and blindly move forward.")
+
+        trust_level = str(input('- ')).strip()
+
+        if trust_level == '1':
+            print("-------------------------------")
+            print("Please check that the two lists match: ")
+
+            safe_names = [printPersonName(person_id, persons)
+                          for person_id in safe]
+
+            print(", ".join(safe_names))
+            print("vs")
+            print(", ".join(PERSISTENT_PERSONS))
+            print("-------------------------------")
+
+            while ok not in ['y', 'n']:
+                ok = str(input("Do they match?(y/n) ")).strip().lower()
+
+                if ok == 'y':
+                    purgePeople(to_delete, persons)
+
+                elif ok == 'n':
+                    print("Please check the input values")
+                    print("Exiting...")
+
+                else:
+                    print("Invalid input. Please enter 'y' or 'n'.")
+
+        elif trust_level == '2':
+            print("-------------------------------")
+            print("Here are the persons being purged: ")
+
+            delete_names = \
+                [printPersonName(person_id, persons)
+                 for person_id in to_delete]
+            print(", ".join(delete_names))
+            print("-------------------------------")
+
+            while ok not in ['y', 'n']:
+                ok = \
+                    str(input("Is this list accurate?(y/n) ")).strip().lower()
+
+                if ok == 'y':
+                    purgePeople(to_delete, persons)
+
+                elif ok == 'n':
+                    print("Please check the input values.")
+                    print("Exiting...")
+
+                else:
+                    print("Invalud input. Please enter 'y' or 'n'.")
+
+        elif trust_level == '3':
+            print("Good luck!")
+            purgePeople(to_delete)
+
+        else:
+            print("Invalid input. Please enter '1', '2', or '3'.")
+
+
+def getPeople(org_id=ORG_ID, api_key=API_KEY):
+    """Returns JSON-formatted persons in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -98,9 +134,6 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PERSON_URL, headers=headers, params=params)
-    
-    with CALL_COUNT_LOCK:
-        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -109,47 +142,28 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
         persons = data.get('persons_of_interest')
         return persons
     else:
-        log.critical(
+        print(
             f"Error with retrieving persons.\
 Status code {response.status_code}")
         return None
 
 
 def getPeopleIds(persons=None):
-    """
-    Returns an array of all PoI labels in an organization.
-    
-    :param persons: A list of dictionaries representing PoIs in an
-organization. Each dictionary should have 'person_id' key.
-Defaults to None.
-    :type persons: list, optional
-    :return: A list of IDs of the PoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     person_id = []
 
     for person in persons:
         if person.get('person_id'):
             person_id.append(person.get('person_id'))
         else:
-            log.error(
+            print(
                 f"There has been an error with person {person.get('label')}.")
 
     return person_id
 
 
-def getPersonId(person, persons=None):
-    """
-    Returns the Verkada ID for a given PoI.
-    
-    :param person: The label of a PoI whose ID is being searched for.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-Each dictionary should have the 'person_id' key. Defaults to None.
-    :type persons: list, optional
-    :return: The person ID of the given PoI.
-    :rtype: str
-    """
+def getPersonId(person=PERSISTENT_PERSONS, persons=None):
+    """Returns the Verkada ID for a given PoI"""
     person_id = None  # Pre-define
 
     for name in persons:
@@ -160,183 +174,104 @@ Each dictionary should have the 'person_id' key. Defaults to None.
     if person_id:
         return person_id
     else:
-        return "No name provided"
+        print(f"person {person} was not found in the database...")
+        return None
 
 
-def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given person from the organization.
+def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
+    if not delete:
+        print("There's nothing here")
+        return
 
-    :param person: The person to be deleted.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    print("\nPurging...")
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    log.info(f"Running for person: {printPersonName(person, persons)}")
-
-    params = {
-        'org_id': org_id,
-        'person_id': person
-    }
-
-    try:
-        # Stop running if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        response = requests.delete(PERSON_URL, headers=headers, params=params)
-    
-        if response.status_code == 429:
-            raise APIThrottleException("API throttled")
-        
-        elif response.status_code == 504:
-            log.warning(f"Plate - Timed out.")
-        
-        elif response.status_code != 200:
-            log.error(f"\
-Person - An error has occured. Status code {response.status_code}")
-        
-    except APIThrottleException:
-                    log.critical("Person - Hit API request rate limit of 500 requests per minute.")
-
-
-def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all PoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of PoIs to be deleted from the organization.
-    :type delete: list
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
-    global CALL_COUNT
-
-    if not delete:
-        log.warning("Person - There's nothing here")
-        return
-
-    log.info("Person - Purging...")
-
-    start_time = time.time()
-    threads = []
     for person in delete:
-        # Stop making threads if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        
-        # Toss delete function into a new thread
-        thread = threading.Thread(
-            target=delete_person, args=(person, persons, org_id, api_key)
-        )
-        thread.start()
-        threads.append(thread)  # Add the thread to the pile
+        print(f"Running for person: {printPersonName(person, persons)}")
 
-        # Make sure the other threads aren't writing
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1  # Log that the thread was made
+        params = {
+            'org_id': org_id,
+            'person_id': person
+        }
 
-    for thread in threads:
-        thread.join()  # Join back to main thread
+        response = requests.delete(PERSON_URL, headers=headers, params=params)
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
+        if response.status_code != 200:
+            print(f"An error has occured. Status code {response.status_code}")
+            return 2  # Completed unsuccesfully
 
-    log.info("Person - Purge complete.")
-    log.info(f"Person - Time to complete: {elapsed_time:.2f}s")
+    print("Purge complete.")
     return 1  # Completed
 
 
 def printPersonName(to_delete, persons):
-    """
-    Returns the label of a PoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     person_name = None  # Pre-define
 
     for person in persons:
         if person.get('person_id') == to_delete:
             person_name = person.get('label')
-            return  # No need to continue running once found
+            break  # No need to continue running once found
 
     if person_name:
         return person_name
     else:
-        return "No name provided"
+        print(f"person {to_delete} was not found in the database...")
+        return "Error finding name"
 
 
 def runPeople():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     # Uncomment the lines below if you want to manually set these values
     # each time the program is ran
 
     # org = str(input("Org ID: ""))
     # key = str(input("API key: "))
 
-    log.info("Retrieving persons")
+    print("Retrieving persons")
     persons = getPeople()
-    log.info("persons retrieved.")
+    print("persons retrieved.\n")
 
     # Run if persons were found
     if persons:
-        log.info("Gather IDs")
+        print("Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        log.info("IDs aquired.")
+        print("IDs aquired.\n")
 
         safe_person_ids = []
 
-        log.info("Searching for safe persons.")
+        print("Searching for safe persons.")
         # Create the list of safe persons
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
-        log.info("Safe persons found.")
+        print("Safe persons found.\n")
 
         # New list that filters persons that are safe
         persons_to_delete = [
             person for person in all_person_ids if person not in safe_person_ids]
 
         if persons_to_delete:
-            purgePeople(persons_to_delete, persons)
+            checkPeople(safe_person_ids, persons_to_delete, persons)
             return 1  # Completed
 
         else:
-            log.warning(
+            print("-------------------------------")
+            print(
                 "The organization has already been purged.\
 There are no more persons to delete.")
+            print("-------------------------------")
+
             return 1  # Completed
-        
     else:
-        log.warning("No persons were found.")
+        print("No persons were found.")
+
         return 1  # Copmleted
 
 
@@ -345,19 +280,77 @@ There are no more persons to delete.")
 ##############################################################################
 
 
-def getPlates(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted plates in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of license plates in an organization.
-    :rtype: list
-    """
-    global CALL_COUNT
+def checkPlates(safe, to_delete, plates):
+    """Checks with the user before continuing with the purge"""
+    trust_level = None  # Pre-define
+    ok = None  # Pre-define
 
+    while trust_level not in ['1', '2', '3']:
+        print("1. Check marked persistent plates against what the \
+application found.")
+        print("2. Check what is marked for deletion by the application.")
+        print("3. Trust the process and blindly move forward.")
+
+        trust_level = str(input('- ')).strip()
+
+        if trust_level == '1':
+            print("-------------------------------")
+            print("Please check that the two lists match: ")
+
+            safe_names = [printPlateName(plate_id, plates)
+                          for plate_id in safe]
+
+            print(", ".join(safe_names))
+            print("vs")
+            print(", ".join(PERSISTENT_PLATES))
+            print("-------------------------------")
+
+            while ok not in ['y', 'n']:
+                ok = str(input("Do they match?(y/n) ")).strip().lower()
+
+                if ok == 'y':
+                    purgePlates(to_delete, plates)
+
+                elif ok == 'n':
+                    print("Please check the input values")
+                    print("Exiting...")
+
+                else:
+                    print("Invalid input. Please enter 'y' or 'n'.")
+
+        elif trust_level == '2':
+            print("-------------------------------")
+            print("Here are the plates being purged: ")
+
+            delete_names = \
+                [printPlateName(plate_id, plates) for plate_id in to_delete]
+            print(", ".join(delete_names))
+            print("-------------------------------")
+
+            while ok not in ['y', 'n']:
+                ok = \
+                    str(input("Is this list accurate?(y/n) ")).strip().lower()
+
+                if ok == 'y':
+                    purgePlates(to_delete, plates)
+
+                elif ok == 'n':
+                    print("Please check the input values.")
+                    print("Exiting...")
+
+                else:
+                    print("Invalud input. Please enter 'y' or 'n'.")
+
+        elif trust_level == '3':
+            print("Good luck!")
+            purgePlates(to_delete)
+
+        else:
+            print("Invalid input. Please enter '1', '2', or '3'.")
+
+
+def getPlates(org_id=ORG_ID, api_key=API_KEY):
+    """Returns JSON-formatted plates in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -369,187 +362,82 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
 
-    # Make sure the other threads aren't writing
-    with CALL_COUNT_LOCK:
-        CALL_COUNT += 1  # Log that a thread was made
-
     if response.status_code == 200:
         data = response.json()  # Parse the response
 
         # Extract as a list
         plates = data.get('license_plate_of_interest')
         return plates
-    
     else:
-        log.critical(
+        print(
             f"Error with retrieving plates.\
 Status code {response.status_code}")
         return None
 
 
 def getPlateIds(plates=None):
-    """
-    Returns an array of all LPoI labels in an organization.
-    
-    :param plates: A list of dictionaries representing LPoIs in an
-organization. Each dictionary should have 'license_plate' key. 
-Defaults to None.
-    :type plates: list, optional
-    :return: A list of IDs of the LPoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     plate_id = []
 
     for plate in plates:
         if plate.get('license_plate'):
             plate_id.append(plate.get('license_plate'))
         else:
-            log.error(
+            print(
                 f"There has been an error with plate {plate.get('label')}.")
+
     return plate_id
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-    """
-    Returns the Verkada ID for a given LPoI.
-    
-    :param plate: The label of a LPoI whose ID is being searched for.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-Each dictionary should have the 'license_plate' key. Defaults to None.
-    :type plates: list, optional
-    :return: The plate ID of the given LPoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given PoI"""
     plate_id = None  # Pre-define
 
     for name in plates:
         if name['description'] == plate:
-            plate_id = name['license_plate']
+            plate_id = name['plate_id']
             break  # No need to continue running once found
 
     if plate_id:
         return plate_id
     else:
-        return "No name provided"
+        print(f"plate {plate} was not found in the database...")
+        return None
 
 
-def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given plate from the organization.
+def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
+    if not delete:
+        print("There's nothing here")
+        return
 
-    :param plate: The plate to be deleted.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    print("\nPurging...")
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    log.info(f"Running for plate: {printPlateName(plate, plates)}")
-
-    params = {
-        'org_id': org_id,
-        'license_plate': plate
-    }
-    try:
-        # Stop running if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        
-        response = requests.delete(PLATE_URL, headers=headers, params=params)
-    
-        if response.status_code == 429:
-            raise APIThrottleException("API throttled")
-        
-        elif response.status_code == 504:
-            log.warning(f"Plate - Timed out.")
-
-        elif response.status_code == 400:
-            log.warning(f"400 on plate {plate}")
-
-        elif response.status_code != 200:
-            log.error(f"\
-Plate - An error has occured. Status code {response.status_code}")
-        
-    except APIThrottleException:
-                    log.critical("Plate - Hit API request rate limit of\
-500 requests per minute.")
-
-
-def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all LPoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of LPoIs to be deleted from the organization.
-    :type delete: list
-    :param plates: A list of LPoIs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
-    global CALL_COUNT
-    
-    if not delete:
-        log.warning("Plate - There's nothing here")
-        return
-
-    log.info("Plate - Purging...")
-
-    start_time = time.time()
-    threads = []
     for plate in delete:
-        # Stop making threads if already at the limit
-        if CALL_COUNT >= 500:
-            return
+        print(f"Running for plate: {printPlateName(plate, plates)}")
 
-        # Toss delete function into a new thread
-        thread = threading.Thread(
-            target=delete_plate, args=(plate, plates, org_id, api_key)
-        )
-        thread.start()
-        threads.append(thread)  # Add the thread to the pile
+        params = {
+            'org_id': org_id,
+            'plate_id': plate
+        }
 
-        # Make sure the other thread isn't writing
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1  # Log that the thread was made
+        response = requests.delete(PLATE_URL, headers=headers, params=params)
 
-    for thread in threads:
-        thread.join()  # Join back to main thread
+        if response.status_code != 200:
+            print(f"An error has occured. Status code {response.status_code}")
+            return 2  # Completed unsuccesfully
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-
-    log.info("Plate - Purge complete.")
-    log.info(f"Plate - Time to complete: {elapsed_time:.2f}s")
+    print("Purge complete.")
     return 1  # Completed
 
 
 def printPlateName(to_delete, plates):
-    """
-    Returns the description of a LPoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     plate_name = None  # Pre-define
 
     for plate in plates:
@@ -560,58 +448,56 @@ was no name found, as well.
     if plate_name:
         return plate_name
     else:
-        return "No name provided."
+        print(f"plate {to_delete} was not found in the database...")
+        return "Error finding name"
 
 
 def runPlates():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     # Uncomment the lines below if you want to manually set these values
     # each time the program is ran
 
     # org = str(input("Org ID: ""))
     # key = str(input("API key: "))
 
-    log.info("Retrieving plates")
+    print("Retrieving plates")
     plates = getPlates()
-    log.info("plates retrieved.")
+    print("plates retrieved.\n")
 
     # Run if plates were found
     if plates:
-        log.info("Gather IDs")
+        print("Gather IDs")
         all_plate_ids = getPlateIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        log.info("IDs aquired.")
+        print("IDs aquired.\n")
 
         safe_plate_ids = []
 
-        log.info("Searching for safe plates.")
+        print("Searching for safe plates.")
         # Create the list of safe plates
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        log.info("Safe plates found.")
+        print("Safe plates found.\n")
 
         # New list that filters plates that are safe
         plates_to_delete = [
             plate for plate in all_plate_ids if plate not in safe_plate_ids]
 
         if plates_to_delete:
-            purgePlates(plates_to_delete, plates)
+            checkPlates(safe_plate_ids, plates_to_delete, plates)
             return 1  # Completed
 
         else:
-            log.warning(
+            print("-------------------------------")
+            print(
                 "The organization has already been purged.\
 There are no more plates to delete.")
+            print("-------------------------------")
 
             return 1  # Completed
     else:
-        log.warning("No plates were found.")
+        print("No plates were found.")
 
         return 1  # Copmleted
 
@@ -621,19 +507,75 @@ There are no more plates to delete.")
 ##############################################################################
 
 
-def getUsers(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted users in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of users in an organization.
-    :rtype: list
-    """
-    global CALL_COUNT
+def checkUsers(safe, to_delete, users):
+    """Checks with the user before continuing with the purge"""
+    trust_level = None  # Pre-define
+    ok = None  # Pre-define
 
+    while trust_level not in ['1', '2', '3']:
+        print("1. Check marked persistent users against what the \
+application found.")
+        print("2. Check what is marked for deletion by the application.")
+        print("3. Trust the process and blindly move forward.")
+
+        trust_level = str(input('- ')).strip()
+
+        if trust_level == '1':
+            print("-------------------------------")
+            print("Please check that the two lists match: ")
+
+            safe_names = [printUserName(user_id, users) for user_id in safe]
+
+            print(", ".join(safe_names))
+            print("vs")
+            print(", ".join(PERSISTENT_USERS))
+            print("-------------------------------")
+
+            while ok not in ['y', 'n']:
+                ok = str(input("Do they match?(y/n) ")).strip().lower()
+
+                if ok == 'y':
+                    purgeUsers(to_delete, users)
+
+                elif ok == 'n':
+                    print("Please check the input values")
+                    print("Exiting...")
+
+                else:
+                    print("Invalid input. Please enter 'y' or 'n'.")
+
+        elif trust_level == '2':
+            print("-------------------------------")
+            print("Here are the users being purged: ")
+
+            delete_names = \
+                [printUserName(user_id, users) for user_id in to_delete]
+            print(", ".join(delete_names))
+            print("-------------------------------")
+
+            while ok not in ['y', 'n']:
+                ok = \
+                    str(input("Is this list accurate?(y/n) ")).strip().lower()
+
+                if ok == 'y':
+                    purgeUsers(to_delete, users)
+
+                elif ok == 'n':
+                    print("Please check the input values.")
+                    print("Exiting...")
+
+                else:
+                    print("Invalud input. Please enter 'y' or 'n'.")
+
+        elif trust_level == '3':
+            print("Good luck!")
+            purgeUsers(to_delete)
+
+        else:
+            print("Invalid input. Please enter '1', '2', or '3'.")
+
+def getUsers(org_id=ORG_ID, api_key=API_KEY):
+    """Returns JSON-formatted users in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -644,9 +586,6 @@ def getUsers(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(USER_INFO_URL, headers=headers, params=params)
-
-    with CALL_COUNT_LOCK:
-        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -662,16 +601,7 @@ Status code {response.status_code}")
 
 
 def getUserIds(users=None):
-    """
-    Returns an array of all user labels in an organization.
-    
-    :param users: A list of dictionaries representing users in an
-organization. Each dictionary should have 'user' key.
-Defaults to None.
-    :type users: list, optional
-    :return: A list of IDs of the users in an organization.
-    :rtype: list
-    """
+    """Returns an array of all user IDs in an organization"""
     user_id = []
 
     for user in users:
@@ -685,17 +615,7 @@ Defaults to None.
 
 
 def getUserId(user=PERSISTENT_USERS, users=None):
-    """
-    Returns the Verkada ID for a given user.
-    
-    :param user: The label of a user whose ID is being searched for.
-    :type user: str
-    :param users: A list of users IDs found inside of an organization.
-Each dictionary should have the 'user_id' key. Defaults to None.
-    :type users: list, optional
-    :return: The user ID of the given user.
-    :rtype: str
-    """
+    """Returns the Verkada user_id for a given user"""
     user_id = None  # Pre-define
 
     for name in users:
@@ -710,106 +630,37 @@ Each dictionary should have the 'user_id' key. Defaults to None.
         return None
 
 
-def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given user from the organization.
+def purgeUsers(delete, users, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all users that aren't marked as safe/persistent"""
+    if not delete:
+        print("There's nothing here")
+        return
 
-    :param user: The user to be deleted.
-    :type user: str
-    :param users: A list of PoI IDs found inside of an organization.
-    :type users: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
-    # Format the URL
-    url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+    print("\nPurging...")
 
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    log.info(f"Running for user: {printUserName(user, users)}")
-    
-    # Stop if at call limit
-    if CALL_COUNT >= 500:
-        return
-    
-    response = requests.delete(url, headers=headers)
-
-    if response.status_code != 200:
-        log.error(
-            f"An error has occured. Status code {response.status_code}")
-        return 2  # Completed unsuccesfully
-
-
-def purgeUsers(delete, users, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all users that aren't marked as safe/persistent.
-    
-    :param delete: A list of users to be deleted from the organization.
-    :type delete: list
-    :param users: A list of users found inside of an organization.
-    :type users: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
-    global CALL_COUNT
-
-    if not delete:
-        log.warning("There's nothing here")
-        return
-
-    log.info("Purging...")
-
-    start_time = time.time()
-    threads = []
     for user in delete:
-        # Stop if at call limit
-        if CALL_COUNT >= 500:
-            return
-        
-        thread = threading.Thread(
-            target=delete_user, args=(user, users, org_id, api_key)
-        )
-        thread.start()
-        threads.append(thread)
+        # Format the URL
+        url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
 
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1
+        print(f"Running for user: {printUserName(user, users)}")
 
-    for thread in threads:
-        thread.join()  # Join back to main thread
+        response = requests.delete(url, headers=headers)
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
+        if response.status_code != 200:
+            print(f"An error has occured. Status code {response.status_code}")
+            return 2  # Completed unsuccesfully
 
-    log.info("Purge complete.")
-    log.info(f"Time to complete: {elapsed_time:.2f}s")
+    print("Purge complete.")
     return 1  # Completed
 
 
 def printUserName(to_delete, users):
-    """
-    Returns the full name of a user with a given ID
-    
-    :param to_delete: The user ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param users: A list of users found inside of an organization.
-    :type users: list
-    :return: Returns the name of the user searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     user_name = None  # Pre-define
 
     for user in users:
@@ -820,49 +671,51 @@ was no name found, as well.
     if user_name:
         return user_name
     else:
-        log.warning(f"User {to_delete} was not found in the database...")
+        print(f"User {to_delete} was not found in the database...")
         return "Error finding name"
     
 
 def runUsers():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
-    log.info("Retrieving users")
+    """Allows the program to be ran if being imported as a module"""
+    # org = str(input("Org ID: ""))
+    # key = str(input("API key: "))
+
+    warn()
+
+    print("Retrieving users")
     users = getUsers()
-    log.info("Users retrieved.")
+    print("Users retrieved.\n")
 
     # Run if users were found
     if users:
-        log.info("Gather IDs")
+        print("Gather IDs")
         all_user_ids = getUserIds(users)
         all_user_ids = cleanList(all_user_ids)
-        log.info("IDs aquired.")
+        print("IDs aquired.\n")
 
         safe_user_ids = []
 
-        log.info("Searching for safe users.")
+        print("Searching for safe users.")
         # Create the list of safe users
         for user in PERSISTENT_USERS:
             safe_user_ids.append(getUserId(user, users))
         safe_user_ids = cleanList(safe_user_ids)
-        log.info("Safe users found.")
+        print("Safe users found.\n")
 
         # New list that filters users that are safe
         users_to_delete = [
             user for user in all_user_ids if user not in safe_user_ids]
 
         if users_to_delete:
-            purgeUsers(users_to_delete, users)
+            checkUsers(safe_user_ids, users_to_delete, users)
             return 1  # Completed
 
         else:
-            log.warning(
+            print("-------------------------------")
+            print(
                 "The organization has already been purged.\
                       There are no more users to delete.")
+            print("-------------------------------")
 
             return 1  # Completed
         
@@ -874,59 +727,30 @@ def runUsers():
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
-    # Pre-define responses
-    run_poi = False
-    run_lpoi = False
-    run_user = False
+    warn()
+
     answer = None
-
-    # Define threads
-    poi_thread = threading.Thread(target=runPeople)
-    lpoi_thread = threading.Thread(target=runPlates)
-    user_thread = threading.Thread(target=runUsers)
-
     while answer not in ['y', 'n']:
-        answer = str(input("Would you like to run for users?(y/n) "))\
+        answer = str(input("Would you like to run for users?\n(y/n) "))\
         .strip().lower()
 
         if answer == 'y':
-            run_user = True
+            runUsers()
     
-    answer = None  # Reset response
+    answer = None
     while answer not in ['y', 'n']:
-        answer = str(input("Would you like to run for PoI?(y/n) "))\
+        answer = str(input("Would you like to run for PoI?\n(y/n) "))\
             .strip().lower()
         
         if answer == 'y':
-            run_poi = True
+            runPeople()
     
-    answer = None  # Reset response
+    answer = None
     while answer not in ['y', 'n']:
-            answer = str(input("Would you like to run for LPoI?(y/n) "))\
+            answer = str(input("Would you like to run for LPoI?\n(y/n) "))\
                 .strip().lower()
                 
             if answer == 'y':
-                run_lpoi = True
+                runPlates()
 
-    # Time the runtime
-    start_time = time.time()
-
-    # Start threads
-    if run_user:
-        user_thread.start()
-    if run_poi:
-        poi_thread.start()
-    if run_lpoi:
-        lpoi_thread.start()
-
-    # Join back to main thread
-    if run_user:
-        user_thread.join()
-    if run_poi:
-        poi_thread.join()
-    if run_lpoi:
-        lpoi_thread.join()
-
-    # Wrap up in a bow and complete
-    log.info(f"Total time to complete: {round(time.time() - start_time, 2)}s")
     print("Exiting...")
