@@ -3,35 +3,15 @@
 
 import base64
 import requests
-from os import getenv
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # Globally-defined Verkada PoI URL
 URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-API_KEY = getenv("lab_key")
-ORG_ID = os.getenv("lab_id")
+API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
+ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
 
 
 def createPOI(name, image, download, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Will create a person of interest with a given URL to an image or path to a file.
-
-    :param name: The label for the person of interest to be created.
-    :type name: str
-    :param image: the link to the portrait image of the person of interest.
-    :type image: str
-    :param download: A 'y' or 'n' value indicating whether the image link
-needs to be downloaded.
-    :type: str
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    """Will create a person of interest with a given URL to an image or path to a file"""
     file_content = None  # Pre-define
     if download == 'y':
         # Download the JPG file from the URL
