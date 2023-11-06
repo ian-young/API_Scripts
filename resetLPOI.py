@@ -3,40 +3,19 @@
 # These names will be "persistent plates" which are to remain in Command.
 # Any plate not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+import requests
 
-load_dotenv()
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
-
-# This will help prevent exceeding the call limit
-CALL_COUNT = 0
-CALL_COUNT_LOCK = threading.Lock()
-
-# Set logger
-log = logging.getLogger()
-logging.basicConfig(
-    level = logging.INFO,
-    format = "%(levelname)s: %(message)s"
-    )
+ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
+API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = ["Random"]
 
-URL = "https://api.verkada.com/cameras/v1/\
-analytics/lpr/license_plate_of_interest"
+URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
 
 
 def warn():
-    """
-    Prints a warning message before continuing
-    
-    :return: None
-    :rtype: None
-    """
+    """Prints a warning message before continuing"""
     print("-------------------------------")
     print("WARNING!!!")
     print("Please make sure you have changed the persistent plates variable.")
@@ -50,18 +29,7 @@ def warn():
 
 
 def check(safe, to_delete, plates):
-    """
-    Checks with the user before continuing with the purge.
-    
-    :param safe: List of plates that are marked as "safe."
-    :type safe: list
-    :param to_delete: List of plates that are marked for deletion.
-    :type to_delete: list
-    :param plates: List of of LPoIs retrieved from the organization.
-    :type plates: list
-    :return: None
-    :rtype: None
-    """
+    """Checks with the user before continuing with the purge"""
     trust_level = None  # Pre-define
     ok = None  # Pre-define
 
@@ -129,29 +97,13 @@ application found.")
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted plates in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of license plates in an organization.
-    :rtype: list
-    """
+    """Returns JSON-formatted plates in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -170,157 +122,75 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         plates = data.get('license_plate_of_interest')
         return plates
     else:
-        log.critical(
+        print(
             f"Error with retrieving plates.\
 Status code {response.status_code}")
         return None
 
 
 def getIds(plates=None):
-    """
-    Returns an array of all LPoI labels in an organization.
-    
-    :param plates: A list of dictionaries representing LPoIs in an
-organization. Each dictionary should have 'license_plate' key. 
-Defaults to None.
-    :type plates: list, optional
-    :return: A list of IDs of the LPoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     plate_id = []
 
     for plate in plates:
         if plate.get('license_plate'):
             plate_id.append(plate.get('license_plate'))
         else:
-            log.error(
+            print(
                 f"There has been an error with plate {plate.get('label')}.")
 
     return plate_id
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-    """
-    Returns the Verkada ID for a given LPoI.
-    
-    :param plate: The label of a LPoI whose ID is being searched for.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-Each dictionary should have the 'license_plate' key. Defaults to None.
-    :type plates: list, optional
-    :return: The plate ID of the given LPoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given PoI"""
     plate_id = None  # Pre-define
 
     for name in plates:
         if name['description'] == plate:
-            plate_id = name['license_plate']
+            plate_id = name['plate_id']
             break  # No need to continue running once found
 
     if plate_id:
         return plate_id
     else:
-        log.warning(f"plate {plate} was not found in the database...")
+        print(f"plate {plate} was not found in the database...")
         return None
 
 
-def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given plate from the organization.
+def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
+    if not delete:
+        print("There's nothing here")
+        return
 
-    :param plate: The plate to be deleted.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    print("\nPurging...")
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    log.info(f"Running for plate: {printName(plate, plates)}")
+    for plate in delete:
+        print(f"Running for plate: {printName(plate, plates)}")
 
-    params = {
-        'org_id': org_id,
-        'license_plate': plate
-    }
+        params = {
+            'org_id': org_id,
+            'plate_id': plate
+        }
 
-    response = requests.delete(URL, headers=headers, params=params)
+        response = requests.delete(URL, headers=headers, params=params)
 
-    if response.status_code != 200:
-        log.error(f"An error has occured. Status code {response.status_code}")
-        return 2  # Completed unsuccesfully
+        if response.status_code != 200:
+            print(f"An error has occured. Status code {response.status_code}")
+            return 2  # Completed unsuccesfully
 
-
-def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all LPoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of LPoIs to be deleted from the organization.
-    :type delete: list
-    :param plates: A list of LPoIs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
-    global CALL_COUNT
-    
-    if not delete:
-        log.warning("There's nothing here")
-        return
-
-    log.info("Purging...")
-
-    start_time = time.time()
-    threads = []
-    for person in delete:
-        if CALL_COUNT >= 500:
-            return
-
-        thread = threading.Thread(
-            target=delete_plate, args=(person, plates, org_id, api_key)
-        )
-        thread.start()
-        threads.append(thread)
-
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1
-
-    for thread in threads:
-        thread.join()  # Join back to main thread
-
-    end_time = time.time()
-    elapsed_time = str(end_time - start_time)
-
-    log.info("Purge complete.")
-    log.info(f"Time to complete: {elapsed_time}")
+    print("Purge complete.")
     return 1  # Completed
 
 
 def printName(to_delete, plates):
-    """
-    Returns the description of a LPoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     plate_name = None  # Pre-define
 
     for plate in plates:
@@ -336,12 +206,7 @@ was no name found, as well.
 
 
 def run():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     # Uncomment the lines below if you want to manually set these values
     # each time the program is ran
 
@@ -356,19 +221,19 @@ def run():
 
     # Run if plates were found
     if plates:
-        log.info("Gather IDs")
+        print("Gather IDs")
         all_plate_ids = getIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        log.info("IDs aquired.\n")
+        print("IDs aquired.\n")
 
         safe_plate_ids = []
 
-        log.info("Searching for safe plates.")
+        print("Searching for safe plates.")
         # Create the list of safe plates
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        log.info("Safe plates found.\n")
+        print("Safe plates found.\n")
 
         # New list that filters plates that are safe
         plates_to_delete = [
@@ -379,15 +244,15 @@ def run():
             return 1  # Completed
 
         else:
-            log.info("-------------------------------")
-            log.info(
+            print("-------------------------------")
+            print(
                 "The organization has already been purged.\
 There are no more plates to delete.")
-            log.info("-------------------------------")
+            print("-------------------------------")
 
             return 1  # Completed
     else:
-        log.warning("No plates were found.")
+        print("No plates were found.")
 
         return 1  # Copmleted
 
