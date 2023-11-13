@@ -91,7 +91,7 @@ def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
     for plate in delete:
         print(f"Running for plate: {printName(plate, plates)}")
-        print(plate)
+        
         params = {
             'org_id': org_id,
             'license_plate': plate
