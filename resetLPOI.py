@@ -247,10 +247,17 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
 
     log.info(f"Running for plate: {printName(plate, plates)}")
 
+<<<<<<< HEAD
     params = {
         'org_id': org_id,
         'license_plate': plate
     }
+=======
+        params = {
+            'org_id': org_id,
+            'license_plate': plate
+        }
+>>>>>>> 4a6b46d (Fixed search values)
 
     response = requests.delete(URL, headers=headers, params=params)
 

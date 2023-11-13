@@ -11,7 +11,7 @@ load_dotenv()
 # Globally-defined Verkada PoI URL
 URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 API_KEY = getenv("lab_key")
-ORG_ID = os.getenv("lab_id")
+ORG_ID = getenv("lab_id")
 
 
 def createPOI(name, image, download, org_id=ORG_ID, api_key=API_KEY):

@@ -19,17 +19,13 @@ logging.basicConfig(
 CALL_COUNT = 0
 CALL_COUNT_LOCK = threading.Lock()
 
-# Set the full name for which plates & PoIs are to be persistent
-PERSISTENT_PLATES = ["Random"]
-PERSISTENT_PERSONS = ["PoI"]
-PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
-                    "Jane Doe", "Tony Stark",
-                    "Ray Raymond", "John Doe"] # Must use full name
+# Set the full name for which plates are to be persistent
+PERSISTENT_PLATES = []
+PERSISTENT_PERSONS = []
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
 PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-USER_INFO_URL = "https://api.verkada.com/access/v1/access_users"
 USER_CONTROL_URL = "https://api.verkada.com/core/v1/user"
 
 
@@ -162,7 +158,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePeople(to_delete)
+            purgePeople(to_delete, persons)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
@@ -512,7 +508,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePlates(to_delete)
+            purgePlates(to_delete, plates)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
