@@ -9,8 +9,8 @@ ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
 API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = ["Random"]
-PERSISTENT_PERSONS = ["PoI"]
+PERSISTENT_PLATES = []
+PERSISTENT_PERSONS = []
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
@@ -110,7 +110,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePeople(to_delete)
+            purgePeople(to_delete, persons)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
@@ -337,7 +337,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePlates(to_delete)
+            purgePlates(to_delete, plates)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
@@ -389,7 +389,7 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
 
     for name in plates:
         if name['description'] == plate:
-            plate_id = name['plate_id']
+            plate_id = name['license_plate']
             break  # No need to continue running once found
 
     if plate_id:
@@ -417,7 +417,7 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
         params = {
             'org_id': org_id,
-            'plate_id': plate
+            'license_plate': plate
         }
 
         response = requests.delete(PLATE_URL, headers=headers, params=params)

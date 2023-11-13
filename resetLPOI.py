@@ -148,7 +148,7 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
 
     for name in plates:
         if name['description'] == plate:
-            plate_id = name['plate_id']
+            plate_id = name['license_plate']
             break  # No need to continue running once found
 
     if plate_id:
@@ -176,7 +176,7 @@ def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
         params = {
             'org_id': org_id,
-            'plate_id': plate
+            'license_plate': plate
         }
 
         response = requests.delete(URL, headers=headers, params=params)
