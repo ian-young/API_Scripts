@@ -110,7 +110,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePeople(to_delete)
+            purgePeople(to_delete, persons)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
@@ -337,7 +337,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePlates(to_delete)
+            purgePlates(to_delete, plates)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
@@ -389,7 +389,7 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
 
     for name in plates:
         if name['description'] == plate:
-            plate_id = name['plate_id']
+            plate_id = name['license_plate']
             break  # No need to continue running once found
 
     if plate_id:
@@ -417,7 +417,7 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
         params = {
             'org_id': org_id,
-            'plate_id': plate
+            'license_plate': plate
         }
 
         response = requests.delete(PLATE_URL, headers=headers, params=params)
