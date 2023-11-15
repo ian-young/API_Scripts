@@ -4,9 +4,10 @@
 # Any plate not marked thusly will be deleted from the org.
 
 import requests
+import logging
 
-ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
-API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
+ORG_ID = ""
+API_KEY = ""
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = []
@@ -21,20 +22,6 @@ PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 ##############################################################################
 
 
-def warn():
-    """Prints a warning message before continuing"""
-    print("-------------------------------")
-    print("WARNING!!!")
-    print("Please make sure you have changed the persistent plates variable.")
-    print("Otherwise all of your plates will be deleted.")
-    print("Please double-check spelling, as well!")
-    print("-------------------------------")
-    cont = None
-
-    while cont not in ["", " "]:
-        cont = str(input("Press enter to continue\n")).strip()
-
-
 def cleanList(list):
     """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
@@ -44,76 +31,6 @@ def cleanList(list):
 ##############################################################################
                          #  All things people  #
 ##############################################################################
-
-
-def checkPeople(safe, to_delete, persons):
-    """Checks with the user before continuing with the purge"""
-    trust_level = None  # Pre-define
-    ok = None  # Pre-define
-
-    while trust_level not in ['1', '2', '3']:
-        print("1. Check marked persistent persons against what the \
-application found.")
-        print("2. Check what is marked for deletion by the application.")
-        print("3. Trust the process and blindly move forward.")
-
-        trust_level = str(input('- ')).strip()
-
-        if trust_level == '1':
-            print("-------------------------------")
-            print("Please check that the two lists match: ")
-
-            safe_names = [printPersonName(person_id, persons)
-                          for person_id in safe]
-
-            print(", ".join(safe_names))
-            print("vs")
-            print(", ".join(PERSISTENT_PERSONS))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = str(input("Do they match?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePeople(to_delete, persons)
-
-                elif ok == 'n':
-                    print("Please check the input values")
-                    print("Exiting...")
-
-                else:
-                    print("Invalid input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '2':
-            print("-------------------------------")
-            print("Here are the persons being purged: ")
-
-            delete_names = \
-                [printPersonName(person_id, persons)
-                 for person_id in to_delete]
-            print(", ".join(delete_names))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = \
-                    str(input("Is this list accurate?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePeople(to_delete, persons)
-
-                elif ok == 'n':
-                    print("Please check the input values.")
-                    print("Exiting...")
-
-                else:
-                    print("Invalud input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '3':
-            print("Good luck!")
-            purgePeople(to_delete, persons)
-
-        else:
-            print("Invalid input. Please enter '1', '2', or '3'.")
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
@@ -136,7 +53,7 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
         persons = data.get('persons_of_interest')
         return persons
     else:
-        print(
+        logging.error(
             f"Error with retrieving persons.\
 Status code {response.status_code}")
         return None
@@ -150,9 +67,8 @@ def getPeopleIds(persons=None):
         if person.get('person_id'):
             person_id.append(person.get('person_id'))
         else:
-            print(
+            logging.error(
                 f"There has been an error with person {person.get('label')}.")
-
     return person_id
 
 
@@ -168,17 +84,17 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
     if person_id:
         return person_id
     else:
-        print(f"person {person} was not found in the database...")
+        logging.warning(f"person {person} was not found in the database...")
         return None
 
 
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        print("There's nothing here")
+        logging.critical("There's nothing here")
         return
 
-    print("\nPurging...")
+    logging.info("\nPurging...")
 
     headers = {
         "accept": "application/json",
@@ -186,7 +102,7 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     }
 
     for person in delete:
-        print(f"Running for person: {printPersonName(person, persons)}")
+        logging.info(f"Running for person: {printPersonName(person, persons)}")
 
         params = {
             'org_id': org_id,
@@ -196,7 +112,7 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
         response = requests.delete(PERSON_URL, headers=headers, params=params)
 
         if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
+            logging.error(f"An error has occured. Status code {response.status_code}")
             return 2  # Completed unsuccesfully
 
     print("Purge complete.")
@@ -215,7 +131,7 @@ def printPersonName(to_delete, persons):
     if person_name:
         return person_name
     else:
-        print(f"person {to_delete} was not found in the database...")
+        logging.error(f"person {to_delete} was not found in the database...")
         return "Error finding name"
 
 
@@ -233,38 +149,38 @@ def runPeople():
 
     # Run if persons were found
     if persons:
-        print("Gather IDs")
+        logging.info("Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        print("IDs aquired.\n")
+        logging.info("IDs aquired.\n")
 
         safe_person_ids = []
 
-        print("Searching for safe persons.")
+        logging.info("Searching for safe persons.")
         # Create the list of safe persons
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
-        print("Safe persons found.\n")
+        logging.info("Safe persons found.\n")
 
         # New list that filters persons that are safe
         persons_to_delete = [
             person for person in all_person_ids if person not in safe_person_ids]
 
         if persons_to_delete:
-            checkPeople(safe_person_ids, persons_to_delete, persons)
+            purgePeople(persons_to_delete, persons)
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            logging.info("-------------------------------")
+            logging.info(
                 "The organization has already been purged.\
 There are no more persons to delete.")
-            print("-------------------------------")
+            logging.info("-------------------------------")
 
             return 1  # Completed
     else:
-        print("No persons were found.")
+        logging.warning("No persons were found.")
 
         return 1  # Copmleted
 
@@ -272,75 +188,6 @@ There are no more persons to delete.")
 ##############################################################################
                             #  All things plates  #
 ##############################################################################
-
-
-def checkPlates(safe, to_delete, plates):
-    """Checks with the user before continuing with the purge"""
-    trust_level = None  # Pre-define
-    ok = None  # Pre-define
-
-    while trust_level not in ['1', '2', '3']:
-        print("1. Check marked persistent plates against what the \
-application found.")
-        print("2. Check what is marked for deletion by the application.")
-        print("3. Trust the process and blindly move forward.")
-
-        trust_level = str(input('- ')).strip()
-
-        if trust_level == '1':
-            print("-------------------------------")
-            print("Please check that the two lists match: ")
-
-            safe_names = [printPlateName(plate_id, plates)
-                          for plate_id in safe]
-
-            print(", ".join(safe_names))
-            print("vs")
-            print(", ".join(PERSISTENT_PLATES))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = str(input("Do they match?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePlates(to_delete, plates)
-
-                elif ok == 'n':
-                    print("Please check the input values")
-                    print("Exiting...")
-
-                else:
-                    print("Invalid input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '2':
-            print("-------------------------------")
-            print("Here are the plates being purged: ")
-
-            delete_names = \
-                [printPlateName(plate_id, plates) for plate_id in to_delete]
-            print(", ".join(delete_names))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = \
-                    str(input("Is this list accurate?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePlates(to_delete, plates)
-
-                elif ok == 'n':
-                    print("Please check the input values.")
-                    print("Exiting...")
-
-                else:
-                    print("Invalud input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '3':
-            print("Good luck!")
-            purgePlates(to_delete, plates)
-
-        else:
-            print("Invalid input. Please enter '1', '2', or '3'.")
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
@@ -448,12 +295,6 @@ def printPlateName(to_delete, plates):
 
 def runPlates():
     """Allows the program to be ran if being imported as a module"""
-    # Uncomment the lines below if you want to manually set these values
-    # each time the program is ran
-
-    # org = str(input("Org ID: ""))
-    # key = str(input("API key: "))
-
     print("Retrieving plates")
     plates = getPlates()
     print("plates retrieved.\n")
@@ -479,7 +320,7 @@ def runPlates():
             plate for plate in all_plate_ids if plate not in safe_plate_ids]
 
         if plates_to_delete:
-            checkPlates(safe_plate_ids, plates_to_delete, plates)
+            purgePlates(plates_to_delete, plates)
             return 1  # Completed
 
         else:
@@ -503,39 +344,5 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
-    warn()
-
-    answer = None
-    while answer not in ['y', 'n']:
-        answer = str(input("Would you like to run for PoI?\n(y/n) "))\
-            .strip().lower()
-        
-        if answer == 'y':
-            runPeople()
-            
-            answer = None
-
-            while answer not in ['y', 'n']:
-                answer = str(input("Would you like to run for LPoI?\n(y/n) "))\
-                    .strip().lower()
-                
-                if answer == 'y':
-                    runPlates()
-                    
-                elif answer == 'n':
-                    print("Exiting...")
-
-        elif answer == 'n':
-            answer = None
-
-            while answer not in ['y', 'n']:
-                answer = str(input("Would you like to run for LPoI?\n(y/n) "))\
-                    .strip().lower()
-                
-                if answer == 'y':
-                    runPlates()
-
-                elif answer == 'n':
-                    print("Why did you run this?")
-                    print("Exiting...")
-                
+    runPeople()
+    runPlates()
