@@ -1,10 +1,12 @@
 # Author: Ian Young
 # Purpose: Compare plates to a pre-defined array of names.
-# These names will be "persistent plates" which are to remain in Command.
-# Any plate not marked thusly will be deleted from the org.
+# These names will be "persistent plates/persons" which are to remain in Command.
+# Any person or plate not marked thusly will be deleted from the org.
 
 import requests
 import logging
+import threading
+import time
 
 ORG_ID = ""
 API_KEY = ""
@@ -88,6 +90,27 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
         return None
 
 
+def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    logging.info(f"Running for person: {printPersonName(person, persons)}")
+
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
+
+    response = requests.delete(PERSON_URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        logging.error(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
@@ -96,26 +119,23 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     logging.info("\nPurging...")
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
-
+    start_time = time.time()
+    threads = []
     for person in delete:
-        logging.info(f"Running for person: {printPersonName(person, persons)}")
+        thread = threading.Thread(
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
 
-        params = {
-            'org_id': org_id,
-            'person_id': person
-        }
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        response = requests.delete(PERSON_URL, headers=headers, params=params)
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
-        if response.status_code != 200:
-            logging.error(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
-
-    print("Purge complete.")
+    logging.info("Purge complete.")
+    logging.debug(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -143,9 +163,9 @@ def runPeople():
     # org = str(input("Org ID: ""))
     # key = str(input("API key: "))
 
-    print("Retrieving persons")
+    logging.info("Retrieving persons")
     persons = getPeople()
-    print("persons retrieved.\n")
+    logging.info("persons retrieved.\n")
 
     # Run if persons were found
     if persons:
@@ -210,7 +230,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         plates = data.get('license_plate_of_interest')
         return plates
     else:
-        print(
+        logging.error(
             f"Error with retrieving plates.\
 Status code {response.status_code}")
         return None
@@ -224,7 +244,7 @@ def getPlateIds(plates=None):
         if plate.get('license_plate'):
             plate_id.append(plate.get('license_plate'))
         else:
-            print(
+            logging.error(
                 f"There has been an error with plate {plate.get('label')}.")
 
     return plate_id
@@ -242,38 +262,56 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
     if plate_id:
         return plate_id
     else:
-        print(f"plate {plate} was not found in the database...")
+        logging.error(f"plate {plate} was not found in the database...")
         return None
 
 
-def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all PoIs that aren't marked as safe/persistent"""
-    if not delete:
-        print("There's nothing here")
-        return
-
-    print("\nPurging...")
-
+def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    for plate in delete:
-        print(f"Running for plate: {printPlateName(plate, plates)}")
+    logging.info(f"Running for plate: {printPlateName(plate, plates)}")
 
-        params = {
-            'org_id': org_id,
-            'license_plate': plate
-        }
+    params = {
+        'org_id': org_id,
+        'license_plate': plate
+    }
 
-        response = requests.delete(PLATE_URL, headers=headers, params=params)
+    response = requests.delete(PLATE_URL, headers=headers, params=params)
 
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    if response.status_code != 200:
+        logging.error(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
 
-    print("Purge complete.")
+
+def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
+    if not delete:
+        logging.critical("There's nothing here")
+        return
+
+    logging.info("\nPurging...")
+
+    start_time = time.time()
+    threads = []
+    for person in delete:
+        thread = threading.Thread(
+            target=delete_plate, args=(person, plates, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()  # Join back to main thread
+
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
+
+    logging.info("Purge complete.")
+    logging.debug(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -289,31 +327,31 @@ def printPlateName(to_delete, plates):
     if plate_name:
         return plate_name
     else:
-        print(f"plate {to_delete} was not found in the database...")
+        logging.error(f"plate {to_delete} was not found in the database...")
         return "Error finding name"
 
 
 def runPlates():
     """Allows the program to be ran if being imported as a module"""
-    print("Retrieving plates")
+    logging.info("Retrieving plates")
     plates = getPlates()
-    print("plates retrieved.\n")
+    logging.info("plates retrieved.\n")
 
     # Run if plates were found
     if plates:
-        print("Gather IDs")
+        logging.info("Gather IDs")
         all_plate_ids = getPlateIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        print("IDs aquired.\n")
+        logging.info("IDs aquired.\n")
 
         safe_plate_ids = []
 
-        print("Searching for safe plates.")
+        logging.info("Searching for safe plates.")
         # Create the list of safe plates
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        print("Safe plates found.\n")
+        logging.info("Safe plates found.\n")
 
         # New list that filters plates that are safe
         plates_to_delete = [
@@ -324,15 +362,15 @@ def runPlates():
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            logging.info("-------------------------------")
+            logging.info(
                 "The organization has already been purged.\
 There are no more plates to delete.")
-            print("-------------------------------")
+            logging.info("-------------------------------")
 
             return 1  # Completed
     else:
-        print("No plates were found.")
+        logging.info("No plates were found.")
 
         return 1  # Copmleted
 
@@ -344,5 +382,13 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
-    runPeople()
-    runPlates()
+    PoI = threading.Thread(target=runPeople())
+    LPoI = threading.Thread(target=runPlates())
+
+    # Start the threads running independantly
+    PoI.start()
+    LPoI.start()
+
+    # Join the threads back to parent process
+    PoI.join()
+    LPoI.join()

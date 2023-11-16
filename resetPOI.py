@@ -4,9 +4,13 @@
 # Any person not marked thusly will be deleted from the org.
 
 import requests
+import threading
+import time
+import logging
 
-ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
-API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
+# Demo org creds
+ORG_ID = "01ec0956-b7cf-415d-bd78-43c8d373cd65"
+API_KEY = "vkd_api_1b122b7fa9ae4544b7ae6af9d3fab5c7"
 
 # Set the full name for which persons are to be persistent
 PERSISTENT_PERSONS = ["PoI"]
@@ -90,7 +94,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purge(to_delete)
+            purge(to_delete, persons)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
@@ -158,6 +162,27 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
         return None
 
 
+def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    print(f"Running for person: {printName(person, persons)}")
+
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
+
+    response = requests.delete(URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        print(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
 def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
@@ -166,26 +191,23 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     print("\nPurging...")
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
-
+    start_time = time.time()
+    threads = []
     for person in delete:
-        print(f"Running for person: {printName(person, persons)}")
+        thread = threading.Thread(
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
 
-        params = {
-            'org_id': org_id,
-            'person_id': person
-        }
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        response = requests.delete(URL, headers=headers, params=params)
-
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
     print("Purge complete.")
+    print(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -260,3 +282,4 @@ There are no more persons to delete.")
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
     run()
+

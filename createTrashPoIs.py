@@ -3,6 +3,7 @@
 
 import base64
 import requests
+import threading
 
 # Globally-defined Verkada PoI URL
 URL_POI = "https://api.verkada.com/cameras/v1/people/person_of_interest"
@@ -77,13 +78,27 @@ if __name__ == "__main__":
 pinimg.com%2F736x%2F87%2Fea%2F33%2F87ea336233db8ad468405db8f94da050--human-\
 faces-photos-of.jpg&f=1&nofb=1&ipt=6af7ecf6cd0e15496e7197f3b6cb1527beaa8718\
 c58609d4feca744209047e57&ipo=images'
+
+    threads = []
     for i in range(1, 11):
         name = f'PoI{i}'
         plate = f'a{i}b{i}c{i}'
         plate_name = f'Plate{i}'
 
         print(f"Running for {name} & {plate_name}")
-        createPOI(name, image, 'y')
-        createLPOI(plate_name, plate)
+        thread_poi = threading.Thread(
+            target=createPOI, args=(name, image, 'y')
+        )
+        thread_poi.start()
+        threads.append(thread_poi)
+
+        # thread_lpoi = threading.Thread(
+        #    target=createPOI, args=(plate_name, plate)
+        # )
+        # thread_lpoi.start
+        # threads.append(thread_lpoi)
+
+    for thread in threads:
+        thread.join()
 
     print("\nComplete")

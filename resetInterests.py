@@ -1,9 +1,11 @@
 # Author: Ian Young
 # Purpose: Compare plates to a pre-defined array of names.
-# These names will be "persistent plates" which are to remain in Command.
-# Any plate not marked thusly will be deleted from the org.
+# These names will be "persistent plates/persons" which are to remain in Command.
+# Any person or plate not marked thusly will be deleted from the org.
 
 import requests
+import threading
+import time
 
 ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
 API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
@@ -172,6 +174,27 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
         return None
 
 
+def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    print(f"Running for person: {printPersonName(person, persons)}")
+
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
+
+    response = requests.delete(PERSON_URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        print(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
@@ -180,26 +203,23 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     print("\nPurging...")
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
-
+    start_time = time.time()
+    threads = []
     for person in delete:
-        print(f"Running for person: {printPersonName(person, persons)}")
+        thread = threading.Thread(
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
 
-        params = {
-            'org_id': org_id,
-            'person_id': person
-        }
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        response = requests.delete(PERSON_URL, headers=headers, params=params)
-
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
     print("Purge complete.")
+    print(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -399,6 +419,27 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
         return None
 
 
+def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    print(f"Running for plate: {printPlateName(plate, plates)}")
+
+    params = {
+        'org_id': org_id,
+        'license_plate': plate
+    }
+
+    response = requests.delete(PLATE_URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        print(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
 def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
@@ -407,26 +448,23 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
     print("\nPurging...")
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    start_time = time.time()
+    threads = []
+    for person in delete:
+        thread = threading.Thread(
+            target=delete_plate, args=(person, plates, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
 
-    for plate in delete:
-        print(f"Running for plate: {printPlateName(plate, plates)}")
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        params = {
-            'org_id': org_id,
-            'license_plate': plate
-        }
-
-        response = requests.delete(PLATE_URL, headers=headers, params=params)
-
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
     print("Purge complete.")
+    print(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
