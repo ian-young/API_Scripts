@@ -3,14 +3,10 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+import creds, logging, requests, threading, time
 
-load_dotenv()
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -123,7 +119,7 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purge(to_delete)
+            purge(to_delete, users)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
@@ -261,7 +257,7 @@ def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
         return 2  # Completed unsuccesfully
 
 
-def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
     """
     Purges all users that aren't marked as safe/persistent.
     
@@ -286,12 +282,12 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     start_time = time.time()
     threads = []
-    for person in delete:
+    for user in delete:
         if CALL_COUNT >= 500:
             return
         
         thread = threading.Thread(
-            target=delete_person, args=(person, persons, org_id, api_key)
+            target=delete_user, args=(user, users, org_id, api_key)
         )
         thread.start()
         threads.append(thread)

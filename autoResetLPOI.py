@@ -3,14 +3,10 @@
 # These names will be "persistent plates" which are to remain in Command.
 # Any plate not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+import creds, logging, requests, threading, time
 
-load_dotenv()
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -147,22 +143,12 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key
     }
 
-<<<<<<< HEAD
     log.info(f"Running for plate: {printName(plate, plates)}")
 
     params = {
         'org_id': org_id,
         'license_plate': plate
     }
-=======
-    for plate in delete:
-        print(f"Running for plate: {printName(plate, plates)}")
-        
-        params = {
-            'org_id': org_id,
-            'license_plate': plate
-        }
->>>>>>> 4a6b46d (Fixed search values)
 
     response = requests.delete(URL, headers=headers, params=params)
 
