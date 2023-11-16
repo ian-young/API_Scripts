@@ -3,6 +3,7 @@
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
 
+<<<<<<< HEAD
 import datetime, logging, requests, threading, time
 from os import getenv
 from dotenv import load_dotenv
@@ -18,10 +19,21 @@ API_KEY = getenv("lab_key")
 MAX_RETRIES = 10
 DEFAULT_RETRY_DELAY = 0.25
 BACKOFF = 0.25
+=======
+import creds, logging, requests, threading, time
+
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
+
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
+>>>>>>> fa8b25f (Added multi-threading.)
 
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
+<<<<<<< HEAD
     level = logging.WARNING,
     format = "%(levelname)s: %(message)s"
     )
@@ -38,6 +50,11 @@ try:
 except ImportError:
     GPIO = None
     log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+=======
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
+>>>>>>> fa8b25f (Added multi-threading.)
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = sorted([])
@@ -54,6 +71,7 @@ PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 ##############################################################################
 
 
+<<<<<<< HEAD
 class RateLimiter:
     def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
         """
@@ -149,6 +167,10 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
 
     for thread in threads:
         thread.join()
+=======
+class APIThrottleException(Exception):
+    pass
+>>>>>>> fa8b25f (Added multi-threading.)
 
 
 def cleanList(list):
@@ -170,6 +192,7 @@ def cleanList(list):
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
+<<<<<<< HEAD
     """
     Returns JSON-formatted persons in a Command org.
     
@@ -180,6 +203,9 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
     :return: A List of dictionaries of people in an organization.
     :rtype: list
     """
+=======
+    """Returns JSON-formatted persons in a Command org"""
+>>>>>>> fa8b25f (Added multi-threading.)
     global CALL_COUNT
 
     headers = {
@@ -192,6 +218,9 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PERSON_URL, headers=headers, params=params)
+
+    with CALL_COUNT_LOCK:
+        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -266,6 +295,7 @@ Each dictionary should have the 'person_id' key. Defaults to None.
 
 
 def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+<<<<<<< HEAD
     """
     Deletes the given person from the organization.
 
@@ -283,12 +313,16 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     local_data = threading.local()
     local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
 
+=======
+    """Deletes the given person"""
+>>>>>>> fa8b25f (Added multi-threading.)
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
     log.info(f"Running for person: {printPersonName(person, persons)}")
+<<<<<<< HEAD
 
     params = {
         'org_id': org_id,
@@ -367,6 +401,71 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Person - Purge complete.")
     log.info(f"Person - Time to complete: {elapsed_time:.2f}")
+=======
+
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
+
+    try:
+        # Stop running if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        response = requests.delete(PERSON_URL, headers=headers, params=params)
+    
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        
+        elif response.status_code == 504:
+            log.warning(f"Plate - Timed out.")
+        
+        elif response.status_code != 200:
+            log.error(f"\
+Person - An error has occured. Status code {response.status_code}")
+        
+    except APIThrottleException:
+                    log.critical("Person - Hit API request rate limit of 500 requests per minute.")
+
+
+
+def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+
+    if not delete:
+        log.warning("Person - There's nothing here")
+        return
+
+    log.info("Person - Purging...")
+
+    start_time = time.time()
+    threads = []
+    for person in delete:
+        # Stop making threads if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        
+        # Toss delete function into a new thread
+        thread = threading.Thread(
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)  # Add the thread to the pile
+
+        # Make sure the other thread isn't writing
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1  # Log that the thread was made
+
+    for thread in threads:
+        thread.join()  # Join back to main thread
+
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
+
+    log.info("Person - Purge complete.")
+    log.info(f"Person - Time to complete: {elapsed_time}")
+>>>>>>> fa8b25f (Added multi-threading.)
     return 1  # Completed
 
 
@@ -397,12 +496,19 @@ was no name found, as well.
 
 
 def runPeople():
+<<<<<<< HEAD
     """
     Allows the program to be ran if being imported as a module.
     
     :return: Returns the value 1 if the program completed successfully.
     :rtype: int
     """
+=======
+    """Allows the program to be ran if being imported as a module"""
+    # Uncomment the lines below if you want to manually set these values
+    # each time the program is ran
+
+>>>>>>> fa8b25f (Added multi-threading.)
     log.info("Retrieving persons")
     persons = getPeople()
     log.info("persons retrieved.")
@@ -411,14 +517,23 @@ def runPeople():
     tree = avlTree.build_avl_tree(persons)
     avlTree.print_avl_tree_anytree(tree)
     # Run if persons were found
+<<<<<<< HEAD
 #     if persons:
 #         log.info("Person - Gather IDs")
 #         all_person_ids = getPeopleIds(persons)
 #         all_person_ids = cleanList(all_person_ids)
 #         log.info("Person - IDs aquired.")
+=======
+    if persons:
+        log.info("Person - Gather IDs")
+        all_person_ids = getPeopleIds(persons)
+        all_person_ids = cleanList(all_person_ids)
+        log.info("Person - IDs aquired.")
+>>>>>>> fa8b25f (Added multi-threading.)
 
 #         safe_person_ids = []
 
+<<<<<<< HEAD
 #         log.info("Searching for safe persons.")
 #         # Create the list of safe persons
 #         for person in PERSISTENT_PERSONS:
@@ -430,11 +545,25 @@ def runPeople():
 #         persons_to_delete = [
 #             person for person in all_person_ids 
 #             if person not in safe_person_ids]
+=======
+        log.info("Searching for safe persons.")
+        # Create the list of safe persons
+        for person in PERSISTENT_PERSONS:
+            safe_person_ids.append(getPersonId(person, persons))
+        safe_person_ids = cleanList(safe_person_ids)
+        log.info("Safe persons found.")
+
+        # New list that filters persons that are safe
+        persons_to_delete = [
+            person for person in all_person_ids 
+            if person not in safe_person_ids]
+>>>>>>> fa8b25f (Added multi-threading.)
 
 #         if persons_to_delete:
 #             purgePeople(persons_to_delete, persons)
 #             return 1  # Completed
 
+<<<<<<< HEAD
 #         else:
 #             log.info(
 #                 "Person - The organization has already been purged.\
@@ -443,6 +572,16 @@ def runPeople():
 #             return 1  # Completed
 #     else:
 #         log.warning("No persons were found.")
+=======
+        else:
+            log.info(
+                "Person - The organization has already been purged.\
+There are no more persons to delete.")
+
+            return 1  # Completed
+    else:
+        log.warning("No persons were found.")
+>>>>>>> fa8b25f (Added multi-threading.)
 
 #         return 1  # Copmleted
 
@@ -453,6 +592,7 @@ def runPeople():
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
+<<<<<<< HEAD
     """
     Returns JSON-formatted plates in a Command org.
     
@@ -463,6 +603,9 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
     :return: A List of dictionaries of license plates in an organization.
     :rtype: list
     """
+=======
+    """Returns JSON-formatted plates in a Command org"""
+>>>>>>> fa8b25f (Added multi-threading.)
     global CALL_COUNT
 
     headers = {
@@ -475,6 +618,9 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
+    
+    with CALL_COUNT_LOCK:
+        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -502,6 +648,7 @@ Status code {response.status_code}")
 
 
 def getPlateIds(plates=None):
+<<<<<<< HEAD
     """
     Returns an array of all LPoI labels in an organization.
     
@@ -512,6 +659,9 @@ Defaults to None.
     :return: A list of IDs of the LPoIs in an organization.
     :rtype: list
     """
+=======
+    """Returns an array of all LPoI labels in an organization"""
+>>>>>>> fa8b25f (Added multi-threading.)
     plate_id = []
 
     for plate in plates:
@@ -525,6 +675,7 @@ Defaults to None.
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
+<<<<<<< HEAD
     """
     Returns the Verkada ID for a given LPoI.
     
@@ -536,6 +687,9 @@ Each dictionary should have the 'license_plate' key. Defaults to None.
     :return: The plate ID of the given LPoI.
     :rtype: str
     """
+=======
+    """Returns the Verkada ID for a given LPoI"""
+>>>>>>> fa8b25f (Added multi-threading.)
     plate_id = None  # Pre-define
 
     for name in plates:
@@ -551,6 +705,7 @@ Each dictionary should have the 'license_plate' key. Defaults to None.
 
 
 def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
+<<<<<<< HEAD
     """
     Deletes the given plate from the organization.
 
@@ -568,12 +723,16 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     local_data = threading.local()
     local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
 
+=======
+    """Deletes the given person"""
+>>>>>>> fa8b25f (Added multi-threading.)
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
     log.info(f"Running for plate: {printPlateName(plate, plates)}")
+<<<<<<< HEAD
 
     params = {
         'org_id': org_id,
@@ -650,6 +809,70 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Plate - Purge complete.")
     log.info(f"Plate - Time to complete: {elapsed_time:.2f}")
+=======
+
+    params = {
+        'org_id': org_id,
+        'license_plate': plate
+    }
+
+    try:
+        # Stop running if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        response = requests.delete(PLATE_URL, headers=headers, params=params)
+    
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        
+        elif response.status_code == 504:
+            log.warning(f"Plate - Timed out.")
+
+        elif response.status_code != 200:
+            log.error(f"\
+Plate - An error has occured. Status code {response.status_code}")
+        
+    except APIThrottleException:
+                    log.critical("Plate - Hit API request rate limit of 500 requests per minute.")
+
+
+def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all LPoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+    
+    if not delete:
+        log.warning("Plate - There's nothing here")
+        return
+
+    log.info("Plate - Purging...")
+
+    start_time = time.time()
+    threads = []
+    for plate in delete:
+        # Stop making threads if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        
+        # Toss delete function into a new thread
+        thread = threading.Thread(
+            target=delete_plate, args=(plate, plates, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)  # Add the thread to the pile
+
+        # Make sure the other thread isn't writing
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1  # Log that the thread was made
+
+    for thread in threads:
+        thread.join()  # Join back to main thread
+
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
+
+    log.info("Plate - Purge complete.")
+    log.info(f"Plate - Time to complete: {elapsed_time}")
+>>>>>>> fa8b25f (Added multi-threading.)
     return 1  # Completed
 
 
@@ -680,6 +903,7 @@ was no name found, as well.
 
 
 def runPlates():
+<<<<<<< HEAD
     """
     Allows the program to be ran if being imported as a module.
     
@@ -692,6 +916,12 @@ def runPlates():
 
     # Sort the JSON dictionaries by plate id
     plates = sorted(plates, key=lambda x: x['license_plate'])
+=======
+    """Allows the program to be ran if being imported as a module"""
+    log.info("Retrieving plates")
+    plates = getPlates()
+    log.info("Plates retrieved.")
+>>>>>>> fa8b25f (Added multi-threading.)
 
     # Run if plates were found
     if plates:
@@ -736,13 +966,17 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
+<<<<<<< HEAD
     GPIO.output(7, True)
+=======
+>>>>>>> fa8b25f (Added multi-threading.)
     start_time = time.time()
     PoI = threading.Thread(target=runPeople)
     LPoI = threading.Thread(target=runPlates)
 
     # Start the threads running independantly
     PoI.start()
+<<<<<<< HEAD
     #--LPoI.start()
 
     # Join the threads back to parent process
@@ -752,3 +986,13 @@ if __name__ == "__main__":
     GPIO.output(7, False)
 
     log.info(f"Total time to complete: {elapsed_time:.2f}") 
+=======
+    LPoI.start()
+
+    # Join the threads back to parent process
+    PoI.join()
+    LPoI.join()
+    elapsed_time = time.time() - start_time
+
+    log.info(f"Total time to complete: {elapsed_time}") 
+>>>>>>> fa8b25f (Added multi-threading.)

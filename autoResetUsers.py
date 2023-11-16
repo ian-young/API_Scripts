@@ -3,10 +3,21 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import requests
+import creds, logging, requests, threading, time
 
-ORG_ID = ""
-API_KEY = ""
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
+
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
 
 # Set the full name for which users are to be persistent
 PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
@@ -46,7 +57,7 @@ def getUsers(org_id=ORG_ID, api_key=API_KEY):
         users = data.get('access_members')
         return users
     else:
-        print(
+        log.critical(
             f"Error with retrieving users.\
 Status code {response.status_code}")
         return None
@@ -60,7 +71,7 @@ def getIds(users=None):
         if user.get('user_id'):
             user_id.append(user.get('user_id'))
         else:
-            print(
+            log.error(
                 f"There has been an error with user {user.get('full_name')}.")
 
     return user_id
@@ -78,36 +89,68 @@ def getUserId(user=PERSISTENT_USERS, users=None):
     if user_id:
         return user_id
     else:
-        print(f"User {user} was not found in the database...")
+        log.error(f"User {user} was not found in the database...")
         return None
 
 
-def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all users that aren't marked as safe/persistent"""
-    if not delete:
-        print("There's nothing here")
-        return
-
-    print("\nPurging...")
+def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given user"""
+    # Format the URL
+    url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
 
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
+    log.info(f"Running for user: {printName(user, users)}")
+    
+    # Stop if at call limit
+    if CALL_COUNT >= 500:
+        return
+    
+    response = requests.delete(url, headers=headers)
+
+    if response.status_code != 200:
+        log.error(
+            f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
+def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all users that aren't marked as safe/persistent"""
+    global CALL_COUNT
+
+    if not delete:
+        log.warning("There's nothing here")
+        return
+
+    log.info("Purging...")
+
+    start_time = time.time()
+    threads = []
     for user in delete:
-        # Format the URL
-        url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+        # Stop if at call limit
+        if CALL_COUNT >= 500:
+            return
+        
+        thread = threading.Thread(
+            target=delete_user, args=(user, users, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
 
-        print(f"Running for user: {printName(user, users)}")
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1
 
-        response = requests.delete(url, headers=headers)
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
-    print("Purge complete.")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -123,31 +166,31 @@ def printName(to_delete, users):
     if user_name:
         return user_name
     else:
-        print(f"User {to_delete} was not found in the database...")
+        log.warning(f"User {to_delete} was not found in the database...")
         return "Error finding name"
 
 
 def run():
     """Allows the program to be ran if being imported as a module"""
-    print("Retrieving users")
+    log.info("Retrieving users")
     users = getUsers()
-    print("Users retrieved.\n")
+    log.info("Users retrieved.\n")
 
     # Run if users were found
     if users:
-        print("Gather IDs")
+        log.info("Gather IDs")
         all_user_ids = getIds(users)
         all_user_ids = cleanList(all_user_ids)
-        print("IDs aquired.\n")
+        log.info("IDs aquired.\n")
 
         safe_user_ids = []
 
         # Create the list of safe users
-        print("Searching for safe users.")
+        log.info("Searching for safe users.")
         for user in PERSISTENT_USERS:
             safe_user_ids.append(getUserId(user, users))
         safe_user_ids = cleanList(safe_user_ids)
-        print("Safe users found.\n")
+        log.info("Safe users found.\n")
 
         # New list that filters users that are safe
         users_to_delete = [
@@ -158,15 +201,15 @@ def run():
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            log.info("-------------------------------")
+            log.info(
                 "The organization has already been purged.\
                       There are no more users to delete.")
-            print("-------------------------------")
+            log.info("-------------------------------")
 
             return 1  # Completed
     else:
-        print("No users were found.")
+        log.warning("No users were found.")
 
         return 1  # Copmleted
 

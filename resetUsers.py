@@ -3,10 +3,21 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import requests
+import creds, logging, requests, threading, time
 
-ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
-API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
+
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
 
 # Set the full name for which users are to be persistent
 PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
@@ -163,32 +174,81 @@ def getUserId(user=PERSISTENT_USERS, users=None):
         return None
 
 
-def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all users that aren't marked as safe/persistent"""
-    if not delete:
-        print("There's nothing here")
-        return
-
-    print("\nPurging...")
-
+def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given user"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    for user in delete:
-        # Format the URL
-        url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+    # Format the URL
+    url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
 
-        print(f"Running for user: {printName(user, users)}")
+    print(f"Running for user: {printName(user, users)}")
 
-        response = requests.delete(url, headers=headers)
+    response = requests.delete(url, headers=headers)
 
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    if response.status_code != 200:
+        print(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
 
-    print("Purge complete.")
+
+def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    log.info(f"Running for person: {printName(person, persons)}")
+
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
+
+    response = requests.delete(
+        USER_CONTROL_URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        log.error(
+            f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
+def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+
+    if not delete:
+        log.warning("There's nothing here")
+        return
+
+    log.info("Purging...")
+
+    start_time = time.time()
+    threads = []
+    for person in delete:
+        if CALL_COUNT >= 500:
+            return
+        
+        thread = threading.Thread(
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
+
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1
+
+    for thread in threads:
+        thread.join()  # Join back to main thread
+
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
+
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
