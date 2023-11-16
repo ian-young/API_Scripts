@@ -8,6 +8,7 @@
 
 import requests
 import base64
+import creds
 
 # Set URLs
 URL_PEOPLE = "https://api.verkada.com/cameras/v1/people/person_of_interest"
@@ -27,13 +28,13 @@ URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 
 # Set general testing variables
-ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
-API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
-CAMERA_ID = "c94be2a0-ca3f-4f3a-b208-8db8945bf40b"
-TEST_USER = "3339db66-f954-465c-ae59-e6686a8e9c3c"
-TEST_USER_CRED = "d7a77639-e451-4d35-b18f-8fd8ae2cd0a6"
-CARD_ID = "00111101100000100110100100"
-PLATE = "H3LL0"
+ORG_ID = creds.slc_id
+API_KEY = creds.slc_key
+CAMERA_ID = creds.slc_camera_id
+TEST_USER = creds.slc_test_user
+TEST_USER_CRED = creds.slc_test_user_cred
+CARD_ID = creds.slc_card_id
+PLATE = creds.slc_plate
 
 GENERAL_HEADER = {
     'accept': 'application/json',
