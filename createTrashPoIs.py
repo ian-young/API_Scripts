@@ -1,30 +1,17 @@
 # Author: Ian Young
 # This script will create a POI when given a name and uri to image
 
-import base64
-import colorama
-import datetime
-import logging
-import random
-import requests
-import string
-import threading
-import time
-
-from os import getenv
-from colorama import Fore, Style
-from dotenv import load_dotenv
-
-# Set style to reset at EoLpython
-colorama.init(autoreset=True)
+import base64, creds, logging, requests, threading, time
 
 # Globally-defined Verkada PoI URL
 URL_POI = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 URL_LPR = "https://api.verkada.com/cameras/v1/\
 analytics/lpr/license_plate_of_interest"
+URL_LPR = "https://api.verkada.com/cameras/v1/\
+analytics/lpr/license_plate_of_interest"
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 MAX_RETRIES = 10
 DEFAULT_RETRY_DELAY = 0.25
@@ -56,15 +43,43 @@ class APIThrottleException(Exception):
     :param message: A human-readable description of the exception.
     :type message: str
     """
+
     def __init__(self, message="API throttle limit exceeded."):
         self.message = message
-        super.__init__(self.message)
+        super().__init__(self.message)
+
+
+def run_thread_with_rate_limit(threads, rate_limit=10,
+                               max_events=10, pacing=1):
+    """
+    Run a thread with rate limiting.
+
+    :param target: The target function to be executed in the thread:
+    :type targe: function:
+    :return: The thread that was created and ran
+    :rtype: thread
+    """
+    limiter = RateLimiter(rate_limit=rate_limit,
+                          max_events_per_sec=max_events, pacing=pacing)
+
+    def run_thread(thread):
+        with threading.Lock():
+            limiter.acquire()
+            log.debug(f"{Fore.LIGHTBLACK_EX}Starting thread{Style.RESET_ALL} \
+{thread.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+            thread.start()
+
+    for thread in threads:
+        run_thread(thread)
+
+    for thread in threads:
+        thread.join()
 
 
 def createPOI(name, image, download):
     """
     Will create a person of interest with a given URL to an image or path to a file
-    
+
     :param name: The name of the person of interest to be created.
     :type name: str
     :param image: The URL to the image of the person of interest. This image
@@ -76,12 +91,9 @@ to be downloaded. Most cases, the value will be 'y.'
     :return: None
     :rtype: None
     """
-    global CALL_COUNT
+    local_data = threading.local()
+    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
 
-    # Don't bother running if at throttle limit
-    if CALL_COUNT >= 500:
-        return
-    
     file_content = None  # Pre-define
 
     if download == 'y':
@@ -135,13 +147,12 @@ license plate.
     :return: None
     :rtype: None
     """
-    global CALL_COUNT
+    local_data = threading.local()
+    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
 
-    # Don't even bother running if at the throttle limit
-    if CALL_COUNT >= 500:
-        return
-    
     payload = {
+        "description": name,
+        "license_plate": plate,
         "description": name,
         "license_plate": plate
     }
