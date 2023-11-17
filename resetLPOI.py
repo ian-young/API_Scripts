@@ -14,7 +14,8 @@ API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = ["Random"]
 
-URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
+URL = "https://api.verkada.com/cameras/v1/\
+analytics/lpr/license_plate_of_interest"
 
 
 def warn():

@@ -3,7 +3,10 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
+import logging
 import requests
+import threading
+import time
 
 ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
 API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
@@ -163,6 +166,25 @@ def getUserId(user=PERSISTENT_USERS, users=None):
         return None
 
 
+def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given user"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    # Format the URL
+    url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+
+    print(f"Running for user: {printName(user, users)}")
+
+    response = requests.delete(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
 def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
     """Purges all users that aren't marked as safe/persistent"""
     if not delete:
@@ -171,24 +193,24 @@ def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
 
     print("\nPurging...")
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    start_time = time.time()
 
+    threads = []
     for user in delete:
-        # Format the URL
-        url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+        thread = threading.Thread(
+            target=delete_user, args=(user, users, org_id, api_key))
 
-        print(f"Running for user: {printName(user, users)}")
+        threads.append(thread)
+        thread.start()
 
-        response = requests.delete(url, headers=headers)
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
     print("Purge complete.")
+    print(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 

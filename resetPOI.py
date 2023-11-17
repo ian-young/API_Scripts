@@ -3,10 +3,7 @@
 # These names will be "persistent persons" which are to remain in Command.
 # Any person not marked thusly will be deleted from the org.
 
-import requests
-import threading
-import time
-import logging
+import logging, requests, threading, time
 
 # Demo org creds
 ORG_ID = "01ec0956-b7cf-415d-bd78-43c8d373cd65"

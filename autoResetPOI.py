@@ -3,7 +3,7 @@
 # These names will be "persistent persons" which are to remain in Command.
 # Any person not marked thusly will be deleted from the org.
 
-import requests
+import logging, requests, threading, time
 
 ORG_ID = ""
 API_KEY = ""
@@ -147,7 +147,8 @@ def run():
 
         # New list that filters persons that are safe
         persons_to_delete = [
-            person for person in all_person_ids if person not in safe_person_ids]
+            person for person in all_person_ids 
+            if person not in safe_person_ids]
 
         if persons_to_delete:
             purge(persons_to_delete, persons)

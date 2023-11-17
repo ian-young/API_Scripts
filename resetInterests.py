@@ -1,11 +1,9 @@
 # Author: Ian Young
 # Purpose: Compare plates to a pre-defined array of names.
-# These names will be "persistent plates/persons" which are to remain in Command.
-# Any person or plate not marked thusly will be deleted from the org.
+# These names will be "persistent plates/persons" which are to remain in
+# Command. Any person or plate not marked thusly will be deleted from the org.
 
-import requests
-import threading
-import time
+import requests, threading, time
 
 ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
 API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
@@ -15,7 +13,8 @@ PERSISTENT_PLATES = []
 PERSISTENT_PERSONS = []
 
 # Set API endpoint URLs
-PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
+PLATE_URL = "https://api.verkada.com/cameras/v1/\
+analytics/lpr/license_plate_of_interest"
 PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 ##############################################################################
@@ -269,7 +268,8 @@ def runPeople():
 
         # New list that filters persons that are safe
         persons_to_delete = [
-            person for person in all_person_ids if person not in safe_person_ids]
+            person for person in all_person_ids 
+            if person not in safe_person_ids]
 
         if persons_to_delete:
             checkPeople(safe_person_ids, persons_to_delete, persons)

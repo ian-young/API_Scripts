@@ -1,12 +1,9 @@
 # Author: Ian Young
 # Purpose: Compare plates to a pre-defined array of names.
-# These names will be "persistent plates/persons" which are to remain in Command.
-# Any person or plate not marked thusly will be deleted from the org.
+# These names will be "persistent plates/persons" which are to remain in 
+# Command. Any person or plate not marked thusly will be deleted from the org.
 
-import requests
-import logging
-import threading
-import time
+import logging, requests, threading, time
 
 ORG_ID = ""
 API_KEY = ""
@@ -16,7 +13,8 @@ PERSISTENT_PLATES = []
 PERSISTENT_PERSONS = []
 
 # Set API endpoint URLs
-PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
+PLATE_URL = "https://api.verkada.com/cameras/v1/\
+analytics/lpr/license_plate_of_interest"
 PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 ##############################################################################
@@ -107,7 +105,8 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     response = requests.delete(PERSON_URL, headers=headers, params=params)
 
     if response.status_code != 200:
-        logging.error(f"An error has occured. Status code {response.status_code}")
+        logging.error(f"\
+An error has occured. Status code {response.status_code}")
         return 2  # Completed unsuccesfully
 
 
@@ -185,7 +184,8 @@ def runPeople():
 
         # New list that filters persons that are safe
         persons_to_delete = [
-            person for person in all_person_ids if person not in safe_person_ids]
+            person for person in all_person_ids 
+            if person not in safe_person_ids]
 
         if persons_to_delete:
             purgePeople(persons_to_delete, persons)
@@ -283,7 +283,8 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     response = requests.delete(PLATE_URL, headers=headers, params=params)
 
     if response.status_code != 200:
-        logging.error(f"An error has occured. Status code {response.status_code}")
+        logging.error(f"\
+An error has occured. Status code {response.status_code}")
         return 2  # Completed unsuccesfully
 
 
