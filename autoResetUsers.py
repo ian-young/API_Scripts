@@ -108,7 +108,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         return 2  # Completed unsuccesfully
 
 
-def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
         logging.critical("There's nothing here")
