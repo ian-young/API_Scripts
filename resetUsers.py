@@ -3,13 +3,10 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import logging
-import requests
-import threading
-import time
+import creds, logging, threading, requests, threading, time
 
-ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
-API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set the full name for which users are to be persistent
 PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
@@ -185,23 +182,45 @@ def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
         return 2  # Completed unsuccesfully
 
 
-def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all users that aren't marked as safe/persistent"""
+def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    logging.info(f"Running for person: {printName(person, persons)}")
+
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
+
+    response = requests.delete(
+        USER_CONTROL_URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        logging.error(
+            f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
+def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        print("There's nothing here")
+        logging.critical("There's nothing here")
         return
 
-    print("\nPurging...")
+    logging.info("\nPurging...")
 
     start_time = time.time()
-
     threads = []
-    for user in delete:
+    for person in delete:
         thread = threading.Thread(
-            target=delete_user, args=(user, users, org_id, api_key))
-
-        threads.append(thread)
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
         thread.start()
+        threads.append(thread)
 
     for thread in threads:
         thread.join()  # Join back to main thread
@@ -209,8 +228,8 @@ def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    print("Purge complete.")
-    print(f"Time to complete: {elapsed_time}")
+    logging.info("Purge complete.")
+    logging.debug(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 

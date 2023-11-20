@@ -3,10 +3,10 @@
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
+import creds, logging, requests, threading, time
 
-ORG_ID = ""
-API_KEY = ""
+ORG_ID = creds.demo_id
+API_KEY = creds.demo_key
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = []

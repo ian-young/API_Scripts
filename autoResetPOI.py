@@ -3,10 +3,10 @@
 # These names will be "persistent persons" which are to remain in Command.
 # Any person not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
+import creds, requests, threading, time
 
-ORG_ID = ""
-API_KEY = ""
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set the full name for which persons are to be persistent
 PERSISTENT_PERSONS = ["PoI"]
@@ -76,6 +76,27 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
         return None
 
 
+def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
+    headers = {
+        "accept": "application/json",
+        "x-api-key": api_key
+    }
+
+    print(f"Running for person: {printName(person, persons)}")
+
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
+
+    response = requests.delete(URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        print(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
 def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
@@ -84,26 +105,23 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     print("\nPurging...")
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
-
+    start_time = time.time()
+    threads = []
     for person in delete:
-        print(f"Running for person: {printName(person, persons)}")
+        thread = threading.Thread(
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
 
-        params = {
-            'org_id': org_id,
-            'person_id': person
-        }
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        response = requests.delete(URL, headers=headers, params=params)
-
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
     print("Purge complete.")
+    print(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 

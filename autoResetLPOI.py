@@ -3,13 +3,10 @@
 # These names will be "persistent plates" which are to remain in Command.
 # Any plate not marked thusly will be deleted from the org.
 
-import logging
-import requests
-import threading
-import time
+import creds, logging, threading, requests, threading, time
 
-ORG_ID = ""
-API_KEY = ""
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = ["Random"]

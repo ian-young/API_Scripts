@@ -3,11 +3,10 @@
 # These names will be "persistent persons" which are to remain in Command.
 # Any person not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
+import creds, requests, threading, time
 
-# Demo org creds
-ORG_ID = "01ec0956-b7cf-415d-bd78-43c8d373cd65"
-API_KEY = "vkd_api_1b122b7fa9ae4544b7ae6af9d3fab5c7"
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set the full name for which persons are to be persistent
 PERSISTENT_PERSONS = ["PoI"]

@@ -3,13 +3,10 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import logging
-import requests
-import threading
-import time
+import creds, logging, threading, requests, threading, time
 
-ORG_ID = ""
-API_KEY = ""
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set the full name for which users are to be persistent
 PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
