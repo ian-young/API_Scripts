@@ -3,10 +3,17 @@
 # These names will be "persistent persons" which are to remain in Command.
 # Any person not marked thusly will be deleted from the org.
 
-import creds, requests, threading, time
+import creds, logging, requests, threading, time
 
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
 
 # Set the full name for which persons are to be persistent
 PERSISTENT_PERSONS = ["PoI"]
@@ -122,7 +129,7 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
         persons = data.get('persons_of_interest')
         return persons
     else:
-        print(
+        log.error(
             f"Error with retrieving persons.\
 Status code {response.status_code}")
         return None
@@ -136,7 +143,7 @@ def getIds(persons=None):
         if person.get('person_id'):
             person_id.append(person.get('person_id'))
         else:
-            print(
+            log.error(
                 f"There has been an error with person {person.get('label')}.")
 
     return person_id
@@ -154,7 +161,7 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
     if person_id:
         return person_id
     else:
-        print(f"person {person} was not found in the database...")
+        log.info(f"person {person} was not found in the database...")
         return None
 
 
@@ -165,7 +172,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key
     }
 
-    print(f"Running for person: {printName(person, persons)}")
+    log.info(f"Running for person: {printName(person, persons)}")
 
     params = {
         'org_id': org_id,
@@ -175,17 +182,17 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     response = requests.delete(URL, headers=headers, params=params)
 
     if response.status_code != 200:
-        print(f"An error has occured. Status code {response.status_code}")
+        log.error(f"An error has occured. Status code {response.status_code}")
         return 2  # Completed unsuccesfully
 
 
 def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        print("There's nothing here")
+        log.warning("There's nothing here")
         return
 
-    print("\nPurging...")
+    log.info("Purging...")
 
     start_time = time.time()
     threads = []
@@ -203,7 +210,7 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     elapsed_time = str(end_time - start_time)
 
     print("Purge complete.")
-    print(f"Time to complete: {elapsed_time}")
+    log.debug(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -219,7 +226,7 @@ def printName(to_delete, persons):
     if person_name:
         return person_name
     else:
-        print(f"person {to_delete} was not found in the database...")
+        log.warning(f"person {to_delete} was not found in the database...")
         return "Error finding name"
 
 
@@ -233,25 +240,25 @@ def run():
 
     warn()
 
-    print("Retrieving persons")
+    log.info("Retrieving persons")
     persons = getPeople()
-    print("persons retrieved.\n")
+    log.info("persons retrieved.\n")
 
     # Run if persons were found
     if persons:
-        print("Gather IDs")
+        log.info("Gather IDs")
         all_person_ids = getIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        print("IDs aquired.\n")
+        log.info("IDs aquired.\n")
 
         safe_person_ids = []
 
-        print("Searching for safe persons.")
+        log.info("Searching for safe persons.")
         # Create the list of safe persons
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
-        print("Safe persons found.\n")
+        log.info("Safe persons found.\n")
 
         # New list that filters persons that are safe
         persons_to_delete = [
@@ -262,15 +269,15 @@ def run():
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            log.info("-------------------------------")
+            log.info(
                 "The organization has already been purged.\
 There are no more persons to delete.")
-            print("-------------------------------")
+            log.info("-------------------------------")
 
             return 1  # Completed
     else:
-        print("No persons were found.")
+        log.warning("No persons were found.")
 
         return 1  # Copmleted
 

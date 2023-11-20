@@ -3,10 +3,17 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import creds, logging, threading, requests, threading, time
+import creds, logging, requests, threading, time
 
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
 
 # Set the full name for which users are to be persistent
 PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
@@ -189,7 +196,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key
     }
 
-    logging.info(f"Running for person: {printName(person, persons)}")
+    log.info(f"Running for person: {printName(person, persons)}")
 
     params = {
         'org_id': org_id,
@@ -200,7 +207,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         USER_CONTROL_URL, headers=headers, params=params)
 
     if response.status_code != 200:
-        logging.error(
+        log.error(
             f"An error has occured. Status code {response.status_code}")
         return 2  # Completed unsuccesfully
 
@@ -208,10 +215,10 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
 def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        logging.critical("There's nothing here")
+        log.warning("There's nothing here")
         return
 
-    logging.info("\nPurging...")
+    log.info("Purging...")
 
     start_time = time.time()
     threads = []
@@ -228,8 +235,8 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    logging.info("Purge complete.")
-    logging.debug(f"Time to complete: {elapsed_time}")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 

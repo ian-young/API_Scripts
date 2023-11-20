@@ -3,10 +3,17 @@
 # These names will be "persistent plates" which are to remain in Command.
 # Any plate not marked thusly will be deleted from the org.
 
-import creds, logging, threading, requests, threading, time
+import creds, logging, requests, threading, time
 
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = ["Random"]
@@ -123,7 +130,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         plates = data.get('license_plate_of_interest')
         return plates
     else:
-        print(
+        log.critical(
             f"Error with retrieving plates.\
 Status code {response.status_code}")
         return None
@@ -137,7 +144,7 @@ def getIds(plates=None):
         if plate.get('license_plate'):
             plate_id.append(plate.get('license_plate'))
         else:
-            print(
+            log.error(
                 f"There has been an error with plate {plate.get('label')}.")
 
     return plate_id
@@ -155,7 +162,7 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
     if plate_id:
         return plate_id
     else:
-        print(f"plate {plate} was not found in the database...")
+        log.warning(f"plate {plate} was not found in the database...")
         return None
 
 
@@ -166,7 +173,7 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key
     }
 
-    print(f"Running for plate: {printName(plate, plates)}")
+    log.info(f"Running for plate: {printName(plate, plates)}")
 
     params = {
         'org_id': org_id,
@@ -176,17 +183,17 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     response = requests.delete(URL, headers=headers, params=params)
 
     if response.status_code != 200:
-        print(f"An error has occured. Status code {response.status_code}")
+        log.error(f"An error has occured. Status code {response.status_code}")
         return 2  # Completed unsuccesfully
 
 
 def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        print("There's nothing here")
+        log.warning("There's nothing here")
         return
 
-    print("\nPurging...")
+    log.info("Purging...")
 
     start_time = time.time()
     threads = []
@@ -203,8 +210,8 @@ def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    print("Purge complete.")
-    logging.info(f"Time to complete: {elapsed_time}")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -240,19 +247,19 @@ def run():
 
     # Run if plates were found
     if plates:
-        print("Gather IDs")
+        log.info("Gather IDs")
         all_plate_ids = getIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        print("IDs aquired.\n")
+        log.info("IDs aquired.\n")
 
         safe_plate_ids = []
 
-        print("Searching for safe plates.")
+        log.info("Searching for safe plates.")
         # Create the list of safe plates
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        print("Safe plates found.\n")
+        log.info("Safe plates found.\n")
 
         # New list that filters plates that are safe
         plates_to_delete = [
@@ -263,15 +270,15 @@ def run():
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            log.info("-------------------------------")
+            log.info(
                 "The organization has already been purged.\
 There are no more plates to delete.")
-            print("-------------------------------")
+            log.info("-------------------------------")
 
             return 1  # Completed
     else:
-        print("No plates were found.")
+        log.warning("No plates were found.")
 
         return 1  # Copmleted
 

@@ -3,10 +3,17 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import creds, logging, threading, requests, threading, time
+import creds, logging, requests, threading, time
 
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
 
 # Set the full name for which users are to be persistent
 PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
@@ -46,7 +53,7 @@ def getUsers(org_id=ORG_ID, api_key=API_KEY):
         users = data.get('access_members')
         return users
     else:
-        logging.error(
+        log.critical(
             f"Error with retrieving users.\
 Status code {response.status_code}")
         return None
@@ -60,7 +67,7 @@ def getIds(users=None):
         if user.get('user_id'):
             user_id.append(user.get('user_id'))
         else:
-            logging.error(
+            log.error(
                 f"There has been an error with user {user.get('full_name')}.")
 
     return user_id
@@ -78,7 +85,7 @@ def getUserId(user=PERSISTENT_USERS, users=None):
     if user_id:
         return user_id
     else:
-        logging.critical(f"User {user} was not found in the database...")
+        log.error(f"User {user} was not found in the database...")
         return None
 
 
@@ -89,7 +96,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key
     }
 
-    logging.info(f"Running for person: {printName(person, persons)}")
+    log.info(f"Running for person: {printName(person, persons)}")
 
     params = {
         'org_id': org_id,
@@ -100,7 +107,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         USER_CONTROL_URL, headers=headers, params=params)
 
     if response.status_code != 200:
-        logging.error(
+        log.error(
             f"An error has occured. Status code {response.status_code}")
         return 2  # Completed unsuccesfully
 
@@ -108,10 +115,10 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
 def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        logging.critical("There's nothing here")
+        log.warning("There's nothing here")
         return
 
-    logging.info("\nPurging...")
+    log.info("Purging...")
 
     start_time = time.time()
     threads = []
@@ -128,8 +135,8 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    logging.info("Purge complete.")
-    logging.debug(f"Time to complete: {elapsed_time}")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -145,31 +152,31 @@ def printName(to_delete, users):
     if user_name:
         return user_name
     else:
-        logging.critical(f"User {to_delete} was not found in the database...")
+        log.warning(f"User {to_delete} was not found in the database...")
         return "Error finding name"
 
 
 def run():
     """Allows the program to be ran if being imported as a module"""
-    logging.info("Retrieving users")
+    log.info("Retrieving users")
     users = getUsers()
-    logging.info("Users retrieved.\n")
+    log.info("Users retrieved.\n")
 
     # Run if users were found
     if users:
-        logging.info("Gather IDs")
+        log.info("Gather IDs")
         all_user_ids = getIds(users)
         all_user_ids = cleanList(all_user_ids)
-        logging.info("IDs aquired.\n")
+        log.info("IDs aquired.\n")
 
         safe_user_ids = []
 
         # Create the list of safe users
-        logging.info("Searching for safe users.")
+        log.info("Searching for safe users.")
         for user in PERSISTENT_USERS:
             safe_user_ids.append(getUserId(user, users))
         safe_user_ids = cleanList(safe_user_ids)
-        logging.info("Safe users found.\n")
+        log.info("Safe users found.\n")
 
         # New list that filters users that are safe
         users_to_delete = [
@@ -180,15 +187,15 @@ def run():
             return 1  # Completed
 
         else:
-            logging.info("-------------------------------")
-            logging.info(
+            log.info("-------------------------------")
+            log.info(
                 "The organization has already been purged.\
                       There are no more users to delete.")
-            logging.info("-------------------------------")
+            log.info("-------------------------------")
 
             return 1  # Completed
     else:
-        logging.warning("No users were found.")
+        log.warning("No users were found.")
 
         return 1  # Copmleted
 

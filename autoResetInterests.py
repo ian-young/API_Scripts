@@ -8,6 +8,13 @@ import creds, logging, requests, threading, time
 ORG_ID = creds.demo_id
 API_KEY = creds.demo_key
 
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+    )
+
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = []
 PERSISTENT_PERSONS = []
@@ -53,7 +60,7 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
         persons = data.get('persons_of_interest')
         return persons
     else:
-        logging.error(
+        log.critical(
             f"Error with retrieving persons.\
 Status code {response.status_code}")
         return None
@@ -67,7 +74,7 @@ def getPeopleIds(persons=None):
         if person.get('person_id'):
             person_id.append(person.get('person_id'))
         else:
-            logging.error(
+            log.error(
                 f"There has been an error with person {person.get('label')}.")
     return person_id
 
@@ -84,7 +91,7 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
     if person_id:
         return person_id
     else:
-        logging.warning(f"person {person} was not found in the database...")
+        log.warning(f"person {person} was not found in the database...")
         return None
 
 
@@ -95,7 +102,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key
     }
 
-    logging.info(f"Running for person: {printPersonName(person, persons)}")
+    log.info(f"Running for person: {printPersonName(person, persons)}")
 
     params = {
         'org_id': org_id,
@@ -105,7 +112,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     response = requests.delete(PERSON_URL, headers=headers, params=params)
 
     if response.status_code != 200:
-        logging.error(f"\
+        log.error(f"\
 An error has occured. Status code {response.status_code}")
         return 2  # Completed unsuccesfully
 
@@ -113,10 +120,10 @@ An error has occured. Status code {response.status_code}")
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        logging.critical("There's nothing here")
+        log.warning("There's nothing here")
         return
 
-    logging.info("\nPurging...")
+    log.info("\nPurging...")
 
     start_time = time.time()
     threads = []
@@ -133,8 +140,8 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    logging.info("Purge complete.")
-    logging.debug(f"Time to complete: {elapsed_time}")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -159,28 +166,25 @@ def runPeople():
     # Uncomment the lines below if you want to manually set these values
     # each time the program is ran
 
-    # org = str(input("Org ID: ""))
-    # key = str(input("API key: "))
-
-    logging.info("Retrieving persons")
+    log.info("Retrieving persons")
     persons = getPeople()
-    logging.info("persons retrieved.\n")
+    log.info("persons retrieved.\n")
 
     # Run if persons were found
     if persons:
-        logging.info("Gather IDs")
+        log.info("Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        logging.info("IDs aquired.\n")
+        log.info("IDs aquired.\n")
 
         safe_person_ids = []
 
-        logging.info("Searching for safe persons.")
+        log.info("Searching for safe persons.")
         # Create the list of safe persons
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
-        logging.info("Safe persons found.\n")
+        log.info("Safe persons found.\n")
 
         # New list that filters persons that are safe
         persons_to_delete = [
@@ -192,15 +196,15 @@ def runPeople():
             return 1  # Completed
 
         else:
-            logging.info("-------------------------------")
-            logging.info(
+            log.info("-------------------------------")
+            log.info(
                 "The organization has already been purged.\
 There are no more persons to delete.")
-            logging.info("-------------------------------")
+            log.info("-------------------------------")
 
             return 1  # Completed
     else:
-        logging.warning("No persons were found.")
+        log.warning("No persons were found.")
 
         return 1  # Copmleted
 
