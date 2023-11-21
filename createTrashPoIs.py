@@ -13,9 +13,9 @@ API_KEY = creds.lab_key
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
-    level = logging.INFO,
-    format = "%(levelname)s: %(message)s"
-    )
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s"
+)
 
 # Define header and parameters for API requests
 HEADERS = {
@@ -27,6 +27,10 @@ HEADERS = {
 PARAMS = {
     "org_id": ORG_ID
 }
+
+
+class APIThrottleException(Exception):
+    pass
 
 
 def createPOI(name, image, download):
@@ -55,26 +59,41 @@ def createPOI(name, image, download):
         "base64_image": base64_image
     }
 
-    response = requests.post(
-        URL_POI, json=payload, headers=HEADERS, params=PARAMS)
+    try:
+        response = requests.post(
+            URL_POI, json=payload, headers=HEADERS, params=PARAMS)
 
-    if response.status_code != 200:
-        log.warning(f"{response.status_code}: Could not create {name}")
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        
+        elif response.status_code != 200:
+            log.warning(f"{response.status_code}: Could not create {name}")
+
+    except APIThrottleException:
+        log.critical("Hit API request rate limit of 500/min")
 
 
-def createLPOI(name, plate):
+def createPlate(name, plate):
     """Create a LPoI with a given name and plate"""
     payload = {
-        'description': name,
-        'license_plate': plate
+        "description": name,
+        "license_plate": plate
     }
 
-    response = requests.post(URL_LPR, json=payload, headers=HEADERS,
-                             params=PARAMS)
+    try:
+        response = requests.post(
+            URL_LPR, json=payload, headers=HEADERS, params=PARAMS)
 
-    if response.status_code != 200:
-        log.error(f"Something went wrong while creating {name}.")
-        log.error(f"Status Code {response.status_code}")
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        elif response.status_code != 200:
+            log.warning(f"{response.status_code}: Could not create {name}")
+            log.warning(f"Response content: {response.text}")
+
+    except APIThrottleException:
+        log.critical("Hit API request rate limit of 500/min")
+    except Exception as e:
+        log.error(f"An unexpected error occurred: {e}")
 
 
 # Check if the code is being ran directly or imported
@@ -88,7 +107,7 @@ c58609d4feca744209047e57&ipo=images'
     threads = []
     for i in range(1, 11):
         name = f'PoI{i}'
-        plate = f'a{i}b{i}c{i}'
+        plate = f'PLATE{i}'
         plate_name = f'Plate{i}'
 
         log.info(f"Running for {name} & {plate_name}")
@@ -98,15 +117,15 @@ c58609d4feca744209047e57&ipo=images'
         thread_poi.start()
         threads.append(thread_poi)
 
-        # thread_lpoi = threading.Thread(
-        #    target=createPOI, args=(plate_name, plate)
-        # )
-        # thread_lpoi.start
-        # threads.append(thread_lpoi)
+        thread_lpoi = threading.Thread(
+            target=createPlate, args=(plate_name, plate)
+        )
+        thread_lpoi.start()
+        threads.append(thread_lpoi)
 
     for thread in threads:
         thread.join()
-    
+
     end_time = time.time()
     elapsed_time = end_time - start_time
     log.info(f"Time to complete: {elapsed_time}")

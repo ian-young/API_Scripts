@@ -5,8 +5,8 @@
 
 import creds, logging, requests, threading, time
 
-ORG_ID = creds.demo_id
-API_KEY = creds.demo_key
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set logger
 log = logging.getLogger()
@@ -27,6 +27,10 @@ PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 ##############################################################################
                                 #  Misc  #
 ##############################################################################
+
+
+class APIThrottleException(Exception):
+    pass
 
 
 def cleanList(list):
@@ -109,12 +113,19 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         'person_id': person
     }
 
-    response = requests.delete(PERSON_URL, headers=headers, params=params)
-
-    if response.status_code != 200:
-        log.error(f"\
+    try:
+        response = requests.delete(PERSON_URL, headers=headers, params=params)
+    
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        
+        elif response.status_code != 200:
+            log.error(f"\
 An error has occured. Status code {response.status_code}")
-        return 2  # Completed unsuccesfully
+        
+    except APIThrottleException:
+                    log.critical("Hit API request rate limit of 500 requests per minute.")
+
 
 
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
@@ -123,7 +134,7 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
         log.warning("There's nothing here")
         return
 
-    log.info("\nPurging...")
+    log.info("Purging...")
 
     start_time = time.time()
     threads = []
@@ -158,7 +169,7 @@ def printPersonName(to_delete, persons):
         return person_name
     else:
         logging.error(f"person {to_delete} was not found in the database...")
-        return "Error finding name"
+        return None
 
 
 def runPeople():
@@ -241,7 +252,7 @@ Status code {response.status_code}")
 
 
 def getPlateIds(plates=None):
-    """Returns an array of all PoI labels in an organization"""
+    """Returns an array of all LPoI labels in an organization"""
     plate_id = []
 
     for plate in plates:
@@ -255,7 +266,7 @@ def getPlateIds(plates=None):
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-    """Returns the Verkada ID for a given PoI"""
+    """Returns the Verkada ID for a given LPoI"""
     plate_id = None  # Pre-define
 
     for name in plates:
@@ -284,12 +295,18 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         'license_plate': plate
     }
 
-    response = requests.delete(PLATE_URL, headers=headers, params=params)
-
-    if response.status_code != 200:
-        logging.error(f"\
+    try:
+        response = requests.delete(PLATE_URL, headers=headers, params=params)
+    
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        
+        elif response.status_code != 200:
+            log.error(f"\
 An error has occured. Status code {response.status_code}")
-        return 2  # Completed unsuccesfully
+        
+    except APIThrottleException:
+                    log.critical("Hit API request rate limit of 500 requests per minute.")
 
 
 def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
@@ -298,7 +315,7 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
         logging.critical("There's nothing here")
         return
 
-    logging.info("\nPurging...")
+    logging.info("Purging...")
 
     start_time = time.time()
     threads = []
@@ -333,7 +350,7 @@ def printPlateName(to_delete, plates):
         return plate_name
     else:
         logging.error(f"plate {to_delete} was not found in the database...")
-        return "Error finding name"
+        return None
 
 
 def runPlates():
@@ -387,8 +404,8 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
-    PoI = threading.Thread(target=runPeople())
-    LPoI = threading.Thread(target=runPlates())
+    PoI = threading.Thread(target=runPeople)
+    LPoI = threading.Thread(target=runPlates)
 
     # Start the threads running independantly
     PoI.start()
