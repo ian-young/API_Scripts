@@ -8,6 +8,10 @@ import creds, logging, requests, threading, time
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
 
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
+
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
@@ -65,7 +69,7 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
         return persons
     else:
         log.critical(
-            f"Error with retrieving persons.\
+            f"Person - Error with retrieving persons.\
 Status code {response.status_code}")
         return None
 
@@ -95,7 +99,7 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
     if person_id:
         return person_id
     else:
-        log.warning(f"person {person} was not found in the database...")
+        log.warning(f"Person {person} was not found in the database...")
         return None
 
 
@@ -121,29 +125,40 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         
         elif response.status_code != 200:
             log.error(f"\
-An error has occured. Status code {response.status_code}")
+Person - An error has occured. Status code {response.status_code}")
         
     except APIThrottleException:
-                    log.critical("Hit API request rate limit of 500 requests per minute.")
+                    log.critical("Person - Hit API request rate limit of 500 requests per minute.")
 
 
 
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+    
     if not delete:
-        log.warning("There's nothing here")
+        log.warning("Person - There's nothing here")
         return
 
-    log.info("Purging...")
+    log.info("Person - Purging...")
 
     start_time = time.time()
     threads = []
     for person in delete:
+        # Stop making threads if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        
+        # Toss delete function into a new thread
         thread = threading.Thread(
             target=delete_person, args=(person, persons, org_id, api_key)
         )
         thread.start()
-        threads.append(thread)
+        threads.append(thread)  # Add the thread to the pile
+
+        # Make sure the other thread isn't writing
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1  # Log that the thread was made
 
     for thread in threads:
         thread.join()  # Join back to main thread
@@ -151,8 +166,8 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    log.info("Purge complete.")
-    log.info(f"Time to complete: {elapsed_time}")
+    log.info("Person - Purge complete.")
+    log.info(f"Person - Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -168,7 +183,7 @@ def printPersonName(to_delete, persons):
     if person_name:
         return person_name
     else:
-        logging.error(f"person {to_delete} was not found in the database...")
+        log.error(f"Person {to_delete} was not found in the database...")
         return None
 
 
@@ -183,10 +198,10 @@ def runPeople():
 
     # Run if persons were found
     if persons:
-        log.info("Gather IDs")
+        log.info("Person - Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        log.info("IDs aquired.\n")
+        log.info("Person - IDs aquired.\n")
 
         safe_person_ids = []
 
@@ -207,11 +222,9 @@ def runPeople():
             return 1  # Completed
 
         else:
-            log.info("-------------------------------")
             log.info(
-                "The organization has already been purged.\
+                "Person - The organization has already been purged.\
 There are no more persons to delete.")
-            log.info("-------------------------------")
 
             return 1  # Completed
     else:
@@ -245,8 +258,8 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         plates = data.get('license_plate_of_interest')
         return plates
     else:
-        logging.error(
-            f"Error with retrieving plates.\
+        log.error(
+            f"Plate - Error with retrieving plates.\
 Status code {response.status_code}")
         return None
 
@@ -259,8 +272,8 @@ def getPlateIds(plates=None):
         if plate.get('license_plate'):
             plate_id.append(plate.get('license_plate'))
         else:
-            logging.error(
-                f"There has been an error with plate {plate.get('label')}.")
+            log.error(
+                f"Plate - There has been an error with plate {plate.get('label')}.")
 
     return plate_id
 
@@ -277,7 +290,7 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
     if plate_id:
         return plate_id
     else:
-        logging.error(f"plate {plate} was not found in the database...")
+        log.error(f"Plate {plate} was not found in the database...")
         return None
 
 
@@ -288,7 +301,7 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key
     }
 
-    logging.info(f"Running for plate: {printPlateName(plate, plates)}")
+    log.info(f"Running for plate: {printPlateName(plate, plates)}")
 
     params = {
         'org_id': org_id,
@@ -303,28 +316,39 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         
         elif response.status_code != 200:
             log.error(f"\
-An error has occured. Status code {response.status_code}")
+Plate - An error has occured. Status code {response.status_code}")
         
     except APIThrottleException:
-                    log.critical("Hit API request rate limit of 500 requests per minute.")
+                    log.critical("Plate - Hit API request rate limit of 500 requests per minute.")
 
 
 def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all PoIs that aren't marked as safe/persistent"""
+    """Purges all LPoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+    
     if not delete:
-        logging.critical("There's nothing here")
+        log.warning("Plate - There's nothing here")
         return
 
-    logging.info("Purging...")
+    log.info("Plate - Purging...")
 
     start_time = time.time()
     threads = []
-    for person in delete:
+    for plate in delete:
+        # Stop making threads if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        
+        # Toss delete function into a new thread
         thread = threading.Thread(
-            target=delete_plate, args=(person, plates, org_id, api_key)
+            target=delete_plate, args=(plate, plates, org_id, api_key)
         )
         thread.start()
-        threads.append(thread)
+        threads.append(thread)  # Add the thread to the pile
+
+        # Make sure the other thread isn't writing
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1  # Log that the thread was made
 
     for thread in threads:
         thread.join()  # Join back to main thread
@@ -332,8 +356,8 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    logging.info("Purge complete.")
-    logging.debug(f"Time to complete: {elapsed_time}")
+    log.info("Plate - Purge complete.")
+    log.info(f"Plate - Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -349,31 +373,31 @@ def printPlateName(to_delete, plates):
     if plate_name:
         return plate_name
     else:
-        logging.error(f"plate {to_delete} was not found in the database...")
+        log.error(f"Plate {to_delete} was not found in the database...")
         return None
 
 
 def runPlates():
     """Allows the program to be ran if being imported as a module"""
-    logging.info("Retrieving plates")
+    log.info("Retrieving plates")
     plates = getPlates()
-    logging.info("plates retrieved.\n")
+    log.info("Plates retrieved.\n")
 
     # Run if plates were found
     if plates:
-        logging.info("Gather IDs")
+        log.info("Plate - Gather IDs")
         all_plate_ids = getPlateIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        logging.info("IDs aquired.\n")
+        log.info("Plate - IDs aquired.\n")
 
         safe_plate_ids = []
 
-        logging.info("Searching for safe plates.")
+        log.info("Searching for safe plates.")
         # Create the list of safe plates
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        logging.info("Safe plates found.\n")
+        log.info("Safe plates found.\n")
 
         # New list that filters plates that are safe
         plates_to_delete = [
@@ -384,15 +408,13 @@ def runPlates():
             return 1  # Completed
 
         else:
-            logging.info("-------------------------------")
-            logging.info(
+            log.info(
                 "The organization has already been purged.\
 There are no more plates to delete.")
-            logging.info("-------------------------------")
 
             return 1  # Completed
     else:
-        logging.info("No plates were found.")
+        log.info("No plates were found.")
 
         return 1  # Copmleted
 
@@ -405,12 +427,12 @@ There are no more plates to delete.")
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
     PoI = threading.Thread(target=runPeople)
-    LPoI = threading.Thread(target=runPlates)
+    # LPoI = threading.Thread(target=runPlates)
 
     # Start the threads running independantly
     PoI.start()
-    LPoI.start()
+    # LPoI.start()
 
     # Join the threads back to parent process
     PoI.join()
-    LPoI.join()
+    # LPoI.join()

@@ -5,10 +5,15 @@ import base64, creds, logging, requests, threading, time
 
 # Globally-defined Verkada PoI URL
 URL_POI = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-URL_LPR = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
+URL_LPR = "https://api.verkada.com/cameras/v1/\
+analytics/lpr/license_plate_of_interest"
 
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
+
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
 
 # Set logger
 log = logging.getLogger()
@@ -35,6 +40,12 @@ class APIThrottleException(Exception):
 
 def createPOI(name, image, download):
     """Will create a person of interest with a given URL to an image or path to a file"""
+    global CALL_COUNT
+
+    # Don't bother running if at throttle limit
+    if CALL_COUNT >= 500:
+        return
+    
     file_content = None  # Pre-define
 
     if download == 'y':
@@ -62,6 +73,9 @@ def createPOI(name, image, download):
     try:
         response = requests.post(
             URL_POI, json=payload, headers=HEADERS, params=PARAMS)
+        
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
@@ -75,6 +89,12 @@ def createPOI(name, image, download):
 
 def createPlate(name, plate):
     """Create a LPoI with a given name and plate"""
+    global CALL_COUNT
+
+    # Don't even bother running if at the throttle limit
+    if CALL_COUNT >= 500:
+        return
+    
     payload = {
         "description": name,
         "license_plate": plate
@@ -83,6 +103,9 @@ def createPlate(name, plate):
     try:
         response = requests.post(
             URL_LPR, json=payload, headers=HEADERS, params=PARAMS)
+        
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")

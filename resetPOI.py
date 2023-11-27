@@ -8,6 +8,10 @@ import creds, logging, requests, threading, time
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
 
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
+
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
@@ -188,6 +192,8 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
 
 def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+
     if not delete:
         log.warning("There's nothing here")
         return
@@ -197,11 +203,17 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     start_time = time.time()
     threads = []
     for person in delete:
+        if CALL_COUNT >= 500: 
+            return
+        
         thread = threading.Thread(
             target=delete_person, args=(person, persons, org_id, api_key)
         )
         thread.start()
         threads.append(thread)
+
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1
 
     for thread in threads:
         thread.join()  # Join back to main thread
