@@ -1,15 +1,26 @@
 # Author: Ian Young
 # NOTE: comment out the globally defined API_KEY and uncomment the other API lines if
 # you'd like to enter it manually each time you run the script.
-import requests
+import requests, creds
 
 # Globally defined variables
-API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
+API_KEY = creds.lab_key
 URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 
 def getPersonID(org_id, label_to_search, api_key=API_KEY):
-    """Accepts a string as a search value and returns the person id associated with it"""
+    """
+    Accepts a string as a search value and returns the person id associated with it.
+
+    :param org_id: Organization ID.
+    :type org_id: str
+    :param label_to_search: The PoI label to search for.
+    :type label_to_search: str
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: Returns the PoI ID.
+    :rtype: str
+    """
 
     # Define request headers
     headers = {
@@ -46,10 +57,21 @@ def getPersonID(org_id, label_to_search, api_key=API_KEY):
             f"Failed to retrieve persons of interest. Status code: {response.status_code}")
 
 
-def updateName(person_id, newLabel, api_key=API_KEY):
-    """Takes a person ID and a string and will change the label of the given PoI"""
+def updateName(person_id, new_label, api_key=API_KEY):
+    """
+    Takes a person ID and a string and will change the label of the given PoI.
+    
+    :param person_id: The ID of the PoI to change the name of.
+    :type person_id: str
+    :param new_label: The new name/label to give the PoI.
+    :type new_label: str
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: None
+    :rtype: None
+    """
 
-    payload = {"label": newLabel}
+    payload = {"label": new_label}
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
@@ -66,9 +88,9 @@ def updateName(person_id, newLabel, api_key=API_KEY):
         URL, json=payload, headers=headers, params=params)
 
     if response.status_code == 200:
-        print(f"Changed name to '{newLabel}'")
+        print(f"Changed name to '{new_label}'")
     else:
-        print(f"Could not change '{person_id}' to '{newLabel}'.")
+        print(f"Could not change '{person_id}' to '{new_label}'.")
 
 
 # Check if it is being ran directly or imported

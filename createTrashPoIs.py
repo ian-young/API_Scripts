@@ -35,11 +35,32 @@ PARAMS = {
 
 
 class APIThrottleException(Exception):
-    pass
+    """
+    Exception raised when the API request rate limit is exceeded.
+
+    :param message: A human-readable description of the exception.
+    :type message: str
+    """
+    def __init__(self, message="API throttle limit exceeded."):
+        self.message = message
+        super.__init__(self.message)
 
 
 def createPOI(name, image, download):
-    """Will create a person of interest with a given URL to an image or path to a file"""
+    """
+    Will create a person of interest with a given URL to an image or path to a file
+    
+    :param name: The name of the person of interest to be created.
+    :type name: str
+    :param image: The URL to the image of the person of interest. This image
+must be a portrait of a human.
+    :type image: str
+    :param download: A value of 'y' or 'n' to indicate whether the image needs
+to be downloaded. Most cases, the value will be 'y.'
+    :type download: str
+    :return: None
+    :rtype: None
+    """
     global CALL_COUNT
 
     # Don't bother running if at throttle limit
@@ -88,7 +109,17 @@ def createPOI(name, image, download):
 
 
 def createPlate(name, plate):
-    """Create a LPoI with a given name and plate"""
+    """
+    Create a LPoI with a given name and license plate number.
+
+    :param name: This is the name that will be used for the description of the
+license plate.
+    :type name: str
+    :param plate: The value of the license plate.
+    :type plate: str
+    :return: None
+    :rtype: None
+    """
     global CALL_COUNT
 
     # Don't even bother running if at the throttle limit
