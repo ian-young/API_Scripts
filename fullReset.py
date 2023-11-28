@@ -3,10 +3,21 @@
 # These names will be "persistent" which are to remain in Command.
 # Anything not marked thusly will be deleted from the org.
 
-import requests
+import creds, logging, requests, threading, time
 
-ORG_ID = "16f37a49-2c89-4bd9-b667-a28af7700068"
-API_KEY = "vkd_api_356c542f37264c99a6e1f95cac15f6af"
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(levelname)s: %(message)s"
+)
+
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = ["Random"]
@@ -27,6 +38,10 @@ USER_CONTROL_URL = "https://api.verkada.com/core/v1/user"
 ##############################################################################
 
 
+class APIThrottleException(Exception):
+    pass
+
+
 def warn():
     """Prints a warning message before continuing"""
     print("-------------------------------")
@@ -38,7 +53,7 @@ def warn():
     cont = None
 
     while cont not in ["", " "]:
-        cont = str(input("Press enter to continue\n")).strip()
+        cont = str(input("Press enter to continue")).strip()
 
 
 def cleanList(list):
@@ -124,6 +139,8 @@ application found.")
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
     """Returns JSON-formatted persons in a Command org"""
+    global CALL_COUNT
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -134,6 +151,9 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PERSON_URL, headers=headers, params=params)
+    
+    with CALL_COUNT_LOCK:
+        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -142,7 +162,7 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
         persons = data.get('persons_of_interest')
         return persons
     else:
-        print(
+        log.critical(
             f"Error with retrieving persons.\
 Status code {response.status_code}")
         return None
@@ -156,7 +176,7 @@ def getPeopleIds(persons=None):
         if person.get('person_id'):
             person_id.append(person.get('person_id'))
         else:
-            print(
+            log.error(
                 f"There has been an error with person {person.get('label')}.")
 
     return person_id
@@ -174,38 +194,80 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
     if person_id:
         return person_id
     else:
-        print(f"person {person} was not found in the database...")
-        return None
+        return "No name provided"
 
 
-def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all PoIs that aren't marked as safe/persistent"""
-    if not delete:
-        print("There's nothing here")
-        return
-
-    print("\nPurging...")
-
+def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    for person in delete:
-        print(f"Running for person: {printPersonName(person, persons)}")
+    log.info(f"Running for person: {printPersonName(person, persons)}")
 
-        params = {
-            'org_id': org_id,
-            'person_id': person
-        }
+    params = {
+        'org_id': org_id,
+        'person_id': person
+    }
 
+    try:
+        # Stop running if already at the limit
+        if CALL_COUNT >= 500:
+            return
         response = requests.delete(PERSON_URL, headers=headers, params=params)
+    
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        
+        elif response.status_code == 504:
+            log.warning(f"Plate - Timed out.")
+        
+        elif response.status_code != 200:
+            log.error(f"\
+Person - An error has occured. Status code {response.status_code}")
+        
+    except APIThrottleException:
+                    log.critical("Person - Hit API request rate limit of 500 requests per minute.")
 
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
 
-    print("Purge complete.")
+
+def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all PoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+
+    if not delete:
+        log.warning("Person - There's nothing here")
+        return
+
+    log.info("Person - Purging...")
+
+    start_time = time.time()
+    threads = []
+    for person in delete:
+        # Stop making threads if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        
+        # Toss delete function into a new thread
+        thread = threading.Thread(
+            target=delete_person, args=(person, persons, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)  # Add the thread to the pile
+
+        # Make sure the other thread isn't writing
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1  # Log that the thread was made
+
+    for thread in threads:
+        thread.join()  # Join back to main thread
+
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
+
+    log.info("Person - Purge complete.")
+    log.info(f"Person - Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -216,13 +278,12 @@ def printPersonName(to_delete, persons):
     for person in persons:
         if person.get('person_id') == to_delete:
             person_name = person.get('label')
-            break  # No need to continue running once found
+            return  # No need to continue running once found
 
     if person_name:
         return person_name
     else:
-        print(f"person {to_delete} was not found in the database...")
-        return "Error finding name"
+        return "No name provided"
 
 
 def runPeople():
@@ -233,25 +294,25 @@ def runPeople():
     # org = str(input("Org ID: ""))
     # key = str(input("API key: "))
 
-    print("Retrieving persons")
+    log.info("Retrieving persons")
     persons = getPeople()
-    print("persons retrieved.\n")
+    log.info("persons retrieved.")
 
     # Run if persons were found
     if persons:
-        print("Gather IDs")
+        log.info("Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        print("IDs aquired.\n")
+        log.info("IDs aquired.")
 
         safe_person_ids = []
 
-        print("Searching for safe persons.")
+        log.info("Searching for safe persons.")
         # Create the list of safe persons
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
-        print("Safe persons found.\n")
+        log.info("Safe persons found.")
 
         # New list that filters persons that are safe
         persons_to_delete = [
@@ -262,16 +323,13 @@ def runPeople():
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            log.warning(
                 "The organization has already been purged.\
 There are no more persons to delete.")
-            print("-------------------------------")
-
             return 1  # Completed
+        
     else:
-        print("No persons were found.")
-
+        log.warning("No persons were found.")
         return 1  # Copmleted
 
 
@@ -351,6 +409,8 @@ application found.")
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
     """Returns JSON-formatted plates in a Command org"""
+    global CALL_COUNT
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -362,6 +422,9 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
 
+    with CALL_COUNT_LOCK:
+        CALL_COUNT += 1
+
     if response.status_code == 200:
         data = response.json()  # Parse the response
 
@@ -369,7 +432,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         plates = data.get('license_plate_of_interest')
         return plates
     else:
-        print(
+        log.critical(
             f"Error with retrieving plates.\
 Status code {response.status_code}")
         return None
@@ -383,7 +446,7 @@ def getPlateIds(plates=None):
         if plate.get('license_plate'):
             plate_id.append(plate.get('license_plate'))
         else:
-            print(
+            log.error(
                 f"There has been an error with plate {plate.get('label')}.")
 
     return plate_id
@@ -401,38 +464,79 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
     if plate_id:
         return plate_id
     else:
-        print(f"plate {plate} was not found in the database...")
-        return None
+        return "No name provided"
 
 
-def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all PoIs that aren't marked as safe/persistent"""
-    if not delete:
-        print("There's nothing here")
-        return
-
-    print("\nPurging...")
-
+def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given person"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    for plate in delete:
-        print(f"Running for plate: {printPlateName(plate, plates)}")
+    log.info(f"Running for plate: {printPlateName(plate, plates)}")
 
-        params = {
-            'org_id': org_id,
-            'plate_id': plate
-        }
+    params = {
+        'org_id': org_id,
+        'license_plate': plate
+    }
 
+    try:
+        # Stop running if already at the limit
+        if CALL_COUNT >= 500:
+            return
         response = requests.delete(PLATE_URL, headers=headers, params=params)
+    
+        if response.status_code == 429:
+            raise APIThrottleException("API throttled")
+        
+        elif response.status_code == 504:
+            log.warning(f"Plate - Timed out.")
 
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+        elif response.status_code != 200:
+            log.error(f"\
+Plate - An error has occured. Status code {response.status_code}")
+        
+    except APIThrottleException:
+                    log.critical("Plate - Hit API request rate limit of 500 requests per minute.")
 
-    print("Purge complete.")
+
+def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all LPoIs that aren't marked as safe/persistent"""
+    global CALL_COUNT
+    
+    if not delete:
+        log.warning("Plate - There's nothing here")
+        return
+
+    log.info("Plate - Purging...")
+
+    start_time = time.time()
+    threads = []
+    for plate in delete:
+        # Stop making threads if already at the limit
+        if CALL_COUNT >= 500:
+            return
+        
+        # Toss delete function into a new thread
+        thread = threading.Thread(
+            target=delete_plate, args=(plate, plates, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)  # Add the thread to the pile
+
+        # Make sure the other thread isn't writing
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1  # Log that the thread was made
+
+    for thread in threads:
+        thread.join()  # Join back to main thread
+
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
+
+    log.info("Plate - Purge complete.")
+    log.info(f"Plate - Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -448,8 +552,7 @@ def printPlateName(to_delete, plates):
     if plate_name:
         return plate_name
     else:
-        print(f"plate {to_delete} was not found in the database...")
-        return "Error finding name"
+        return "No name provided."
 
 
 def runPlates():
@@ -460,25 +563,25 @@ def runPlates():
     # org = str(input("Org ID: ""))
     # key = str(input("API key: "))
 
-    print("Retrieving plates")
+    log.info("Retrieving plates")
     plates = getPlates()
-    print("plates retrieved.\n")
+    log.info("plates retrieved.")
 
     # Run if plates were found
     if plates:
-        print("Gather IDs")
+        log.info("Gather IDs")
         all_plate_ids = getPlateIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        print("IDs aquired.\n")
+        log.info("IDs aquired.")
 
         safe_plate_ids = []
 
-        print("Searching for safe plates.")
+        log.info("Searching for safe plates.")
         # Create the list of safe plates
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        print("Safe plates found.\n")
+        log.info("Safe plates found.")
 
         # New list that filters plates that are safe
         plates_to_delete = [
@@ -489,15 +592,13 @@ def runPlates():
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            log.warning(
                 "The organization has already been purged.\
 There are no more plates to delete.")
-            print("-------------------------------")
 
             return 1  # Completed
     else:
-        print("No plates were found.")
+        log.warning("No plates were found.")
 
         return 1  # Copmleted
 
@@ -576,6 +677,8 @@ application found.")
 
 def getUsers(org_id=ORG_ID, api_key=API_KEY):
     """Returns JSON-formatted users in a Command org"""
+    global CALL_COUNT
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -586,6 +689,9 @@ def getUsers(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(USER_INFO_URL, headers=headers, params=params)
+
+    with CALL_COUNT_LOCK:
+        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -630,32 +736,64 @@ def getUserId(user=PERSISTENT_USERS, users=None):
         return None
 
 
-def purgeUsers(delete, users, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all users that aren't marked as safe/persistent"""
-    if not delete:
-        print("There's nothing here")
-        return
-
-    print("\nPurging...")
+def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given user"""
+    # Format the URL
+    url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
 
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
+    log.info(f"Running for user: {printUserName(user, users)}")
+    
+    # Stop if at call limit
+    if CALL_COUNT >= 500:
+        return
+    
+    response = requests.delete(url, headers=headers)
+
+    if response.status_code != 200:
+        log.error(
+            f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
+
+
+def purgeUsers(delete, users, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all users that aren't marked as safe/persistent"""
+    global CALL_COUNT
+
+    if not delete:
+        log.warning("There's nothing here")
+        return
+
+    log.info("Purging...")
+
+    start_time = time.time()
+    threads = []
     for user in delete:
-        # Format the URL
-        url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+        # Stop if at call limit
+        if CALL_COUNT >= 500:
+            return
+        
+        thread = threading.Thread(
+            target=delete_user, args=(user, users, org_id, api_key)
+        )
+        thread.start()
+        threads.append(thread)
 
-        print(f"Running for user: {printUserName(user, users)}")
+        with CALL_COUNT_LOCK:
+            CALL_COUNT += 1
 
-        response = requests.delete(url, headers=headers)
+    for thread in threads:
+        thread.join()  # Join back to main thread
 
-        if response.status_code != 200:
-            print(f"An error has occured. Status code {response.status_code}")
-            return 2  # Completed unsuccesfully
+    end_time = time.time()
+    elapsed_time = str(end_time - start_time)
 
-    print("Purge complete.")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
@@ -671,7 +809,7 @@ def printUserName(to_delete, users):
     if user_name:
         return user_name
     else:
-        print(f"User {to_delete} was not found in the database...")
+        log.warning(f"User {to_delete} was not found in the database...")
         return "Error finding name"
     
 
@@ -682,25 +820,25 @@ def runUsers():
 
     warn()
 
-    print("Retrieving users")
+    log.info("Retrieving users")
     users = getUsers()
-    print("Users retrieved.\n")
+    log.info("Users retrieved.")
 
     # Run if users were found
     if users:
-        print("Gather IDs")
+        log.info("Gather IDs")
         all_user_ids = getUserIds(users)
         all_user_ids = cleanList(all_user_ids)
-        print("IDs aquired.\n")
+        log.info("IDs aquired.")
 
         safe_user_ids = []
 
-        print("Searching for safe users.")
+        log.info("Searching for safe users.")
         # Create the list of safe users
         for user in PERSISTENT_USERS:
             safe_user_ids.append(getUserId(user, users))
         safe_user_ids = cleanList(safe_user_ids)
-        print("Safe users found.\n")
+        log.info("Safe users found.")
 
         # New list that filters users that are safe
         users_to_delete = [
@@ -711,11 +849,9 @@ def runUsers():
             return 1  # Completed
 
         else:
-            print("-------------------------------")
-            print(
+            log.warning(
                 "The organization has already been purged.\
                       There are no more users to delete.")
-            print("-------------------------------")
 
             return 1  # Completed
         
@@ -728,29 +864,57 @@ def runUsers():
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
     warn()
+    run_poi = False
+    run_lpoi = False
+    run_user = False
+    
+    poi_thread = threading.Thread(target=runPeople)
+    lpoi_thread = threading.Thread(target=runPlates)
+    user_thread = threading.Thread(target=runUsers)
 
     answer = None
     while answer not in ['y', 'n']:
-        answer = str(input("Would you like to run for users?\n(y/n) "))\
+        answer = str(input("Would you like to run for users?(y/n) "))\
         .strip().lower()
 
         if answer == 'y':
-            runUsers()
+            run_user = True
     
     answer = None
     while answer not in ['y', 'n']:
-        answer = str(input("Would you like to run for PoI?\n(y/n) "))\
+        answer = str(input("Would you like to run for PoI?(y/n) "))\
             .strip().lower()
         
         if answer == 'y':
-            runPeople()
+            run_poi = True
     
     answer = None
     while answer not in ['y', 'n']:
-            answer = str(input("Would you like to run for LPoI?\n(y/n) "))\
+            answer = str(input("Would you like to run for LPoI?(y/n) "))\
                 .strip().lower()
                 
             if answer == 'y':
-                runPlates()
+                run_lpoi = True
 
+    # Time the runtime
+    start_time = time.time()
+
+    # Start threads
+    if run_user:
+        user_thread.start()
+    if run_poi:
+        poi_thread.start()
+    if run_lpoi:
+        lpoi_thread.start()
+
+    # Join back to main thread
+    if run_user:
+        user_thread.join()
+    if run_poi:
+        poi_thread.join()
+    if run_lpoi:
+        lpoi_thread.join()
+
+    # Wrap up in a bow and complete
+    print(f"Time to complete: {time.time() - start_time}")
     print("Exiting...")
