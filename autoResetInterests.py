@@ -34,11 +34,26 @@ PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 
 class APIThrottleException(Exception):
-    pass
+    """
+    Exception raised when the API request rate limit is exceeded.
+
+    :param message: A human-readable description of the exception.
+    :type message: str
+    """
+    def __init__(self, message="API throttle limit exceeded."):
+        self.message = message
+        super.__init__(self.message)
 
 
 def cleanList(list):
-    """Removes any None values from error codes"""
+    """
+    Removes any None values from error codes
+    
+    :param list: The list to be cleaned.
+    :type list: list
+    :return: A new list with None values removed.
+    :rtype: list
+    """
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
 
@@ -49,7 +64,16 @@ def cleanList(list):
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
-    """Returns JSON-formatted persons in a Command org"""
+    """
+    Returns JSON-formatted persons in a Command org.
+    
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: A List of dictionaries of people in an organization.
+    :rtype: list
+    """
     global CALL_COUNT
 
     headers = {
@@ -80,7 +104,16 @@ Status code {response.status_code}")
 
 
 def getPeopleIds(persons=None):
-    """Returns an array of all PoI labels in an organization"""
+    """
+    Returns an array of all PoI labels in an organization.
+    
+    :param persons: A list of dictionaries representing PoIs in an
+organization. Each dictionary should have 'person_id' key.
+Defaults to None.
+    :type persons: list, optional
+    :return: A list of IDs of the PoIs in an organization.
+    :rtype: list
+    """
     person_id = []
 
     for person in persons:
@@ -93,7 +126,17 @@ def getPeopleIds(persons=None):
 
 
 def getPersonId(person=PERSISTENT_PERSONS, persons=None):
-    """Returns the Verkada ID for a given PoI"""
+    """
+    Returns the Verkada ID for a given PoI.
+    
+    :param person: The label of a PoI whose ID is being searched for.
+    :type person: str
+    :param persons: A list of PoI IDs found inside of an organization.
+Each dictionary should have the 'person_id' key. Defaults to None.
+    :type persons: list, optional
+    :return: The person ID of the given PoI.
+    :rtype: str
+    """
     person_id = None  # Pre-define
 
     for name in persons:
@@ -109,7 +152,20 @@ def getPersonId(person=PERSISTENT_PERSONS, persons=None):
 
 
 def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
-    """Deletes the given person"""
+    """
+    Deletes the given person from the organization.
+
+    :param person: The person to be deleted.
+    :type person: str
+    :param persons: A list of PoI IDs found inside of an organization.
+    :type persons: list
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: None
+    :rtype: None
+    """
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -144,7 +200,20 @@ Person - An error has occured. Status code {response.status_code}")
 
 
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all PoIs that aren't marked as safe/persistent"""
+    """
+    Purges all PoIs that aren't marked as safe/persistent.
+    
+    :param delete: A list of PoIs to be deleted from the organization.
+    :type delete: list
+    :param persons: A list of PoIs found inside of an organization.
+    :type persons: list
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: Returns the value of 1 if completed successfully.
+    :rtype: int
+    """
     global CALL_COUNT
 
     if not delete:
@@ -183,7 +252,18 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
 
 def printPersonName(to_delete, persons):
-    """Returns the full name with a given ID"""
+    """
+    Returns the label of a PoI with a given ID
+    
+    :param to_delete: The person ID whose name is being searched for in the
+dictionary.
+    :type to_delete: str
+    :param persons: A list of PoIs found inside of an organization.
+    :type persons: list
+    :return: Returns the name of the person searched for. Will return if there
+was no name found, as well.
+    :rtype: str
+    """
     person_name = None  # Pre-define
 
     for person in persons:
@@ -198,10 +278,12 @@ def printPersonName(to_delete, persons):
 
 
 def runPeople():
-    """Allows the program to be ran if being imported as a module"""
-    # Uncomment the lines below if you want to manually set these values
-    # each time the program is ran
-
+    """
+    Allows the program to be ran if being imported as a module.
+    
+    :return: Returns the value 1 if the program completed successfully.
+    :rtype: int
+    """
     log.info("Retrieving persons")
     persons = getPeople()
     log.info("persons retrieved.")
@@ -249,7 +331,16 @@ There are no more persons to delete.")
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
-    """Returns JSON-formatted plates in a Command org"""
+    """
+    Returns JSON-formatted plates in a Command org.
+    
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: A List of dictionaries of license plates in an organization.
+    :rtype: list
+    """
     global CALL_COUNT
 
     headers = {
@@ -280,7 +371,16 @@ Status code {response.status_code}")
 
 
 def getPlateIds(plates=None):
-    """Returns an array of all LPoI labels in an organization"""
+    """
+    Returns an array of all LPoI labels in an organization.
+    
+    :param plates: A list of dictionaries representing LPoIs in an
+organization. Each dictionary should have 'license_plate' key. 
+Defaults to None.
+    :type plates: list, optional
+    :return: A list of IDs of the LPoIs in an organization.
+    :rtype: list
+    """
     plate_id = []
 
     for plate in plates:
@@ -294,7 +394,17 @@ def getPlateIds(plates=None):
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-    """Returns the Verkada ID for a given LPoI"""
+    """
+    Returns the Verkada ID for a given LPoI.
+    
+    :param plate: The label of a LPoI whose ID is being searched for.
+    :type plate: str
+    :param plates: A list of LPoI IDs found inside of an organization.
+Each dictionary should have the 'license_plate' key. Defaults to None.
+    :type plates: list, optional
+    :return: The plate ID of the given LPoI.
+    :rtype: str
+    """
     plate_id = None  # Pre-define
 
     for name in plates:
@@ -310,7 +420,20 @@ def getPlateId(plate=PERSISTENT_PLATES, plates=None):
 
 
 def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
-    """Deletes the given person"""
+    """
+    Deletes the given plate from the organization.
+
+    :param plate: The plate to be deleted.
+    :type plate: str
+    :param plates: A list of LPoI IDs found inside of an organization.
+    :type plates: list
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: None
+    :rtype: None
+    """
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -344,7 +467,20 @@ Plate - An error has occured. Status code {response.status_code}")
 
 
 def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all LPoIs that aren't marked as safe/persistent"""
+    """
+    Purges all LPoIs that aren't marked as safe/persistent.
+    
+    :param delete: A list of LPoIs to be deleted from the organization.
+    :type delete: list
+    :param plates: A list of LPoIs found inside of an organization.
+    :type plates: list
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: Returns the value of 1 if completed successfully.
+    :rtype: int
+    """
     global CALL_COUNT
     
     if not delete:
@@ -383,7 +519,18 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
 
 def printPlateName(to_delete, plates):
-    """Returns the full name with a given ID"""
+    """
+    Returns the description of a LPoI with a given ID
+    
+    :param to_delete: The person ID whose name is being searched for in the
+dictionary.
+    :type to_delete: str
+    :param persons: A list of PoIs found inside of an organization.
+    :type persons: list
+    :return: Returns the name of the person searched for. Will return if there
+was no name found, as well.
+    :rtype: str
+    """
     plate_name = None  # Pre-define
 
     for plate in plates:
@@ -398,7 +545,12 @@ def printPlateName(to_delete, plates):
 
 
 def runPlates():
-    """Allows the program to be ran if being imported as a module"""
+    """
+    Allows the program to be ran if being imported as a module.
+    
+    :return: Returns the value 1 if the program completed successfully.
+    :rtype: int
+    """
     log.info("Retrieving plates")
     plates = getPlates()
     log.info("Plates retrieved.")
