@@ -916,5 +916,5 @@ if __name__ == "__main__":
         lpoi_thread.join()
 
     # Wrap up in a bow and complete
-    print(f"Time to complete: {time.time() - start_time}")
+    log.info(f"Time to complete: {time.time() - start_time}")
     print("Exiting...")
