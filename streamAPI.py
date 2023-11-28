@@ -15,7 +15,17 @@ ORG_ID = "cbe2df58-36fd-46f3-9148-e300bbee8489"
 
 
 def getToken(org_id=ORG_ID, api_key=API_KEY):
-    """Generates a JWT token for streaming API"""
+    """
+    Generates a JWT token for the streaming API. This token will be integrated
+inside of a link to grant access to footage.
+
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: Returns the JWT token to allow access via a link to footage.
+    :rtype: str
+    """
 
     # Define the request headers
     headers = {
@@ -46,7 +56,20 @@ def getToken(org_id=ORG_ID, api_key=API_KEY):
 
 
 def loadStream(jwt, camera_id, start_time, org_id=ORG_ID):
-    """Loads the HLS video and saves a snapshot of the first frame"""
+    """
+    Loads the HLS video and saves a snapshot of the first frame of the clip.
+    
+    :param jwt: The token that grants the API access to the footage.
+    :type jwt: str
+    :param camera_id: The camera ID of the device to pull footage from.
+    :type camera_id: str
+    :param start_time: The start time for the footage to pull from the camera.
+    :type start_time: str
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :return: None
+    :rtype: None
+    """
 
     # Bring the end time to one second ahead of the start time
     end_time = start_time + 1
@@ -79,7 +102,14 @@ def loadStream(jwt, camera_id, start_time, org_id=ORG_ID):
 
 
 def printImage(file_name):
-    """Will print a given image into the terminal"""
+    """
+    Will print a given image into the terminal in very low resolution.
+
+    :param file_name: The name of the image file to print into the terminal.
+    :type file_name: str
+    :return: None
+    :rtype: None
+    """
 
     try:
         subprocess.run(['timg', file_name])
@@ -88,6 +118,7 @@ def printImage(file_name):
 
     # --------------------------
     # If using Pillow and you want a higher-res image displayed
+    # NOTE: This won't be displayed in the terminal
     # Load the image
     # image = Image.open(file_name)
 
@@ -96,7 +127,22 @@ def printImage(file_name):
 
 
 def epoch(year, month, day, hour, minute):
-    """Converts a given time to an epoch timestamp and returns the integer value"""
+    """
+    Converts a given time to an epoch timestamp and returns the integer value.
+
+    :param year: The target year to return in the epoch timestamp.
+    :type year: int
+    :param month: The target month to return in the epoch timestamp.
+    :type month: int
+    :param day: The target day to return in the epoch timestamp.
+    :type day: int
+    :param hour: The target hour to return in the epoch timestamp.
+    :type hour: int
+    :param minute: The target minute to return in the epoch timestamp.
+    :type minute: int
+    :return: Returns the epoch timestamp.
+    :rtype: int
+    """
 
     # Define the date and time in Python terms
     py_time = datetime.datetime(year, month, day, hour, minute)
@@ -104,7 +150,7 @@ def epoch(year, month, day, hour, minute):
     # Convert to epoch timestamp (seconds since Jan 1, 1970)
     epoch_timestamp = int(py_time.timestamp())
 
-    return int(epoch_timestamp)
+    return epoch_timestamp
 
 
 # Check if being ran directly or is imported by another program
