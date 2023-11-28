@@ -93,22 +93,23 @@ def getUserId(user=PERSISTENT_USERS, users=None):
         return None
 
 
-def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
-    """Deletes the given person"""
+def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
+    """Deletes the given user"""
+    # Format the URL
+    url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
-    log.info(f"Running for person: {printName(person, persons)}")
-
-    params = {
-        'org_id': org_id,
-        'person_id': person
-    }
-
-    response = requests.delete(
-        USER_CONTROL_URL, headers=headers, params=params)
+    log.info(f"Running for user: {printName(user, users)}")
+    
+    # Stop if at call limit
+    if CALL_COUNT >= 500:
+        return
+    
+    response = requests.delete(url, headers=headers)
 
     if response.status_code != 200:
         log.error(
@@ -116,8 +117,8 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         return 2  # Completed unsuccesfully
 
 
-def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """Purges all PoIs that aren't marked as safe/persistent"""
+def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
+    """Purges all users that aren't marked as safe/persistent"""
     global CALL_COUNT
 
     if not delete:
@@ -128,12 +129,13 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     start_time = time.time()
     threads = []
-    for person in delete:
+    for user in delete:
+        # Stop if at call limit
         if CALL_COUNT >= 500:
             return
         
         thread = threading.Thread(
-            target=delete_person, args=(person, persons, org_id, api_key)
+            target=delete_user, args=(user, users, org_id, api_key)
         )
         thread.start()
         threads.append(thread)

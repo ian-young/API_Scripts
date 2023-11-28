@@ -50,6 +50,8 @@ def cleanList(list):
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
     """Returns JSON-formatted persons in a Command org"""
+    global CALL_COUNT
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -60,6 +62,9 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PERSON_URL, headers=headers, params=params)
+
+    with CALL_COUNT_LOCK:
+        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -118,10 +123,16 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     }
 
     try:
+        # Stop running if already at the limit
+        if CALL_COUNT >= 500:
+            return
         response = requests.delete(PERSON_URL, headers=headers, params=params)
     
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
+        
+        elif response.status_code == 504:
+            log.warning(f"Plate - Timed out.")
         
         elif response.status_code != 200:
             log.error(f"\
@@ -135,7 +146,7 @@ Person - An error has occured. Status code {response.status_code}")
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """Purges all PoIs that aren't marked as safe/persistent"""
     global CALL_COUNT
-    
+
     if not delete:
         log.warning("Person - There's nothing here")
         return
@@ -183,8 +194,7 @@ def printPersonName(to_delete, persons):
     if person_name:
         return person_name
     else:
-        log.error(f"Person {to_delete} was not found in the database...")
-        return None
+        return "No name provided"
 
 
 def runPeople():
@@ -194,14 +204,14 @@ def runPeople():
 
     log.info("Retrieving persons")
     persons = getPeople()
-    log.info("persons retrieved.\n")
+    log.info("persons retrieved.")
 
     # Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        log.info("Person - IDs aquired.\n")
+        log.info("Person - IDs aquired.")
 
         safe_person_ids = []
 
@@ -210,7 +220,7 @@ def runPeople():
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
-        log.info("Safe persons found.\n")
+        log.info("Safe persons found.")
 
         # New list that filters persons that are safe
         persons_to_delete = [
@@ -240,6 +250,8 @@ There are no more persons to delete.")
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
     """Returns JSON-formatted plates in a Command org"""
+    global CALL_COUNT
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -250,6 +262,9 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
+    
+    with CALL_COUNT_LOCK:
+        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -258,7 +273,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         plates = data.get('license_plate_of_interest')
         return plates
     else:
-        log.error(
+        log.critical(
             f"Plate - Error with retrieving plates.\
 Status code {response.status_code}")
         return None
@@ -309,11 +324,17 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     }
 
     try:
+        # Stop running if already at the limit
+        if CALL_COUNT >= 500:
+            return
         response = requests.delete(PLATE_URL, headers=headers, params=params)
     
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
         
+        elif response.status_code == 504:
+            log.warning(f"Plate - Timed out.")
+
         elif response.status_code != 200:
             log.error(f"\
 Plate - An error has occured. Status code {response.status_code}")
@@ -373,22 +394,21 @@ def printPlateName(to_delete, plates):
     if plate_name:
         return plate_name
     else:
-        log.error(f"Plate {to_delete} was not found in the database...")
-        return None
+        return "No name provided"
 
 
 def runPlates():
     """Allows the program to be ran if being imported as a module"""
     log.info("Retrieving plates")
     plates = getPlates()
-    log.info("Plates retrieved.\n")
+    log.info("Plates retrieved.")
 
     # Run if plates were found
     if plates:
         log.info("Plate - Gather IDs")
         all_plate_ids = getPlateIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        log.info("Plate - IDs aquired.\n")
+        log.info("Plate - IDs aquired.")
 
         safe_plate_ids = []
 
@@ -397,7 +417,7 @@ def runPlates():
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        log.info("Safe plates found.\n")
+        log.info("Safe plates found.")
 
         # New list that filters plates that are safe
         plates_to_delete = [
@@ -426,13 +446,17 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
+    start_time = time.time()
     PoI = threading.Thread(target=runPeople)
-    # LPoI = threading.Thread(target=runPlates)
+    LPoI = threading.Thread(target=runPlates)
 
     # Start the threads running independantly
     PoI.start()
-    # LPoI.start()
+    LPoI.start()
 
     # Join the threads back to parent process
     PoI.join()
-    # LPoI.join()
+    LPoI.join()
+    elapsed_time = time.time() - start_time
+
+    log.info(f"Total time to complete: {elapsed_time}") 
