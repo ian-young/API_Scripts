@@ -514,6 +514,7 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
         # Stop making threads if already at the limit
         if CALL_COUNT >= 500:
             return
+
         # Toss delete function into a new thread
         thread = threading.Thread(
             target=delete_plate, args=(plate, plates, org_id, api_key)
