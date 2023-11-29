@@ -5,8 +5,8 @@
 import requests
 import datetime
 
-ORG_ID = ""
-API_KEY = ""
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 URL = "https://api.verkada.com/cameras/v1/footage/link"
 
 
