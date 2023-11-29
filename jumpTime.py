@@ -4,6 +4,7 @@
 
 import requests
 import datetime
+import creds
 
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
