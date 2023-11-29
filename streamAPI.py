@@ -6,12 +6,12 @@ import requests
 from PIL import Image
 import subprocess
 import datetime
-import os
+import creds
 
 TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
 STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
-API_KEY = "vkd_api_70d7270bf6ea486d808a85cefb6a909e"
-ORG_ID = "cbe2df58-36fd-46f3-9148-e300bbee8489"
+API_KEY = creds.lab_key
+ORG_ID = creds.lab_id
 
 
 def getToken(org_id=ORG_ID, api_key=API_KEY):
