@@ -21,11 +21,13 @@ CALL_COUNT = 0
 CALL_COUNT_LOCK = threading.Lock()
 
 # Set the full name for which plates & PoIs are to be persistent
-PERSISTENT_PLATES = ["Random"]
-PERSISTENT_PERSONS = ["PoI"]
-PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
-                    "Jane Doe", "Tony Stark",
-                    "Ray Raymond", "John Doe"] # Must use full name
+PERSISTENT_PLATES = []
+PERSISTENT_PERSONS = []
+# Must use full name
+PERSISTENT_USERS = ["Ian Young", "Austin Griffith", "Brian Avrit", 
+                    "Hans Robertson", "John Lawrence", "Lisa Sulmasy",
+                    "Rhett Hatch", "test three", "Travis Bauer",
+                    "Greg Popiel"]
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
@@ -51,25 +53,6 @@ class APIThrottleException(Exception):
         super.__init__(self.message)
 
 
-def warn():
-    """
-    Prints a warning message before continuing
-    
-    :return: None
-    :rtype: None
-    """
-    print("-------------------------------")
-    print("WARNING!!!")
-    print("Please make sure you have changed the persistent plates variable.")
-    print("Otherwise all of your plates will be deleted.")
-    print("Please double-check spelling, as well!")
-    print("-------------------------------")
-    cont = None
-
-    while cont not in ["", " "]:
-        cont = str(input("Press enter to continue")).strip()
-
-
 def cleanList(list):
     """
     Removes any None values from error codes
@@ -86,87 +69,6 @@ def cleanList(list):
 ##############################################################################
                          #  All things people  #
 ##############################################################################
-
-
-def checkPeople(safe, to_delete, persons):
-    """
-    Checks with the user before continuing with the purge.
-    
-    :param safe: List of PoIs that are marked as "safe."
-    :type safe: list
-    :param to_delete: List of PoIs that are marked for deletion.
-    :type to_delete: list
-    :param persons: List of of PoIs retrieved from the organization.
-    :type persons: list
-    :return: None
-    :rtype: None
-    """
-    trust_level = None  # Pre-define
-    ok = None  # Pre-define
-
-    while trust_level not in ['1', '2', '3']:
-        print("1. Check marked persistent persons against what the \
-application found.")
-        print("2. Check what is marked for deletion by the application.")
-        print("3. Trust the process and blindly move forward.")
-
-        trust_level = str(input('- ')).strip()
-
-        if trust_level == '1':
-            print("-------------------------------")
-            print("Please check that the two lists match: ")
-
-            safe_names = [printPersonName(person_id, persons)
-                          for person_id in safe]
-
-            print(", ".join(safe_names))
-            print("vs")
-            print(", ".join(PERSISTENT_PERSONS))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = str(input("Do they match?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePeople(to_delete, persons)
-
-                elif ok == 'n':
-                    print("Please check the input values")
-                    print("Exiting...")
-
-                else:
-                    print("Invalid input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '2':
-            print("-------------------------------")
-            print("Here are the persons being purged: ")
-
-            delete_names = \
-                [printPersonName(person_id, persons)
-                 for person_id in to_delete]
-            print(", ".join(delete_names))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = \
-                    str(input("Is this list accurate?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePeople(to_delete, persons)
-
-                elif ok == 'n':
-                    print("Please check the input values.")
-                    print("Exiting...")
-
-                else:
-                    print("Invalud input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '3':
-            print("Good luck!")
-            purgePeople(to_delete)
-
-        else:
-            print("Invalid input. Please enter '1', '2', or '3'.")
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
@@ -349,10 +251,10 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
         thread.join()  # Join back to main thread
 
     end_time = time.time()
-    elapsed_time = str(end_time - start_time)
+    elapsed_time = end_time - start_time
 
     log.info("Person - Purge complete.")
-    log.info(f"Person - Time to complete: {elapsed_time}")
+    log.info(f"Person - Time to complete: {elapsed_time:.2f}s")
     return 1  # Completed
 
 
@@ -420,7 +322,7 @@ def runPeople():
             person for person in all_person_ids if person not in safe_person_ids]
 
         if persons_to_delete:
-            checkPeople(safe_person_ids, persons_to_delete, persons)
+            purgePeople(persons_to_delete, persons)
             return 1  # Completed
 
         else:
@@ -437,86 +339,6 @@ There are no more persons to delete.")
 ##############################################################################
                             #  All things plates  #
 ##############################################################################
-
-
-def checkPlates(safe, to_delete, plates):
-    """
-    Checks with the user before continuing with the purge.
-    
-    :param safe: List of plates that are marked as "safe."
-    :type safe: list
-    :param to_delete: List of plates that are marked for deletion.
-    :type to_delete: list
-    :param plates: List of of LPoIs retrieved from the organization.
-    :type plates: list
-    :return: None
-    :rtype: None
-    """
-    trust_level = None  # Pre-define
-    ok = None  # Pre-define
-
-    while trust_level not in ['1', '2', '3']:
-        print("1. Check marked persistent plates against what the \
-application found.")
-        print("2. Check what is marked for deletion by the application.")
-        print("3. Trust the process and blindly move forward.")
-
-        trust_level = str(input('- ')).strip()
-
-        if trust_level == '1':
-            print("-------------------------------")
-            print("Please check that the two lists match: ")
-
-            safe_names = [printPlateName(plate_id, plates)
-                          for plate_id in safe]
-
-            print(", ".join(safe_names))
-            print("vs")
-            print(", ".join(PERSISTENT_PLATES))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = str(input("Do they match?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePlates(to_delete, plates)
-
-                elif ok == 'n':
-                    print("Please check the input values")
-                    print("Exiting...")
-
-                else:
-                    print("Invalid input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '2':
-            print("-------------------------------")
-            print("Here are the plates being purged: ")
-
-            delete_names = \
-                [printPlateName(plate_id, plates) for plate_id in to_delete]
-            print(", ".join(delete_names))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = \
-                    str(input("Is this list accurate?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgePlates(to_delete, plates)
-
-                elif ok == 'n':
-                    print("Please check the input values.")
-                    print("Exiting...")
-
-                else:
-                    print("Invalud input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '3':
-            print("Good luck!")
-            purgePlates(to_delete)
-
-        else:
-            print("Invalid input. Please enter '1', '2', or '3'.")
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
@@ -580,7 +402,6 @@ Defaults to None.
         else:
             log.error(
                 f"There has been an error with plate {plate.get('label')}.")
-
     return plate_id
 
 
@@ -635,11 +456,11 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         'org_id': org_id,
         'license_plate': plate
     }
-
     try:
         # Stop running if already at the limit
         if CALL_COUNT >= 500:
             return
+        
         response = requests.delete(PLATE_URL, headers=headers, params=params)
     
         if response.status_code == 429:
@@ -648,12 +469,16 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         elif response.status_code == 504:
             log.warning(f"Plate - Timed out.")
 
+        elif response.status_code == 400:
+            log.warning(f"400 on plate {plate}")
+
         elif response.status_code != 200:
             log.error(f"\
 Plate - An error has occured. Status code {response.status_code}")
         
     except APIThrottleException:
-                    log.critical("Plate - Hit API request rate limit of 500 requests per minute.")
+                    log.critical("Plate - Hit API request rate limit of\
+500 requests per minute.")
 
 
 def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
@@ -685,7 +510,7 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
         # Stop making threads if already at the limit
         if CALL_COUNT >= 500:
             return
-        
+
         # Toss delete function into a new thread
         thread = threading.Thread(
             target=delete_plate, args=(plate, plates, org_id, api_key)
@@ -701,10 +526,10 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
         thread.join()  # Join back to main thread
 
     end_time = time.time()
-    elapsed_time = str(end_time - start_time)
+    elapsed_time = end_time - start_time
 
     log.info("Plate - Purge complete.")
-    log.info(f"Plate - Time to complete: {elapsed_time}")
+    log.info(f"Plate - Time to complete: {elapsed_time:.2f}s")
     return 1  # Completed
 
 
@@ -772,7 +597,7 @@ def runPlates():
             plate for plate in all_plate_ids if plate not in safe_plate_ids]
 
         if plates_to_delete:
-            checkPlates(safe_plate_ids, plates_to_delete, plates)
+            purgePlates(plates_to_delete, plates)
             return 1  # Completed
 
         else:
@@ -791,84 +616,6 @@ There are no more plates to delete.")
                             #  All things plates  #
 ##############################################################################
 
-
-def checkUsers(safe, to_delete, users):
-    """
-    Checks with the user before continuing with the purge.
-    
-    :param safe: List of users that are marked as "safe."
-    :type safe: list
-    :param to_delete: List of users that are marked for deletion.
-    :type to_delete: list
-    :param users: List of of users retrieved from the organization.
-    :type users: list
-    :return: None
-    :rtype: None
-    """
-    trust_level = None  # Pre-define
-    ok = None  # Pre-define
-
-    while trust_level not in ['1', '2', '3']:
-        print("1. Check marked persistent users against what the \
-application found.")
-        print("2. Check what is marked for deletion by the application.")
-        print("3. Trust the process and blindly move forward.")
-
-        trust_level = str(input('- ')).strip()
-
-        if trust_level == '1':
-            print("-------------------------------")
-            print("Please check that the two lists match: ")
-
-            safe_names = [printUserName(user_id, users) for user_id in safe]
-
-            print(", ".join(safe_names))
-            print("vs")
-            print(", ".join(PERSISTENT_USERS))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = str(input("Do they match?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgeUsers(to_delete, users)
-
-                elif ok == 'n':
-                    print("Please check the input values")
-                    print("Exiting...")
-
-                else:
-                    print("Invalid input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '2':
-            print("-------------------------------")
-            print("Here are the users being purged: ")
-
-            delete_names = \
-                [printUserName(user_id, users) for user_id in to_delete]
-            print(", ".join(delete_names))
-            print("-------------------------------")
-
-            while ok not in ['y', 'n']:
-                ok = \
-                    str(input("Is this list accurate?(y/n) ")).strip().lower()
-
-                if ok == 'y':
-                    purgeUsers(to_delete, users)
-
-                elif ok == 'n':
-                    print("Please check the input values.")
-                    print("Exiting...")
-
-                else:
-                    print("Invalud input. Please enter 'y' or 'n'.")
-
-        elif trust_level == '3':
-            print("Good luck!")
-            purgeUsers(to_delete)
-
-        else:
-            print("Invalid input. Please enter '1', '2', or '3'.")
 
 def getUsers(org_id=ORG_ID, api_key=API_KEY):
     """
@@ -1039,10 +786,10 @@ def purgeUsers(delete, users, org_id=ORG_ID, api_key=API_KEY):
         thread.join()  # Join back to main thread
 
     end_time = time.time()
-    elapsed_time = str(end_time - start_time)
+    elapsed_time = end_time - start_time
 
     log.info("Purge complete.")
-    log.info(f"Time to complete: {elapsed_time}")
+    log.info(f"Time to complete: {elapsed_time:.2f}s")
     return 1  # Completed
 
 
@@ -1080,11 +827,6 @@ def runUsers():
     :return: Returns the value 1 if the program completed successfully.
     :rtype: int
     """
-    # org = str(input("Org ID: ""))
-    # key = str(input("API key: "))
-
-    warn()
-
     log.info("Retrieving users")
     users = getUsers()
     log.info("Users retrieved.")
@@ -1110,7 +852,7 @@ def runUsers():
             user for user in all_user_ids if user not in safe_user_ids]
 
         if users_to_delete:
-            checkUsers(safe_user_ids, users_to_delete, users)
+            purgeUsers(users_to_delete, users)
             return 1  # Completed
 
         else:
@@ -1128,8 +870,6 @@ def runUsers():
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
-    warn()
-
     # Pre-define responses
     run_poi = False
     run_lpoi = False
@@ -1184,5 +924,5 @@ if __name__ == "__main__":
         lpoi_thread.join()
 
     # Wrap up in a bow and complete
-    log.info(f"Time to complete: {time.time() - start_time}")
+    log.info(f"Total time to complete: {round(time.time() - start_time, 2)}s")
     print("Exiting...")

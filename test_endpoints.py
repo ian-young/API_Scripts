@@ -28,13 +28,13 @@ URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 
 # Set general testing variables
-ORG_ID = creds.slc_id
-API_KEY = creds.slc_key
-CAMERA_ID = creds.slc_camera_id
-TEST_USER = creds.slc_test_user
-TEST_USER_CRED = creds.slc_test_user_cred
-CARD_ID = creds.slc_card_id
-PLATE = creds.slc_plate
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
+CAMERA_ID = creds.lab_camera_id
+TEST_USER = creds.lab_test_user
+TEST_USER_CRED = creds.lab_test_user_cred
+CARD_ID = creds.lab_card_id
+PLATE = creds.lab_plate
 
 GENERAL_HEADER = {
     'accept': 'application/json',

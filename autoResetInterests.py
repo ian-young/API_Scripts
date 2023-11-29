@@ -5,8 +5,8 @@
 
 import creds, logging, requests, threading, time
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+ORG_ID = creds.demo_id
+API_KEY = creds.demo_key
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -188,7 +188,10 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
             raise APIThrottleException("API throttled")
         
         elif response.status_code == 504:
-            log.warning(f"Plate - Timed out.")
+            log.warning(f"Person - Timed out.")
+
+        elif response.status_code == 400:
+            log.warning(f"Person - Contact support: endpoint failure")
         
         elif response.status_code != 200:
             log.error(f"\
@@ -457,6 +460,9 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         
         elif response.status_code == 504:
             log.warning(f"Plate - Timed out.")
+        
+        elif response.status_code == 400:
+            log.warning(f"Plate - Contact support: endpoint failure")
 
         elif response.status_code != 200:
             log.error(f"\
