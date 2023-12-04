@@ -13,6 +13,14 @@ import threading
 import shutil
 import time
 import datetime
+import logging
+
+# Set logger
+log = logging.getLogger()
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s"
+)
 
 colorama.init(autoreset=True)
 
@@ -52,7 +60,7 @@ FAILED_ENDPOINTS_LOCK = threading.Lock()
 
 
 ##############################################################################
-                            #  Test PoI  #
+                                #  Test PoI  #
 ##############################################################################
 
 
@@ -65,7 +73,7 @@ def testPOI():
 
 def getPersonID():
     """Accepts a string as a search value and returns the person id\
- associated with it"""    
+ associated with it"""
     # Define query parameters for the request
     params = {
         'org_id': ORG_ID,
@@ -89,12 +97,15 @@ def getPersonID():
             return person_id
             # print(f"Person ID for label '{label_to_search}': {person_id}")
         else:
-            print(f"No person was found with the label 'test'.")
-        
+            log.warning(f"No person was found with the label 'test'.")
+
 
 def createPOI():
     """Creates a PoI to test the API endpoint"""
     global FAILED_ENDPOINTS
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPoI")
+
     file_content = None  # Pre-define
 
     # Download the JPG file from the URL
@@ -109,7 +120,7 @@ feca744209047e57&ipo=images')
         file_content = img_response.content
     else:
         # Handle the case where the file download failed
-        print("Failed to download the image")
+        log.critical("Failed to download the image")
 
     # Convert the binary content to base64
     base64_image = base64.b64encode(file_content).decode('utf-8')
@@ -132,6 +143,8 @@ feca744209047e57&ipo=images')
     response = requests.post(
         URL_PEOPLE, json=payload, headers=headers, params=params)
 
+    log.info(f"createPoI response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"CreatePoI: {response.status_code}")
@@ -139,11 +152,16 @@ feca744209047e57&ipo=images')
 
 def getPOI():
     """Looks to see if it can get PoIs"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPoI")
+
     params = {
         "org_id": ORG_ID
     }
 
     response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
+
+    log.info(f"getPoI response received: {response.status_code}")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -152,6 +170,9 @@ def getPOI():
 
 def updatePOI():
     """Tests the patch requests for the people endpoint"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePoI")
+
     payload = {"label": 'Test'}
     headers = {
         "accept": "application/json",
@@ -168,6 +189,8 @@ def updatePOI():
     response = requests.patch(
         URL_PEOPLE, json=payload, headers=headers, params=params)
 
+    log.info(f"updatePoI response received: {response.status_code}")
+
     if response.status_code == 400:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPersonID: {response.status_code}")
@@ -178,6 +201,9 @@ def updatePOI():
 
 def deletePOI():
     """Tests the delete request for the people endpoint"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePoI")
+
     headers = {
         "accept": "application/json",
         "x-api-key": API_KEY
@@ -190,25 +216,30 @@ def deletePOI():
 
     response = requests.delete(URL_PEOPLE, headers=headers, params=params)
 
+    log.info(f"deletePoI response received: {response.status_code}")
+
     if response.status_code != 200 and response.status_code != 400:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deletePoI: {response.status_code}")
 
 
 ##############################################################################
-                            #  Test LPoI  #
+                                #  Test LPoI  #
 ##############################################################################
 
 
 def testLPOI():
     createPlate()
-    getLPOI()
-    updateLPOI()
-    deleteLPOI()
+    getPlate()
+    updatePlate()
+    deletePlate()
 
 
 def createPlate():
-    """Creates a LPoI to test the API endpoint"""
+    """Creates a Plate to test the API endpoint"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPlate")
+
     # Set payload
     payload = {
         "description": 'test',
@@ -228,13 +259,18 @@ def createPlate():
     response = requests.post(
         URL_PLATE, json=payload, headers=headers, params=params)
 
+    log.info(f"createPlate response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"createPlate: {response.status_code}")
 
 
-def getLPOI():
-    """Looks to see if it can get LPoIs"""
+def getPlate():
+    """Looks to see if it can get Plates"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPlate")
+
     headers = {
         "accept": "application/json",
         "x-api-key": API_KEY
@@ -246,13 +282,18 @@ def getLPOI():
 
     response = requests.get(URL_PLATE, headers=headers, params=params)
 
+    log.info(f"getPlates response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"getLPoI: {response.status_code}")
+            FAILED_ENDPOINTS.append(f"getPlate: {response.status_code}")
 
 
-def updateLPOI():
-    """Tests the patch requests for the LPoI endpoint"""
+def updatePlate():
+    """Tests the patch requests for the Plate endpoint"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePlate")
+
     payload = {"description": 'Test'}
     headers = {
         "accept": "application/json",
@@ -269,13 +310,18 @@ def updateLPOI():
     response = requests.patch(
         URL_PLATE, json=payload, headers=headers, params=params)
 
+    log.info(f"updatePlate response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"updateLPoI: {response.status_code}")
+            FAILED_ENDPOINTS.append(f"updatePlate: {response.status_code}")
 
 
-def deleteLPOI():
-    """Tests the delete request for the LPoI endpoint"""
+def deletePlate():
+    """Tests the delete request for the Plate endpoint"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePlate")
+
     params = {
         "org_id": ORG_ID,
         'license_plate': "t3stpl4te"
@@ -284,18 +330,23 @@ def deleteLPOI():
     response = requests.delete(
         URL_PLATE, headers=GENERAL_HEADER, params=params)
 
+    log.info(f"deletePlate response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"deleteLPoI: {response.status_code}")
+            FAILED_ENDPOINTS.append(f"deletePlate: {response.status_code}")
 
 
 ##############################################################################
-                            # Test Cameras #
+                                # Test Cameras #
 ##############################################################################
 
 
 def getCloudSettings():
     """Tests to see if it can retrieve cloud backup settings for a camera"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCloudSettings")
+
     params = {
         'org_id': ORG_ID,
         'camera_id': CAMERA_ID
@@ -303,19 +354,26 @@ def getCloudSettings():
 
     response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params)
 
+    log.info(f"getCloudSettings response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"getCloudSettings: {response.status_code}")
+            FAILED_ENDPOINTS.append(f"getCloudSettings: \
+{response.status_code}")
 
 
 def getCounts():
     """Tests if it can get object counts from a camera"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCounts")
     params = {
         'org_id': ORG_ID,
         'camera_id': CAMERA_ID
     }
 
     response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params)
+
+    log.info("getCounts response received")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -324,6 +382,9 @@ def getCounts():
 
 def getTrends():
     """Tests if it can get trend counts from a camera"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getTrendLineData")
+
     params = {
         'org_id': ORG_ID,
         'camera_id': CAMERA_ID
@@ -331,6 +392,8 @@ def getTrends():
 
     response = requests.get(
         URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+
+    log.info(f"getTrendLineData response received: {response.status_code}")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -339,6 +402,9 @@ def getTrends():
 
 def getCameraData():
     """Tests if it can get camera data on a given camera"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCameraData")
+
     params = {
         'org_id': ORG_ID,
         'camera_id': CAMERA_ID
@@ -347,6 +413,8 @@ def getCameraData():
     response = requests.get(
         URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
 
+    log.info(f"getCameraData response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCameraData: {response.status_code}")
@@ -354,17 +422,23 @@ def getCameraData():
 
 def getThumbed():
     """Tests if it can get a thumbnail from a camera"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getThumbnail")
+
     params = {
         'org_id': ORG_ID,
         'camera_id': CAMERA_ID,
         'resolution': 'low-res'
     }
 
-    response = requests.get(URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
+    response = requests.get(
+        URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
+
+    log.info(f"getThumbnail response received: {response.status_code}")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"getThumbed: {response.status_code}")
+            FAILED_ENDPOINTS.append(f"getThumbnail: {response.status_code}")
 
 
 ##############################################################################
@@ -374,11 +448,16 @@ def getThumbed():
 
 def getAudit():
     """Tests the ability to retrieve audit logs"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAuditLogs")
+
     params = {
         'org_id': ORG_ID,
         'page_size': '1'
     }
     response = requests.get(URL_AUDIT, headers=GENERAL_HEADER, params=params)
+
+    log.info(f"getAuditLogs response received: {response.status_code}")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -387,6 +466,9 @@ def getAudit():
 
 def updateUser():
     """Tests the ability to update a user"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updateUser")
+
     payload = {
         'active': False
     }
@@ -405,6 +487,8 @@ def updateUser():
     response = requests.put(URL_CORE, json=payload,
                             headers=headers, params=params)
 
+    log.info(f"updateUser response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updateUser: {response.status_code}")
@@ -412,6 +496,9 @@ def updateUser():
 
 def getUser():
     """Tests the ability to retrieve information on a user"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
+
     params = {
         'org_id': ORG_ID,
         'user_id': TEST_USER
@@ -419,24 +506,31 @@ def getUser():
 
     response = requests.get(URL_CORE, headers=GENERAL_HEADER, params=params)
 
+    log.info(f"getUser response received: {response.status_code}")
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
 
 
 ##############################################################################
-                        # Test Access Control #
+                            # Test Access Control #
 ##############################################################################
 
 
 def getGroups():
     """Tests the ability to get AC Groups"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessGroups")
+
     params = {
         'org_id': ORG_ID
     }
 
     response = requests.get(
         URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
+
+    log.info("getGroups response received")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -445,12 +539,17 @@ def getGroups():
 
 def getACUsers():
     """Tests the ability to get AC users"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessUsers")
+
     params = {
         'org_id': ORG_ID
     }
 
     response = requests.get(
         URL_AC_USERS, headers=GENERAL_HEADER, params=params)
+
+    log.info(f"getAccessUsers response received: {response.status_code}")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -459,6 +558,9 @@ def getACUsers():
 
 def changeCards():
     """Tests the ability to change credentials"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activateCard & deactivateCard")
+
     params = {
         'org_id': ORG_ID,
         'user_id': TEST_USER_CRED,
@@ -472,20 +574,31 @@ def changeCards():
         activate_url, headers=GENERAL_HEADER, params=params
     )
 
+    log.info(f"activateCard response received: {active_response.status_code}")
+
     deactive_response = requests.put(
         deactivate_url, headers=GENERAL_HEADER, params=params
     )
 
+    log.info(f"deactivateCard response received: \
+{deactive_response.status_code}")
+
     if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"activateCard: {active_response.status_code}")
+            FAILED_ENDPOINTS.append(f"activateCard: \
+{active_response.status_code}")
+
     elif deactive_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"deactivateCard: {deactive_response.status_code}")
+            FAILED_ENDPOINTS.append(f"deactivateCard: \
+{deactive_response.status_code}")
 
 
 def changePlates():
     """Tests the ability to change access plates"""
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activatePlate & deactivatePlate")
+
     params = {
         'org_id': ORG_ID,
         'user_id': TEST_USER_CRED,
@@ -499,19 +612,25 @@ def changePlates():
         activate_url, headers=GENERAL_HEADER, params=params
     )
 
+    log.info(f"activatePlate response received: \
+{active_response.status_code}")
+
     deactive_response = requests.put(
         deactivate_url, headers=GENERAL_HEADER, params=params
     )
 
-    codes = int(active_response.status_code)\
-        + int(deactive_response.status_code)
+    log.info(f"deactivatePlate response received: \
+{deactive_response.status_code}")
 
     if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"activatePlate: {active_response.status_code}")
+            FAILED_ENDPOINTS.append(f"activatePlate: \
+{active_response.status_code}")
+
     elif deactive_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"deactivatePlate: {deactive_response.status_code}")
+            FAILED_ENDPOINTS.append(f"deactivatePlate: \
+{deactive_response.status_code}")
 
 ##############################################################################
                                 # Misc #
@@ -585,7 +704,7 @@ if __name__ == '__main__':
     # Start all threads
     for thread in threads:
         thread.start()
-    
+
     # Join all threads back once complete
     for thread in threads:
         thread.join()
@@ -593,4 +712,5 @@ if __name__ == '__main__':
     elapsed = end_time - start_time
 
     passed = 23 - len(FAILED_ENDPOINTS)
-    print_colored_centered(elapsed, passed, len(FAILED_ENDPOINTS), FAILED_ENDPOINTS)
+    print_colored_centered(elapsed, passed, len(
+        FAILED_ENDPOINTS), FAILED_ENDPOINTS)
