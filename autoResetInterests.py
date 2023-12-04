@@ -3,35 +3,98 @@
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
 
-import creds, logging, requests, threading, time
+import creds, datetime, logging, requests, threading, time
 
-ORG_ID = creds.demo_id
-API_KEY = creds.demo_key
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
-# This will help prevent exceeding the call limit
-CALL_COUNT = 0
-CALL_COUNT_LOCK = threading.Lock()
+# Set timeout for a 429
+MAX_RETRIES = 5
+DEFAULT_RETRY_DELAY = 0.25
+BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
-    level = logging.INFO,
+    level = logging.DEBUG,
     format = "%(levelname)s: %(message)s"
     )
+# Mute non-essential logging from requests library
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = []
-PERSISTENT_PERSONS = []
+PERSISTENT_PLATES = ["Cool Car"]
+PERSISTENT_PERSONS = ["P. Parker"]
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
 analytics/lpr/license_plate_of_interest"
 PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
+
 ##############################################################################
                                 #  Misc  #
 ##############################################################################
 
+
+class RateLimiter:
+    def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
+        """
+        Initilization of the rate limiter.
+
+        :param rate_limit: The value of how many threads may be made each sec.
+        :type rate_limit: int
+        :param max_events_per_sec: Maximum events allowed per second.
+        :type: int
+        :return: None
+        :rtype: None
+        """
+        self.rate_limit = rate_limit
+        self.lock = threading.Lock()  # Local lock to prevent race conditions
+        self.max_events_per_sec = max_events_per_sec
+        self.pacing = pacing
+
+
+    def acquire(self):
+        """
+        States whether or not the program may create new threads or not.
+
+        :return: Boolean value stating whether new threads may be made or not.
+        :rtype: bool
+        """
+        with self.lock:
+            current_time = time.time()  # Define current time
+
+            if not hasattr(self, 'start_time'):
+                # Check if attribue 'start_time' exists, if not, make it.
+                self.start_time = current_time
+                self.event_count = self.pacing
+                return True
+            
+            # How much time has passed since starting
+            elapsed_time = current_time - self.start_time
+
+            # Check if it's been less than 1sec and less than 10 events have
+            # been made.
+            if elapsed_time < self.pacing / self.rate_limit \
+                and self.event_count < self.max_events_per_sec:
+                self.event_count += 1
+                return True
+            
+            # Check if it is the first wave of events
+            elif elapsed_time >= self.pacing / self.rate_limit:
+                self.start_time = current_time
+                self.event_count = 2
+                return True
+            
+            else:
+                # Calculate the time left before next wave
+                remaining_time = self.pacing - \
+                    (current_time - self.start_time)
+                time.sleep(remaining_time)  # Wait before next wave
+                return True
+            
 
 class APIThrottleException(Exception):
     """
@@ -42,7 +105,32 @@ class APIThrottleException(Exception):
     """
     def __init__(self, message="API throttle limit exceeded."):
         self.message = message
-        super.__init__(self.message)
+        super().__init__(self.message)
+
+
+def run_thread_with_rate_limit(threads, rate_limit=10):
+    """
+    Run a thread with rate limiting.
+        
+    :param target: The target function to be executed in the thread:
+    :type targe: function:
+    :return: The thread that was created and ran
+    :rtype: thread
+    """
+    limiter = RateLimiter(rate_limit=rate_limit)
+
+    def run_thread(thread):
+        with threading.Lock():
+            limiter.acquire()
+            log.debug(f"Starting thread {thread.name} at time \
+{datetime.datetime.now().strftime('%H:%M:%S')}")
+            thread.start()
+
+    for thread in threads:
+        run_thread(thread)
+
+    for thread in threads:
+        thread.join()
 
 
 def cleanList(list):
@@ -86,9 +174,6 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PERSON_URL, headers=headers, params=params)
-
-    with CALL_COUNT_LOCK:
-        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -166,6 +251,9 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     :return: None
     :rtype: None
     """
+    local_data = threading.local()
+    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -179,10 +267,19 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     }
 
     try:
-        # Stop running if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        response = requests.delete(PERSON_URL, headers=headers, params=params)
+        for _ in range(MAX_RETRIES):
+            response = requests.delete(PERSON_URL, headers=headers, params=params)
+
+            if response.status_code == 429:
+                log.info(f"{printPersonName(person, persons)} response: 429. \
+Retrying in {local_data.RETRY_DELAY}s.")
+                
+                time.sleep(local_data.RETRY_DELAY)
+
+                local_data.RETRY_DELAY += BACKOFF
+
+            else:
+                break
     
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
@@ -228,29 +325,19 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     start_time = time.time()
     threads = []
     for person in delete:
-        # Stop making threads if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        
         # Toss delete function into a new thread
         thread = threading.Thread(
             target=delete_person, args=(person, persons, org_id, api_key)
         )
-        thread.start()
         threads.append(thread)  # Add the thread to the pile
 
-        # Make sure the other thread isn't writing
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1  # Log that the thread was made
-
-    for thread in threads:
-        thread.join()  # Join back to main thread
+    run_thread_with_rate_limit(threads)
 
     end_time = time.time()
-    elapsed_time = str(end_time - start_time)
+    elapsed_time = end_time - start_time
 
     log.info("Person - Purge complete.")
-    log.info(f"Person - Time to complete: {elapsed_time}")
+    log.info(f"Person - Time to complete: {elapsed_time:.2f}")
     return 1  # Completed
 
 
@@ -356,9 +443,6 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
-    
-    with CALL_COUNT_LOCK:
-        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -437,6 +521,9 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     :return: None
     :rtype: None
     """
+    local_data = threading.local()
+    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -450,10 +537,19 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     }
 
     try:
-        # Stop running if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        response = requests.delete(PLATE_URL, headers=headers, params=params)
+        for _ in range(MAX_RETRIES):
+            response = requests.delete(PLATE_URL, headers=headers, params=params)
+
+            if response.status_code == 429:
+                log.info(f"{printPlateName(plate, plates)} response: 429. \
+Retrying in {local_data.RETRY_DELAY}s.")
+                
+                time.sleep(local_data.RETRY_DELAY)
+
+                local_data.RETRY_DELAY += BACKOFF
+
+            else:
+                break
     
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
@@ -487,7 +583,6 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     :return: Returns the value of 1 if completed successfully.
     :rtype: int
     """
-    global CALL_COUNT
     
     if not delete:
         log.warning("Plate - There's nothing here")
@@ -498,29 +593,19 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     start_time = time.time()
     threads = []
     for plate in delete:
-        # Stop making threads if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        
         # Toss delete function into a new thread
         thread = threading.Thread(
             target=delete_plate, args=(plate, plates, org_id, api_key)
         )
-        thread.start()
         threads.append(thread)  # Add the thread to the pile
 
-        # Make sure the other thread isn't writing
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1  # Log that the thread was made
-
-    for thread in threads:
-        thread.join()  # Join back to main thread
+    run_thread_with_rate_limit(threads)
 
     end_time = time.time()
-    elapsed_time = str(end_time - start_time)
+    elapsed_time = end_time - start_time
 
     log.info("Plate - Purge complete.")
-    log.info(f"Plate - Time to complete: {elapsed_time}")
+    log.info(f"Plate - Time to complete: {elapsed_time:.2f}")
     return 1  # Completed
 
 
@@ -617,4 +702,4 @@ if __name__ == "__main__":
     LPoI.join()
     elapsed_time = time.time() - start_time
 
-    log.info(f"Total time to complete: {elapsed_time}") 
+    log.info(f"Total time to complete: {elapsed_time:.2f}") 
