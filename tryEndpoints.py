@@ -2,9 +2,7 @@
 # Purpose: Test Verkada API endpoints.
 # This script is to be ran using the pip module pytest
 # Anything that starts with test will be ran by pytest
-# The script only looks for a 200 response code or 429.
-# It is being assumed that if a server returns a 429 (for whatever reason),
-# The rest of the command processed sucessfully.
+# The script only looks for a 200 response code.
 
 import requests
 import base64
@@ -20,7 +18,7 @@ import logging
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format="%(levelname)s: %(message)s"
 )
 
@@ -44,13 +42,13 @@ URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 
 # Set general testing variables
-ORG_ID = creds.slc_id
-API_KEY = creds.slc_key
-CAMERA_ID = creds.slc_camera_id
-TEST_USER = creds.slc_test_user
-TEST_USER_CRED = creds.slc_test_user_cred
-CARD_ID = creds.slc_card_id
-PLATE = creds.slc_plate
+ORG_ID = creds.slc_id  # Org ID
+API_KEY = creds.slc_key  # API Key
+CAMERA_ID = creds.slc_camera_id  # Device ID of camera
+TEST_USER = creds.slc_test_user  # Command User ID
+TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
+CARD_ID = creds.slc_card_id  # Card ID to manipulate
+PLATE = creds.slc_plate  # AC plate cred to manipulate
 
 GENERAL_HEADER = {
     'accept': 'application/json',
@@ -59,6 +57,140 @@ GENERAL_HEADER = {
 
 FAILED_ENDPOINTS = []
 FAILED_ENDPOINTS_LOCK = threading.Lock()
+MAX_RETRIES = 5  # How many times the program should retry on 429
+RETRY_DELAY = 0.25   # Seconds to wait
+RETRY_COUNT = 0
+RETRY_COUNT_LOCK = threading.Lock()
+
+
+##############################################################################
+                                # Misc #
+##############################################################################
+
+
+class RateLimiter:
+    def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
+        """
+        Initilization of the rate limiter.
+
+        :param rate_limit: The value of how many threads may be made each sec.
+        :type rate_limit: int
+        :param max_events_per_sec: Maximum events allowed per second.
+        :type: int
+        :return: None
+        :rtype: None
+        """
+        self.rate_limit = rate_limit
+        self.lock = threading.Lock()  # Local lock to prevent race conditions
+        self.max_events_per_sec = max_events_per_sec
+        self.pacing = pacing
+
+
+    def acquire(self):
+        """
+        States whether or not the program may create new threads or not.
+
+        :return: Boolean value stating whether new threads may be made or not.
+        :rtype: bool
+        """
+        with self.lock:
+            current_time = time.time()  # Define current time
+
+            if not hasattr(self, 'start_time'):
+                # Check if attribue 'start_time' exists, if not, make it.
+                self.start_time = current_time
+                self.event_count = self.pacing
+                return True
+            
+            # How much time has passed since starting
+            elapsed_time = current_time - self.start_time
+
+            # Check if it's been less than 1sec and less than 10 events have
+            # been made.
+            if elapsed_time < self.pacing / self.rate_limit \
+                and self.event_count < self.max_events_per_sec:
+                self.event_count += 1
+                return True
+            
+            # Check if it is the first wave of events
+            elif elapsed_time >= self.pacing / self.rate_limit:
+                self.start_time = current_time
+                self.event_count = 2
+                return True
+            
+            else:
+                # Calculate the time left before next wave
+                remaining_time = self.pacing - \
+                    (current_time - self.start_time)
+                time.sleep(remaining_time)  # Wait before next wave
+                return True
+            
+
+def run_thread_with_rate_limit(threads, rate_limit=10):
+    """
+    Run a thread with rate limiting.
+        
+    :param target: The target function to be executed in the thread:
+    :type targe: function:
+    :return: The thread that was created and ran
+    :rtype: thread
+    """
+    limiter = RateLimiter(rate_limit=rate_limit,)
+
+    def run_thread(thread):
+        with threading.Lock():
+            limiter.acquire()
+            log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+{thread.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+            thread.start()
+
+    for thread in threads:
+        run_thread(thread)
+
+    for thread in threads:
+        thread.join()
+
+
+def print_colored_centered(time, passed, failed, failed_modules):
+    """
+    Formats and prints what modules failed and how long it took for the
+    program to complete all the tests.
+
+    :param time: The time it took for the program to complete.
+    :type time: int
+    :param passed: How many modules passed their tests.
+    :type passed: int
+    :param failed: How many modules failed their tests.
+    :type failed: int
+    :param failed_modules: The name of the modules that failed their tests.
+    :type failed_modules: list
+    :return: None
+    :rtype: None
+    """
+    global RETRY_COUNT
+
+    terminal_width, _ = shutil.get_terminal_size()
+    short_time = round(time, 2)
+
+    text1 = f"{Fore.CYAN} short test summary info "
+    text2_fail = f"{Fore.RED} {failed} failed, {Fore.GREEN}{passed} \
+passed{Fore.RED} in {short_time}s "
+    text2_pass = f"{Fore.GREEN} {passed} passed in \
+{short_time}s "
+
+    # Print the padded and colored text with "=" characters on both sides
+    print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
+
+    # Print the retry count if > 0
+    if RETRY_COUNT > 0:
+        print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
+
+    if failed > 0:
+        for module in failed_modules:
+            print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
+        print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
+    else:
+        print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
 
 
 ##############################################################################
@@ -115,6 +247,7 @@ def createPOI():
     :rtype: None
     """
     global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPoI")
 
@@ -152,12 +285,24 @@ feca744209047e57&ipo=images')
         "org_id": ORG_ID
     }
 
-    response = requests.post(
-        URL_PEOPLE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.post(
+            URL_PEOPLE, json=payload, headers=headers, params=params)
+        
+        if response.status_code == 429:
+            log.info(f"createPoI retrying in {RETRY_DELAY}s. Response: 429")
+
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+
+        else:
+            break
 
     log.info(f"createPoI response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"CreatePoI: {response.status_code}")
 
@@ -169,6 +314,8 @@ def getPOI():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPoI")
 
@@ -176,11 +323,23 @@ def getPOI():
         "org_id": ORG_ID
     }
 
-    response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
 
+        if response.status_code == 429:
+            log.info(f"getPoI retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+
+        else:
+            break
+    
     log.info(f"getPoI response received: {response.status_code}")
-
-    if response.status_code != 200 and response.status_code != 429:
+    
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPoI: {response.status_code}")
 
@@ -192,6 +351,8 @@ def updatePOI():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePoI")
 
@@ -208,15 +369,27 @@ def updatePOI():
         'person_id': getPersonID()
     }
 
-    response = requests.patch(
-        URL_PEOPLE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.patch(
+            URL_PEOPLE, json=payload, headers=headers, params=params)
+        
+        if response.status_code == 429:
+            log.info(f"updatePoI retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"updatePoI response received: {response.status_code}")
 
     if response.status_code == 400:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPersonID: {response.status_code}")
-    elif response.status_code != 200 and response.status_code != 429:
+    elif response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updatePoI: {response.status_code}")
 
@@ -228,6 +401,8 @@ def deletePOI():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePoI")
 
@@ -241,11 +416,23 @@ def deletePOI():
         "person_id": getPersonID()
     }
 
-    response = requests.delete(URL_PEOPLE, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.delete(URL_PEOPLE, headers=headers, params=params)
+            
+        if response.status_code == 429:
+            log.info(f"deletePoI retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deletePoI response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429 and response.status_code != 400:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deletePoI: {response.status_code}")
 
@@ -269,6 +456,8 @@ def createPlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPlate")
 
@@ -288,12 +477,24 @@ def createPlate():
         "org_id": ORG_ID
     }
 
-    response = requests.post(
-        URL_PLATE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.post(
+            URL_PLATE, json=payload, headers=headers, params=params)
+            
+        if response.status_code == 429:
+            log.info(f"createPlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"createPlate response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"createPlate: {response.status_code}")
 
@@ -305,6 +506,8 @@ def getPlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPlate")
 
@@ -317,11 +520,23 @@ def getPlate():
         "org_id": ORG_ID
     }
 
-    response = requests.get(URL_PLATE, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_PLATE, headers=headers, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getPlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getPlates response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPlate: {response.status_code}")
 
@@ -333,6 +548,8 @@ def updatePlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePlate")
 
@@ -349,12 +566,24 @@ def updatePlate():
         'license_plate': "t3stpl4te"
     }
 
-    response = requests.patch(
-        URL_PLATE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.patch(
+            URL_PLATE, json=payload, headers=headers, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"updatePlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"updatePlate response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updatePlate: {response.status_code}")
 
@@ -366,6 +595,8 @@ def deletePlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePlate")
 
@@ -374,12 +605,24 @@ def deletePlate():
         'license_plate': "t3stpl4te"
     }
 
-    response = requests.delete(
-        URL_PLATE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.delete(
+            URL_PLATE, headers=GENERAL_HEADER, params=params)
+            
+        if response.status_code == 429:
+            log.info(f"deletePlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deletePlate response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deletePlate: {response.status_code}")
 
@@ -396,6 +639,8 @@ def getCloudSettings():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCloudSettings")
 
@@ -404,11 +649,24 @@ def getCloudSettings():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getCloudSettings retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getCloudSettings response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCloudSettings: \
 {response.status_code}")
@@ -421,6 +679,8 @@ def getCounts():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCounts")
     params = {
@@ -428,11 +688,23 @@ def getCounts():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getCounts retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info("getCounts response received")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCounts: {response.status_code}")
 
@@ -444,6 +716,8 @@ def getTrends():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getTrendLineData")
 
@@ -452,12 +726,25 @@ def getTrends():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(
-        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getTrendLineData retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getTrendLineData response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getTrends: {response.status_code}")
 
@@ -469,6 +756,8 @@ def getCameraData():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCameraData")
 
@@ -477,12 +766,25 @@ def getCameraData():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(
-        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getCameraData retrying in {RETRY_DELAY}s\
+. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getCameraData response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCameraData: {response.status_code}")
 
@@ -494,6 +796,8 @@ def getThumbed():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getThumbnail")
 
@@ -503,12 +807,25 @@ def getThumbed():
         'resolution': 'low-res'
     }
 
-    response = requests.get(
-        URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getThumbnail retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getThumbnail response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getThumbnail: {response.status_code}")
 
@@ -525,6 +842,8 @@ def getAudit():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAuditLogs")
 
@@ -532,11 +851,26 @@ def getAudit():
         'org_id': ORG_ID,
         'page_size': '1'
     }
-    response = requests.get(URL_AUDIT, headers=GENERAL_HEADER, params=params)
+
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_AUDIT, headers=GENERAL_HEADER,
+                                params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getAuditLogs retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
         log.info(f"getAuditLogs response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getAudit: {response.status_code}")
 
@@ -548,6 +882,8 @@ def updateUser():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updateUser")
 
@@ -566,12 +902,24 @@ def updateUser():
         'user_id': TEST_USER
     }
 
-    response = requests.put(URL_CORE, json=payload,
-                            headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.put(URL_CORE, json=payload,
+                                headers=headers, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"updateUser retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"updateUser response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updateUser: {response.status_code}")
 
@@ -583,6 +931,8 @@ def getUser():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
 
@@ -591,11 +941,24 @@ def getUser():
         'user_id': TEST_USER
     }
 
-    response = requests.get(URL_CORE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_CORE, headers=GENERAL_HEADER, 
+                                params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getUser retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getUser response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
 
@@ -612,6 +975,8 @@ def getGroups():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessGroups")
 
@@ -619,12 +984,24 @@ def getGroups():
         'org_id': ORG_ID
     }
 
-    response = requests.get(
-        URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getGroups retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info("getGroups response received")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getGroups: {response.status_code}")
 
@@ -636,6 +1013,8 @@ def getACUsers():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessUsers")
 
@@ -643,25 +1022,42 @@ def getACUsers():
         'org_id': ORG_ID
     }
 
-    response = requests.get(
-        URL_AC_USERS, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_AC_USERS, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getAccessUsers retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getAccessUsers response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getACUsers: {response.status_code}")
 
 
 def changeCards():
+    
     """
     Tests the ability to change credentials
     
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
-    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activateCard & deactivateCard")
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activateCard\
+ & deactivateCard")
 
     params = {
         'org_id': ORG_ID,
@@ -672,27 +1068,49 @@ def changeCards():
     activate_url = URL_AC_CRED + '/activate'
     deactivate_url = URL_AC_CRED + '/deactivate'
 
-    active_response = requests.put(
-        activate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        active_response = requests.put(
+            activate_url, headers=GENERAL_HEADER, params=params)
+                
+        if active_response.status_code == 429:
+            log.info(f"activateCard retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"activateCard response received: {active_response.status_code}")
 
-    deactive_response = requests.put(
-        deactivate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        deactive_response = requests.put(
+            deactivate_url, headers=GENERAL_HEADER, params=params)
+                
+        if deactive_response.status_code == 429:
+            log.info(f"deactivateCard retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deactivateCard response received: \
 {deactive_response.status_code}")
 
-    if active_response.status_code != 200 and \
-        active_response.status_code != 429:
+    if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"activateCard: \
 {active_response.status_code}")
 
-    elif deactive_response.status_code != 200 and \
-        deactive_response.status_code != 429:
+    elif deactive_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deactivateCard: \
 {deactive_response.status_code}")
@@ -705,8 +1123,11 @@ def changePlates():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
-    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activatePlate & deactivatePlate")
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activatePlate\
+ & deactivatePlate")
 
     params = {
         'org_id': ORG_ID,
@@ -717,71 +1138,53 @@ def changePlates():
     activate_url = URL_AC_PLATE + '/activate'
     deactivate_url = URL_AC_PLATE + '/deactivate'
 
-    active_response = requests.put(
-        activate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        active_response = requests.put(
+            activate_url, headers=GENERAL_HEADER, params=params)
+                
+        if active_response.status_code == 429:
+            log.info(f"activatePlate retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"activatePlate response received: \
 {active_response.status_code}")
 
-    deactive_response = requests.put(
-        deactivate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        deactive_response = requests.put(
+            deactivate_url, headers=GENERAL_HEADER, params=params)
+                
+        if deactive_response.status_code == 429:
+            log.info(f"deactivatePlate retrying in {RETRY_DELAY}s.\
+ Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deactivatePlate response received: \
 {deactive_response.status_code}")
 
-    if active_response.status_code != 200 and \
-        active_response.status_code != 429:
+    if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"activatePlate: \
 {active_response.status_code}")
 
-    elif deactive_response.status_code != 200 and \
-        deactive_response.status_code != 429:
+    elif deactive_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deactivatePlate: \
 {deactive_response.status_code}")
-
-##############################################################################
-                                # Misc #
-##############################################################################
-
-
-def print_colored_centered(time, passed, failed, failed_modules):
-    """
-    Formats and prints what modules failed and how long it took for the
-    program to complete all the tests.
-
-    :param time: The time it took for the program to complete.
-    :type time: int
-    :param passed: How many modules passed their tests.
-    :type passed: int
-    :param failed: How many modules failed their tests.
-    :type failed: int
-    :param failed_modules: The name of the modules that failed their tests.
-    :type failed_modules: list
-    :return: None
-    :rtype: None
-    """
-    terminal_width, _ = shutil.get_terminal_size()
-    short_time = round(time, 2)
-
-    text1 = f"{Fore.CYAN} short test summary info "
-    text2_fail = f"{Fore.RED} {failed} failed, {Fore.GREEN}{passed} \
-passed{Fore.RED} in {short_time}s "
-    text2_pass = f"{Fore.GREEN} {passed} passed in \
-{short_time}s "
-
-    # Print the padded and colored text with "=" characters on both sides
-    print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
-
-    if failed > 0:
-        for module in failed_modules:
-            print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
-        print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
-    else:
-        print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
 
 
 ##############################################################################
@@ -806,19 +1209,27 @@ if __name__ == '__main__':
     t_changeCards = threading.Thread(target=changeCards)
     t_changePlates = threading.Thread(target=changePlates)
 
-    threads = [t_POI, t_LPOI, t_getCloudSettings, t_getCounts, t_getTrends,
+    threads = [t_getCloudSettings, t_getCounts, t_getTrends,
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates]
 
     start_time = time.time()
-    # Start all threads
-    for thread in threads:
-        thread.start()
 
-    # Join all threads back once complete
-    for thread in threads:
-        thread.join()
+    t_POI.start()
+    log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+{t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+    time.sleep(1)
+
+    t_LPOI.start()
+    log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+{t_LPOI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+    time.sleep(1)
+
+    run_thread_with_rate_limit(threads)
+    t_POI.join()
+    t_LPOI.join()
+
     end_time = time.time()
     elapsed = end_time - start_time
 
