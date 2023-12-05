@@ -2,9 +2,7 @@
 # Purpose: Test Verkada API endpoints.
 # This script is to be ran using the pip module pytest
 # Anything that starts with test will be ran by pytest
-# The script only looks for a 200 response code or 429.
-# It is being assumed that if a server returns a 429 (for whatever reason),
-# The rest of the command processed sucessfully.
+# The script only looks for a 200 response code.
 
 import requests
 import base64
@@ -59,6 +57,129 @@ GENERAL_HEADER = {
 
 FAILED_ENDPOINTS = []
 FAILED_ENDPOINTS_LOCK = threading.Lock()
+
+
+
+##############################################################################
+                                # Misc #
+##############################################################################
+
+
+class RateLimiter:
+    def __init__(self, rate_limit, max_events_per_sec=10):
+        """
+        Initilization of the rate limiter.
+
+        :param rate_limit: The value of how many threads may be made each sec.
+        :type rate_limit: int
+        :param max_events_per_sec: Maximum events allowed per second.
+        :type: int
+        :return: None
+        :rtype: None
+        """
+        self.rate_limit = rate_limit
+        self.lock = threading.Lock()  # Local lock to prevent race conditions
+        self.max_events_per_sec = max_events_per_sec
+
+
+    def acquire(self):
+        """
+        States whether or not the program may create new threads or not.
+
+        :return: Boolean value stating whether new threads may be made or not.
+        :rtype: bool
+        """
+        with self.lock:
+            current_time = time.time()  # Define current time
+
+            if not hasattr(self, 'start_time'):
+                # Check if attribue 'start_time' exists, if not, make it.
+                self.start_time = current_time
+                self.event_count = 1
+                return True
+            
+            # How much time has passed since starting
+            elapsed_time = current_time - self.start_time
+
+            # Check if it's been less than 1sec and less than 10 events have
+            # been made.
+            if elapsed_time < 1 / self.rate_limit and self.event_count <\
+                 self.max_events_per_sec:
+                self.event_count += 1
+                return True
+            
+            # Check if it is the first wave of events
+            elif elapsed_time >= 1 / self.rate_limit:
+                self.start_time = current_time
+                self.event_count = 2
+                return True
+            
+            else:
+                # Calculate the time left before next wave
+                remaining_time = 1 - (current_time - self.start_time)
+                time.sleep(remaining_time)  # Wait before next wave
+                return True
+            
+
+def run_thread_with_rate_limit(threads, rate_limit=10):
+    """
+    Run a thread with rate limiting.
+        
+    :param target: The target function to be executed in the thread:
+    :type targe: function:
+    :return: The thread that was created and ran
+    :rtype: thread
+    """
+    limiter = RateLimiter(rate_limit=rate_limit,max_events_per_sec=5)
+
+    def run_thread(thread):
+        with threading.Lock():
+            limiter.acquire()
+            log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+{thread.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+            thread.start()
+
+    for thread in threads:
+        run_thread(thread)
+
+    for thread in threads:
+        thread.join()
+
+
+def print_colored_centered(time, passed, failed, failed_modules):
+    """
+    Formats and prints what modules failed and how long it took for the
+    program to complete all the tests.
+
+    :param time: The time it took for the program to complete.
+    :type time: int
+    :param passed: How many modules passed their tests.
+    :type passed: int
+    :param failed: How many modules failed their tests.
+    :type failed: int
+    :param failed_modules: The name of the modules that failed their tests.
+    :type failed_modules: list
+    :return: None
+    :rtype: None
+    """
+    terminal_width, _ = shutil.get_terminal_size()
+    short_time = round(time, 2)
+
+    text1 = f"{Fore.CYAN} short test summary info "
+    text2_fail = f"{Fore.RED} {failed} failed, {Fore.GREEN}{passed} \
+passed{Fore.RED} in {short_time}s "
+    text2_pass = f"{Fore.GREEN} {passed} passed in \
+{short_time}s "
+
+    # Print the padded and colored text with "=" characters on both sides
+    print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
+
+    if failed > 0:
+        for module in failed_modules:
+            print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
+        print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
+    else:
+        print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
 
 
 ##############################################################################
@@ -157,7 +278,7 @@ feca744209047e57&ipo=images')
 
     log.info(f"createPoI response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"CreatePoI: {response.status_code}")
 
@@ -180,7 +301,7 @@ def getPOI():
 
     log.info(f"getPoI response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPoI: {response.status_code}")
 
@@ -216,7 +337,7 @@ def updatePOI():
     if response.status_code == 400:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPersonID: {response.status_code}")
-    elif response.status_code != 200 and response.status_code != 429:
+    elif response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updatePoI: {response.status_code}")
 
@@ -245,7 +366,7 @@ def deletePOI():
 
     log.info(f"deletePoI response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429 and response.status_code != 400:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deletePoI: {response.status_code}")
 
@@ -293,7 +414,7 @@ def createPlate():
 
     log.info(f"createPlate response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"createPlate: {response.status_code}")
 
@@ -321,7 +442,7 @@ def getPlate():
 
     log.info(f"getPlates response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPlate: {response.status_code}")
 
@@ -354,7 +475,7 @@ def updatePlate():
 
     log.info(f"updatePlate response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updatePlate: {response.status_code}")
 
@@ -379,7 +500,7 @@ def deletePlate():
 
     log.info(f"deletePlate response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deletePlate: {response.status_code}")
 
@@ -408,7 +529,7 @@ def getCloudSettings():
 
     log.info(f"getCloudSettings response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCloudSettings: \
 {response.status_code}")
@@ -432,7 +553,7 @@ def getCounts():
 
     log.info("getCounts response received")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCounts: {response.status_code}")
 
@@ -457,7 +578,7 @@ def getTrends():
 
     log.info(f"getTrendLineData response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getTrends: {response.status_code}")
 
@@ -482,7 +603,7 @@ def getCameraData():
 
     log.info(f"getCameraData response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCameraData: {response.status_code}")
 
@@ -508,7 +629,7 @@ def getThumbed():
 
     log.info(f"getThumbnail response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getThumbnail: {response.status_code}")
 
@@ -536,7 +657,7 @@ def getAudit():
 
     log.info(f"getAuditLogs response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getAudit: {response.status_code}")
 
@@ -571,7 +692,7 @@ def updateUser():
 
     log.info(f"updateUser response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updateUser: {response.status_code}")
 
@@ -595,7 +716,7 @@ def getUser():
 
     log.info(f"getUser response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
 
@@ -624,7 +745,7 @@ def getGroups():
 
     log.info("getGroups response received")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getGroups: {response.status_code}")
 
@@ -648,7 +769,7 @@ def getACUsers():
 
     log.info(f"getAccessUsers response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 429:
+    if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getACUsers: {response.status_code}")
 
@@ -685,14 +806,12 @@ def changeCards():
     log.info(f"deactivateCard response received: \
 {deactive_response.status_code}")
 
-    if active_response.status_code != 200 and \
-        active_response.status_code != 429:
+    if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"activateCard: \
 {active_response.status_code}")
 
-    elif deactive_response.status_code != 200 and \
-        deactive_response.status_code != 429:
+    elif deactive_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deactivateCard: \
 {deactive_response.status_code}")
@@ -731,57 +850,15 @@ def changePlates():
     log.info(f"deactivatePlate response received: \
 {deactive_response.status_code}")
 
-    if active_response.status_code != 200 and \
-        active_response.status_code != 429:
+    if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"activatePlate: \
 {active_response.status_code}")
 
-    elif deactive_response.status_code != 200 and \
-        deactive_response.status_code != 429:
+    elif deactive_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deactivatePlate: \
 {deactive_response.status_code}")
-
-##############################################################################
-                                # Misc #
-##############################################################################
-
-
-def print_colored_centered(time, passed, failed, failed_modules):
-    """
-    Formats and prints what modules failed and how long it took for the
-    program to complete all the tests.
-
-    :param time: The time it took for the program to complete.
-    :type time: int
-    :param passed: How many modules passed their tests.
-    :type passed: int
-    :param failed: How many modules failed their tests.
-    :type failed: int
-    :param failed_modules: The name of the modules that failed their tests.
-    :type failed_modules: list
-    :return: None
-    :rtype: None
-    """
-    terminal_width, _ = shutil.get_terminal_size()
-    short_time = round(time, 2)
-
-    text1 = f"{Fore.CYAN} short test summary info "
-    text2_fail = f"{Fore.RED} {failed} failed, {Fore.GREEN}{passed} \
-passed{Fore.RED} in {short_time}s "
-    text2_pass = f"{Fore.GREEN} {passed} passed in \
-{short_time}s "
-
-    # Print the padded and colored text with "=" characters on both sides
-    print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
-
-    if failed > 0:
-        for module in failed_modules:
-            print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
-        print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
-    else:
-        print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
 
 
 ##############################################################################
@@ -806,19 +883,13 @@ if __name__ == '__main__':
     t_changeCards = threading.Thread(target=changeCards)
     t_changePlates = threading.Thread(target=changePlates)
 
-    threads = [t_POI, t_LPOI, t_getCloudSettings, t_getCounts, t_getTrends,
+    threads = [t_POI, t_getCloudSettings, t_getCounts, t_getTrends,
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
-               t_getUser, t_getGroups, t_getACUsers, t_changeCards,
+               t_getUser, t_getGroups, t_getACUsers, t_LPOI, t_changeCards,
                t_changePlates]
 
     start_time = time.time()
-    # Start all threads
-    for thread in threads:
-        thread.start()
-
-    # Join all threads back once complete
-    for thread in threads:
-        thread.join()
+    run_thread_with_rate_limit(threads, 5)
     end_time = time.time()
     elapsed = end_time - start_time
 
