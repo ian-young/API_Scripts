@@ -295,7 +295,7 @@ feca744209047e57&ipo=images')
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
         else:
             break
@@ -332,7 +332,7 @@ def getPOI():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
         else:
             break
@@ -379,7 +379,7 @@ def updatePOI():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -425,7 +425,7 @@ def deletePOI():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -487,7 +487,7 @@ def createPlate():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -529,7 +529,7 @@ def getPlate():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -576,7 +576,7 @@ def updatePlate():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -615,7 +615,7 @@ def deletePlate():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -659,7 +659,7 @@ def getCloudSettings():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -697,7 +697,7 @@ def getCounts():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -737,7 +737,7 @@ def getTrends():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -777,7 +777,7 @@ def getCameraData():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -818,7 +818,7 @@ def getThumbed():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -863,7 +863,7 @@ def getAudit():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -912,7 +912,7 @@ def updateUser():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -951,7 +951,7 @@ def getUser():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -994,7 +994,7 @@ def getGroups():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -1033,7 +1033,7 @@ def getACUsers():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -1079,7 +1079,7 @@ def changeCards():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -1097,7 +1097,7 @@ def changeCards():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -1149,7 +1149,7 @@ def changePlates():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -1168,7 +1168,7 @@ def changePlates():
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
             
         else:
             break
@@ -1215,17 +1215,21 @@ if __name__ == '__main__':
                t_changePlates]
 
     start_time = time.time()
+
     t_POI.start()
     log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
 {t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
     time.sleep(1)
+
     t_LPOI.start()
     log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
 {t_LPOI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
     time.sleep(1)
+
     run_thread_with_rate_limit(threads)
     t_POI.join()
     t_LPOI.join()
+
     end_time = time.time()
     elapsed = end_time - start_time
 

@@ -43,7 +43,7 @@ class APIThrottleException(Exception):
     """
     def __init__(self, message="API throttle limit exceeded."):
         self.message = message
-        super.__init__(self.message)
+        super().__init__(self.message)
 
 
 def createPOI(name, image, download):
