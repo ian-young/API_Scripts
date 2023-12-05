@@ -18,7 +18,7 @@ import logging
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format="%(levelname)s: %(message)s"
 )
 
@@ -42,13 +42,13 @@ URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 
 # Set general testing variables
-ORG_ID = creds.slc_id
-API_KEY = creds.slc_key
-CAMERA_ID = creds.slc_camera_id
-TEST_USER = creds.slc_test_user
-TEST_USER_CRED = creds.slc_test_user_cred
-CARD_ID = creds.slc_card_id
-PLATE = creds.slc_plate
+ORG_ID = creds.slc_id  # Org ID
+API_KEY = creds.slc_key  # API Key
+CAMERA_ID = creds.slc_camera_id  # Device ID of camera
+TEST_USER = creds.slc_test_user  # Command User ID
+TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
+CARD_ID = creds.slc_card_id  # Card ID to manipulate
+PLATE = creds.slc_plate  # AC plate cred to manipulate
 
 GENERAL_HEADER = {
     'accept': 'application/json',
@@ -57,7 +57,8 @@ GENERAL_HEADER = {
 
 FAILED_ENDPOINTS = []
 FAILED_ENDPOINTS_LOCK = threading.Lock()
-
+MAX_RETRIES = 5  # How many times the program should retry on 429
+RETRY_DELAY = 0.5   # Seconds to wait
 
 
 ##############################################################################
@@ -66,7 +67,7 @@ FAILED_ENDPOINTS_LOCK = threading.Lock()
 
 
 class RateLimiter:
-    def __init__(self, rate_limit, max_events_per_sec=10):
+    def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
         """
         Initilization of the rate limiter.
 
@@ -80,6 +81,7 @@ class RateLimiter:
         self.rate_limit = rate_limit
         self.lock = threading.Lock()  # Local lock to prevent race conditions
         self.max_events_per_sec = max_events_per_sec
+        self.pacing = pacing
 
 
     def acquire(self):
@@ -95,7 +97,7 @@ class RateLimiter:
             if not hasattr(self, 'start_time'):
                 # Check if attribue 'start_time' exists, if not, make it.
                 self.start_time = current_time
-                self.event_count = 1
+                self.event_count = self.pacing
                 return True
             
             # How much time has passed since starting
@@ -103,20 +105,21 @@ class RateLimiter:
 
             # Check if it's been less than 1sec and less than 10 events have
             # been made.
-            if elapsed_time < 1 / self.rate_limit and self.event_count <\
-                 self.max_events_per_sec:
+            if elapsed_time < self.pacing / self.rate_limit \
+                and self.event_count < self.max_events_per_sec:
                 self.event_count += 1
                 return True
             
             # Check if it is the first wave of events
-            elif elapsed_time >= 1 / self.rate_limit:
+            elif elapsed_time >= self.pacing / self.rate_limit:
                 self.start_time = current_time
                 self.event_count = 2
                 return True
             
             else:
                 # Calculate the time left before next wave
-                remaining_time = 1 - (current_time - self.start_time)
+                remaining_time = self.pacing - \
+                    (current_time - self.start_time)
                 time.sleep(remaining_time)  # Wait before next wave
                 return True
             
@@ -130,7 +133,7 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
     :return: The thread that was created and ran
     :rtype: thread
     """
-    limiter = RateLimiter(rate_limit=rate_limit,max_events_per_sec=5)
+    limiter = RateLimiter(rate_limit=rate_limit,)
 
     def run_thread(thread):
         with threading.Lock():
@@ -273,8 +276,16 @@ feca744209047e57&ipo=images')
         "org_id": ORG_ID
     }
 
-    response = requests.post(
-        URL_PEOPLE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.post(
+            URL_PEOPLE, json=payload, headers=headers, params=params)
+        
+        if response.status_code == 429:
+            log.info(f"createPoI retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+
+        else:
+            break
 
     log.info(f"createPoI response received: {response.status_code}")
 
@@ -297,10 +308,18 @@ def getPOI():
         "org_id": ORG_ID
     }
 
-    response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
 
+        if response.status_code == 429:
+            log.info(f"getPoI retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
+    
     log.info(f"getPoI response received: {response.status_code}")
-
+    
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPoI: {response.status_code}")
@@ -329,8 +348,16 @@ def updatePOI():
         'person_id': getPersonID()
     }
 
-    response = requests.patch(
-        URL_PEOPLE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.patch(
+            URL_PEOPLE, json=payload, headers=headers, params=params)
+        
+        if response.status_code == 429:
+            log.info(f"updatePoI retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"updatePoI response received: {response.status_code}")
 
@@ -362,7 +389,15 @@ def deletePOI():
         "person_id": getPersonID()
     }
 
-    response = requests.delete(URL_PEOPLE, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.delete(URL_PEOPLE, headers=headers, params=params)
+            
+        if response.status_code == 429:
+            log.info(f"deletePoI retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deletePoI response received: {response.status_code}")
 
@@ -409,8 +444,16 @@ def createPlate():
         "org_id": ORG_ID
     }
 
-    response = requests.post(
-        URL_PLATE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.post(
+            URL_PLATE, json=payload, headers=headers, params=params)
+            
+        if response.status_code == 429:
+            log.info(f"createPlate retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"createPlate response received: {response.status_code}")
 
@@ -438,7 +481,15 @@ def getPlate():
         "org_id": ORG_ID
     }
 
-    response = requests.get(URL_PLATE, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_PLATE, headers=headers, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getPlate retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getPlates response received: {response.status_code}")
 
@@ -470,8 +521,16 @@ def updatePlate():
         'license_plate': "t3stpl4te"
     }
 
-    response = requests.patch(
-        URL_PLATE, json=payload, headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.patch(
+            URL_PLATE, json=payload, headers=headers, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"updatePlate retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"updatePlate response received: {response.status_code}")
 
@@ -495,8 +554,16 @@ def deletePlate():
         'license_plate': "t3stpl4te"
     }
 
-    response = requests.delete(
-        URL_PLATE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.delete(
+            URL_PLATE, headers=GENERAL_HEADER, params=params)
+            
+        if response.status_code == 429:
+            log.info(f"deletePlate retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deletePlate response received: {response.status_code}")
 
@@ -525,7 +592,16 @@ def getCloudSettings():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getCloudSettings retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getCloudSettings response received: {response.status_code}")
 
@@ -549,7 +625,15 @@ def getCounts():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getCounts retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info("getCounts response received")
 
@@ -573,8 +657,17 @@ def getTrends():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(
-        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getTrendLineData retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getTrendLineData response received: {response.status_code}")
 
@@ -598,8 +691,17 @@ def getCameraData():
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(
-        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getCameraData retrying in {RETRY_DELAY}s\
+. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getCameraData response received: {response.status_code}")
 
@@ -624,8 +726,17 @@ def getThumbed():
         'resolution': 'low-res'
     }
 
-    response = requests.get(
-        URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getThumbnail retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getThumbnail response received: {response.status_code}")
 
@@ -653,7 +764,18 @@ def getAudit():
         'org_id': ORG_ID,
         'page_size': '1'
     }
-    response = requests.get(URL_AUDIT, headers=GENERAL_HEADER, params=params)
+
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_AUDIT, headers=GENERAL_HEADER,
+                                params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getAuditLogs retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getAuditLogs response received: {response.status_code}")
 
@@ -687,8 +809,16 @@ def updateUser():
         'user_id': TEST_USER
     }
 
-    response = requests.put(URL_CORE, json=payload,
-                            headers=headers, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.put(URL_CORE, json=payload,
+                                headers=headers, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"updateUser retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"updateUser response received: {response.status_code}")
 
@@ -712,7 +842,16 @@ def getUser():
         'user_id': TEST_USER
     }
 
-    response = requests.get(URL_CORE, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(URL_CORE, headers=GENERAL_HEADER, 
+                                params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getUser retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getUser response received: {response.status_code}")
 
@@ -740,8 +879,16 @@ def getGroups():
         'org_id': ORG_ID
     }
 
-    response = requests.get(
-        URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getGroups retrying in {RETRY_DELAY}s. Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info("getGroups response received")
 
@@ -764,8 +911,17 @@ def getACUsers():
         'org_id': ORG_ID
     }
 
-    response = requests.get(
-        URL_AC_USERS, headers=GENERAL_HEADER, params=params)
+    for _ in range(MAX_RETRIES):
+        response = requests.get(
+            URL_AC_USERS, headers=GENERAL_HEADER, params=params)
+                
+        if response.status_code == 429:
+            log.info(f"getAccessUsers retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"getAccessUsers response received: {response.status_code}")
 
@@ -782,7 +938,8 @@ def changeCards():
     :rtype: None
     """
 
-    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activateCard & deactivateCard")
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activateCard\
+ & deactivateCard")
 
     params = {
         'org_id': ORG_ID,
@@ -792,16 +949,31 @@ def changeCards():
 
     activate_url = URL_AC_CRED + '/activate'
     deactivate_url = URL_AC_CRED + '/deactivate'
-
-    active_response = requests.put(
-        activate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        active_response = requests.put(
+            activate_url, headers=GENERAL_HEADER, params=params)
+                
+        if active_response.status_code == 429:
+            log.info(f"activateCard retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"activateCard response received: {active_response.status_code}")
 
-    deactive_response = requests.put(
-        deactivate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        deactive_response = requests.put(
+            deactivate_url, headers=GENERAL_HEADER, params=params)
+                
+        if deactive_response.status_code == 429:
+            log.info(f"deactivateCard retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deactivateCard response received: \
 {deactive_response.status_code}")
@@ -825,7 +997,8 @@ def changePlates():
     :rtype: None
     """
 
-    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activatePlate & deactivatePlate")
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activatePlate\
+ & deactivatePlate")
 
     params = {
         'org_id': ORG_ID,
@@ -836,16 +1009,32 @@ def changePlates():
     activate_url = URL_AC_PLATE + '/activate'
     deactivate_url = URL_AC_PLATE + '/deactivate'
 
-    active_response = requests.put(
-        activate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        active_response = requests.put(
+            activate_url, headers=GENERAL_HEADER, params=params)
+                
+        if active_response.status_code == 429:
+            log.info(f"activatePlate retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"activatePlate response received: \
 {active_response.status_code}")
 
-    deactive_response = requests.put(
-        deactivate_url, headers=GENERAL_HEADER, params=params
-    )
+    for _ in range(MAX_RETRIES):
+        deactive_response = requests.put(
+            deactivate_url, headers=GENERAL_HEADER, params=params)
+                
+        if deactive_response.status_code == 429:
+            log.info(f"deactivatePlate retrying in {RETRY_DELAY}s.\
+ Response: 429")
+            time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
+            
+        else:
+            break
 
     log.info(f"deactivatePlate response received: \
 {deactive_response.status_code}")
@@ -883,13 +1072,23 @@ if __name__ == '__main__':
     t_changeCards = threading.Thread(target=changeCards)
     t_changePlates = threading.Thread(target=changePlates)
 
-    threads = [t_POI, t_getCloudSettings, t_getCounts, t_getTrends,
+    threads = [t_getCloudSettings, t_getCounts, t_getTrends,
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
-               t_getUser, t_getGroups, t_getACUsers, t_LPOI, t_changeCards,
+               t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates]
 
     start_time = time.time()
-    run_thread_with_rate_limit(threads, 5)
+    t_POI.start()
+    log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+{t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+    time.sleep(1)
+    t_LPOI.start()
+    log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+{t_LPOI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+    time.sleep(1)
+    run_thread_with_rate_limit(threads)
+    t_POI.join()
+    t_LPOI.join()
     end_time = time.time()
     elapsed = end_time - start_time
 
