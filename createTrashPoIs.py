@@ -11,9 +11,8 @@ analytics/lpr/license_plate_of_interest"
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
 
-# This will help prevent exceeding the call limit
-CALL_COUNT = 0
-CALL_COUNT_LOCK = threading.Lock()
+MAX_RETRIES = 5
+RETRY_DELAY = 0.25
 
 # Set logger
 log = logging.getLogger()
@@ -61,12 +60,6 @@ to be downloaded. Most cases, the value will be 'y.'
     :return: None
     :rtype: None
     """
-    global CALL_COUNT
-
-    # Don't bother running if at throttle limit
-    if CALL_COUNT >= 500:
-        return
-    
     file_content = None  # Pre-define
 
     if download == 'y':
@@ -92,11 +85,14 @@ to be downloaded. Most cases, the value will be 'y.'
     }
 
     try:
-        response = requests.post(
-            URL_POI, json=payload, headers=HEADERS, params=PARAMS)
-        
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1
+        for _ in range(MAX_RETRIES):
+            response = requests.post(
+                URL_POI, json=payload, headers=HEADERS, params=PARAMS)
+            
+            if response.status_code == 429:
+                log.info(f"{name} API throttle. Retry in {RETRY_DELAY}s.")
+            
+            else: break
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
@@ -120,26 +116,22 @@ license plate.
     :return: None
     :rtype: None
     """
-    global CALL_COUNT
-
-    # Don't even bother running if at the throttle limit
-    if CALL_COUNT >= 500:
-        return
-    
     payload = {
         "description": name,
         "license_plate": plate
     }
 
     try:
-        response = requests.post(
-            URL_LPR, json=payload, headers=HEADERS, params=PARAMS)
-        
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1
+        for _ in range(MAX_RETRIES):
+            response = requests.post(
+                URL_LPR, json=payload, headers=HEADERS, params=PARAMS)
+            
+            if response.status_code == 429:
+                log.info(f"{name} API throttle. Retry in {RETRY_DELAY}s.")
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
+        
         elif response.status_code != 200:
             log.warning(f"{response.status_code}: Could not create {name}")
             log.warning(f"Response content: {response.text}")
