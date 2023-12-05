@@ -58,7 +58,9 @@ GENERAL_HEADER = {
 FAILED_ENDPOINTS = []
 FAILED_ENDPOINTS_LOCK = threading.Lock()
 MAX_RETRIES = 5  # How many times the program should retry on 429
-RETRY_DELAY = 0.5   # Seconds to wait
+RETRY_DELAY = 0.25   # Seconds to wait
+RETRY_COUNT = 0
+RETRY_COUNT_LOCK = threading.Lock()
 
 
 ##############################################################################
@@ -165,6 +167,8 @@ def print_colored_centered(time, passed, failed, failed_modules):
     :return: None
     :rtype: None
     """
+    global RETRY_COUNT
+
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
 
@@ -176,6 +180,10 @@ passed{Fore.RED} in {short_time}s "
 
     # Print the padded and colored text with "=" characters on both sides
     print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
+
+    # Print the retry count if > 0
+    if RETRY_COUNT > 0:
+        print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
 
     if failed > 0:
         for module in failed_modules:
@@ -239,6 +247,7 @@ def createPOI():
     :rtype: None
     """
     global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPoI")
 
@@ -282,6 +291,10 @@ feca744209047e57&ipo=images')
         
         if response.status_code == 429:
             log.info(f"createPoI retrying in {RETRY_DELAY}s. Response: 429")
+
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
 
         else:
@@ -301,6 +314,8 @@ def getPOI():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPoI")
 
@@ -313,8 +328,12 @@ def getPOI():
 
         if response.status_code == 429:
             log.info(f"getPoI retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
-            
+
         else:
             break
     
@@ -332,6 +351,8 @@ def updatePOI():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePoI")
 
@@ -354,6 +375,10 @@ def updatePOI():
         
         if response.status_code == 429:
             log.info(f"updatePoI retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -376,6 +401,8 @@ def deletePOI():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePoI")
 
@@ -394,6 +421,10 @@ def deletePOI():
             
         if response.status_code == 429:
             log.info(f"deletePoI retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -425,6 +456,8 @@ def createPlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPlate")
 
@@ -450,6 +483,10 @@ def createPlate():
             
         if response.status_code == 429:
             log.info(f"createPlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -469,6 +506,8 @@ def getPlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPlate")
 
@@ -486,6 +525,10 @@ def getPlate():
                 
         if response.status_code == 429:
             log.info(f"getPlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -505,6 +548,8 @@ def updatePlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePlate")
 
@@ -527,6 +572,10 @@ def updatePlate():
                 
         if response.status_code == 429:
             log.info(f"updatePlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -546,6 +595,8 @@ def deletePlate():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePlate")
 
@@ -560,6 +611,10 @@ def deletePlate():
             
         if response.status_code == 429:
             log.info(f"deletePlate retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -584,6 +639,8 @@ def getCloudSettings():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCloudSettings")
 
@@ -598,6 +655,10 @@ def getCloudSettings():
         if response.status_code == 429:
             log.info(f"getCloudSettings retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -618,6 +679,8 @@ def getCounts():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCounts")
     params = {
@@ -630,6 +693,10 @@ def getCounts():
                 
         if response.status_code == 429:
             log.info(f"getCounts retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -649,6 +716,8 @@ def getTrends():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getTrendLineData")
 
@@ -664,6 +733,10 @@ def getTrends():
         if response.status_code == 429:
             log.info(f"getTrendLineData retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -683,6 +756,8 @@ def getCameraData():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCameraData")
 
@@ -698,6 +773,10 @@ def getCameraData():
         if response.status_code == 429:
             log.info(f"getCameraData retrying in {RETRY_DELAY}s\
 . Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -717,6 +796,8 @@ def getThumbed():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getThumbnail")
 
@@ -733,6 +814,10 @@ def getThumbed():
         if response.status_code == 429:
             log.info(f"getThumbnail retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -757,6 +842,8 @@ def getAudit():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAuditLogs")
 
@@ -772,6 +859,10 @@ def getAudit():
         if response.status_code == 429:
             log.info(f"getAuditLogs retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -791,6 +882,8 @@ def updateUser():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updateUser")
 
@@ -815,6 +908,10 @@ def updateUser():
                 
         if response.status_code == 429:
             log.info(f"updateUser retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -834,6 +931,8 @@ def getUser():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
 
@@ -848,6 +947,10 @@ def getUser():
                 
         if response.status_code == 429:
             log.info(f"getUser retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -872,6 +975,8 @@ def getGroups():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessGroups")
 
@@ -885,6 +990,10 @@ def getGroups():
                 
         if response.status_code == 429:
             log.info(f"getGroups retrying in {RETRY_DELAY}s. Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -904,6 +1013,8 @@ def getACUsers():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessUsers")
 
@@ -918,6 +1029,10 @@ def getACUsers():
         if response.status_code == 429:
             log.info(f"getAccessUsers retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -931,12 +1046,15 @@ def getACUsers():
 
 
 def changeCards():
+    
     """
     Tests the ability to change credentials
     
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activateCard\
  & deactivateCard")
@@ -949,6 +1067,7 @@ def changeCards():
 
     activate_url = URL_AC_CRED + '/activate'
     deactivate_url = URL_AC_CRED + '/deactivate'
+
     for _ in range(MAX_RETRIES):
         active_response = requests.put(
             activate_url, headers=GENERAL_HEADER, params=params)
@@ -956,6 +1075,10 @@ def changeCards():
         if active_response.status_code == 429:
             log.info(f"activateCard retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -970,6 +1093,10 @@ def changeCards():
         if deactive_response.status_code == 429:
             log.info(f"deactivateCard retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -996,6 +1123,8 @@ def changePlates():
     :return: None
     :rtype: None
     """
+    global FAILED_ENDPOINTS
+    global RETRY_COUNT
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activatePlate\
  & deactivatePlate")
@@ -1016,6 +1145,10 @@ def changePlates():
         if active_response.status_code == 429:
             log.info(f"activatePlate retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
@@ -1031,6 +1164,10 @@ def changePlates():
         if deactive_response.status_code == 429:
             log.info(f"deactivatePlate retrying in {RETRY_DELAY}s.\
  Response: 429")
+                        
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+
             time.sleep(RETRY_DELAY)  # Wait 1 second for throttle refresh
             
         else:
