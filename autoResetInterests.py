@@ -44,8 +44,8 @@ except ImportError:
     log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted(['Cool Car'])  # Label of plate !Not plate number!
-PERSISTENT_PERSONS = sorted(['P. Parker'])  # PoI label
+PERSISTENT_PLATES = sorted([])  # Label of plate !Not plate number!
+PERSISTENT_PERSONS = sorted([])  # PoI label
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
