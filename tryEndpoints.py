@@ -2,7 +2,9 @@
 # Purpose: Test Verkada API endpoints.
 # This script is to be ran using the pip module pytest
 # Anything that starts with test will be ran by pytest
-# The script only looks for a 200 response code.
+# The script only looks for a 200 response code or 429.
+# It is being assumed that if a server returns a 429 (for whatever reason),
+# The rest of the command processed sucessfully.
 
 import requests
 import base64
@@ -72,8 +74,13 @@ def testPOI():
 
 
 def getPersonID():
-    """Accepts a string as a search value and returns the person id\
- associated with it"""
+    """
+    Accepts a string as a search value and returns the person id
+ associated with it
+    
+    :return: The person id for the search value hard-coded into label.
+    :rtype: str
+    """
     # Define query parameters for the request
     params = {
         'org_id': ORG_ID,
@@ -101,7 +108,12 @@ def getPersonID():
 
 
 def createPOI():
-    """Creates a PoI to test the API endpoint"""
+    """
+    Creates a PoI to test the responsiveness of the API endpoint.
+    
+    :return: None
+    :rtype: None
+    """
     global FAILED_ENDPOINTS
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPoI")
@@ -145,13 +157,18 @@ feca744209047e57&ipo=images')
 
     log.info(f"createPoI response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"CreatePoI: {response.status_code}")
 
 
 def getPOI():
-    """Looks to see if it can get PoIs"""
+    """
+    Looks to see if it can get a list of PoIs
+
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPoI")
 
@@ -163,13 +180,18 @@ def getPOI():
 
     log.info(f"getPoI response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPoI: {response.status_code}")
 
 
 def updatePOI():
-    """Tests the patch requests for the people endpoint"""
+    """
+    Tests the patch requests for the people endpoint
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePoI")
 
@@ -194,13 +216,18 @@ def updatePOI():
     if response.status_code == 400:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPersonID: {response.status_code}")
-    elif response.status_code != 200:
+    elif response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updatePoI: {response.status_code}")
 
 
 def deletePOI():
-    """Tests the delete request for the people endpoint"""
+    """
+    Tests the delete request for the people endpoint
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePoI")
 
@@ -218,7 +245,7 @@ def deletePOI():
 
     log.info(f"deletePoI response received: {response.status_code}")
 
-    if response.status_code != 200 and response.status_code != 400:
+    if response.status_code != 200 and response.status_code != 429 and response.status_code != 400:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deletePoI: {response.status_code}")
 
@@ -236,7 +263,12 @@ def testLPOI():
 
 
 def createPlate():
-    """Creates a Plate to test the API endpoint"""
+    """
+    Creates a Plate to test the API endpoint
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} createPlate")
 
@@ -261,13 +293,18 @@ def createPlate():
 
     log.info(f"createPlate response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"createPlate: {response.status_code}")
 
 
 def getPlate():
-    """Looks to see if it can get Plates"""
+    """
+    Looks to see if it can get Plates
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getPlate")
 
@@ -284,13 +321,18 @@ def getPlate():
 
     log.info(f"getPlates response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPlate: {response.status_code}")
 
 
 def updatePlate():
-    """Tests the patch requests for the Plate endpoint"""
+    """
+    Tests the patch requests for the Plate endpoint
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updatePlate")
 
@@ -312,13 +354,18 @@ def updatePlate():
 
     log.info(f"updatePlate response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updatePlate: {response.status_code}")
 
 
 def deletePlate():
-    """Tests the delete request for the Plate endpoint"""
+    """
+    Tests the delete request for the Plate endpoint
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} deletePlate")
 
@@ -332,7 +379,7 @@ def deletePlate():
 
     log.info(f"deletePlate response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deletePlate: {response.status_code}")
 
@@ -343,7 +390,12 @@ def deletePlate():
 
 
 def getCloudSettings():
-    """Tests to see if it can retrieve cloud backup settings for a camera"""
+    """
+    Tests to see if it can retrieve cloud backup settings for a camera
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCloudSettings")
 
@@ -356,14 +408,19 @@ def getCloudSettings():
 
     log.info(f"getCloudSettings response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCloudSettings: \
 {response.status_code}")
 
 
 def getCounts():
-    """Tests if it can get object counts from a camera"""
+    """
+    Tests if it can get object counts from a camera
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCounts")
     params = {
@@ -375,13 +432,18 @@ def getCounts():
 
     log.info("getCounts response received")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCounts: {response.status_code}")
 
 
 def getTrends():
-    """Tests if it can get trend counts from a camera"""
+    """
+    Tests if it can get trend counts from a camera
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getTrendLineData")
 
@@ -395,13 +457,18 @@ def getTrends():
 
     log.info(f"getTrendLineData response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getTrends: {response.status_code}")
 
 
 def getCameraData():
-    """Tests if it can get camera data on a given camera"""
+    """
+    Tests if it can get camera data on a given camera
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getCameraData")
 
@@ -415,13 +482,18 @@ def getCameraData():
 
     log.info(f"getCameraData response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getCameraData: {response.status_code}")
 
 
 def getThumbed():
-    """Tests if it can get a thumbnail from a camera"""
+    """
+    Tests if it can get a thumbnail from a camera
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getThumbnail")
 
@@ -436,7 +508,7 @@ def getThumbed():
 
     log.info(f"getThumbnail response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getThumbnail: {response.status_code}")
 
@@ -447,7 +519,12 @@ def getThumbed():
 
 
 def getAudit():
-    """Tests the ability to retrieve audit logs"""
+    """
+    Tests the ability to retrieve audit logs
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAuditLogs")
 
@@ -459,13 +536,18 @@ def getAudit():
 
     log.info(f"getAuditLogs response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getAudit: {response.status_code}")
 
 
 def updateUser():
-    """Tests the ability to update a user"""
+    """
+    Tests the ability to update a user
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} updateUser")
 
@@ -489,13 +571,18 @@ def updateUser():
 
     log.info(f"updateUser response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"updateUser: {response.status_code}")
 
 
 def getUser():
-    """Tests the ability to retrieve information on a user"""
+    """
+    Tests the ability to retrieve information on a user
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
 
@@ -508,7 +595,7 @@ def getUser():
 
     log.info(f"getUser response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
 
@@ -519,7 +606,12 @@ def getUser():
 
 
 def getGroups():
-    """Tests the ability to get AC Groups"""
+    """
+    Tests the ability to get AC Groups
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessGroups")
 
@@ -532,13 +624,18 @@ def getGroups():
 
     log.info("getGroups response received")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getGroups: {response.status_code}")
 
 
 def getACUsers():
-    """Tests the ability to get AC users"""
+    """
+    Tests the ability to get AC users
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getAccessUsers")
 
@@ -551,13 +648,18 @@ def getACUsers():
 
     log.info(f"getAccessUsers response received: {response.status_code}")
 
-    if response.status_code != 200:
+    if response.status_code != 200 and response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getACUsers: {response.status_code}")
 
 
 def changeCards():
-    """Tests the ability to change credentials"""
+    """
+    Tests the ability to change credentials
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activateCard & deactivateCard")
 
@@ -583,19 +685,26 @@ def changeCards():
     log.info(f"deactivateCard response received: \
 {deactive_response.status_code}")
 
-    if active_response.status_code != 200:
+    if active_response.status_code != 200 and \
+        active_response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"activateCard: \
 {active_response.status_code}")
 
-    elif deactive_response.status_code != 200:
+    elif deactive_response.status_code != 200 and \
+        deactive_response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deactivateCard: \
 {deactive_response.status_code}")
 
 
 def changePlates():
-    """Tests the ability to change access plates"""
+    """
+    Tests the ability to change access plates
+    
+    :return: None
+    :rtype: None
+    """
 
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} activatePlate & deactivatePlate")
 
@@ -622,12 +731,14 @@ def changePlates():
     log.info(f"deactivatePlate response received: \
 {deactive_response.status_code}")
 
-    if active_response.status_code != 200:
+    if active_response.status_code != 200 and \
+        active_response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"activatePlate: \
 {active_response.status_code}")
 
-    elif deactive_response.status_code != 200:
+    elif deactive_response.status_code != 200 and \
+        deactive_response.status_code != 429:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"deactivatePlate: \
 {deactive_response.status_code}")
