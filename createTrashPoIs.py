@@ -309,7 +309,7 @@ like to create? "))
         )
         threads.append(thread_lpoi)
 
-    run_thread_with_rate_limit(threads, rate_limit=4, max_events=4)
+    run_thread_with_rate_limit(threads)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
