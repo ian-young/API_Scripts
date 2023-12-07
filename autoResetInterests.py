@@ -10,7 +10,8 @@ API_KEY = creds.lab_key
 
 # Set timeout for a 429
 MAX_RETRIES = 5
-RETRY_DELAY = 0.25
+DEFAULT_RETRY_DELAY = 0.25
+BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
@@ -23,8 +24,8 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = []
-PERSISTENT_PERSONS = []
+PERSISTENT_PLATES = ["Cool Car"]
+PERSISTENT_PERSONS = ["P. Parker"]
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -35,6 +36,8 @@ PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 ##############################################################################
                                 #  Misc  #
 ##############################################################################
+
+
 class RateLimiter:
     def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
         """
@@ -114,7 +117,7 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
     :return: The thread that was created and ran
     :rtype: thread
     """
-    limiter = RateLimiter(rate_limit=rate_limit,)
+    limiter = RateLimiter(rate_limit=rate_limit)
 
     def run_thread(thread):
         with threading.Lock():
@@ -248,6 +251,9 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     :return: None
     :rtype: None
     """
+    local_data = threading.local()
+    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -266,9 +272,11 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
 
             if response.status_code == 429:
                 log.info(f"{printPersonName(person, persons)} response: 429. \
-Retrying in {RETRY_DELAY}s.")
+Retrying in {local_data.RETRY_DELAY}s.")
                 
-                time.sleep(RETRY_DELAY)
+                time.sleep(local_data.RETRY_DELAY)
+
+                local_data.RETRY_DELAY += BACKOFF
 
             else:
                 break
@@ -326,10 +334,10 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     run_thread_with_rate_limit(threads)
 
     end_time = time.time()
-    elapsed_time = str(end_time - start_time)
+    elapsed_time = end_time - start_time
 
     log.info("Person - Purge complete.")
-    log.info(f"Person - Time to complete: {elapsed_time}")
+    log.info(f"Person - Time to complete: {elapsed_time:.2f}")
     return 1  # Completed
 
 
@@ -513,6 +521,9 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     :return: None
     :rtype: None
     """
+    local_data = threading.local()
+    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
+
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -531,9 +542,11 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
 
             if response.status_code == 429:
                 log.info(f"{printPlateName(plate, plates)} response: 429. \
-Retrying in {RETRY_DELAY}s.")
+Retrying in {local_data.RETRY_DELAY}s.")
                 
-                time.sleep(RETRY_DELAY)
+                time.sleep(local_data.RETRY_DELAY)
+
+                local_data.RETRY_DELAY += BACKOFF
 
             else:
                 break
@@ -589,10 +602,10 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     run_thread_with_rate_limit(threads)
 
     end_time = time.time()
-    elapsed_time = str(end_time - start_time)
+    elapsed_time = end_time - start_time
 
     log.info("Plate - Purge complete.")
-    log.info(f"Plate - Time to complete: {elapsed_time}")
+    log.info(f"Plate - Time to complete: {elapsed_time:.2f}")
     return 1  # Completed
 
 
@@ -689,4 +702,4 @@ if __name__ == "__main__":
     LPoI.join()
     elapsed_time = time.time() - start_time
 
-    log.info(f"Total time to complete: {elapsed_time}") 
+    log.info(f"Total time to complete: {elapsed_time:.2f}") 
