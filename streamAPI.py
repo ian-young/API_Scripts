@@ -26,7 +26,6 @@ inside of a link to grant access to footage.
     :return: Returns the JWT token to allow access via a link to footage.
     :rtype: str
     """
-
     # Define the request headers
     headers = {
         'x-api-key': api_key
@@ -164,12 +163,12 @@ if __name__ == "__main__":
     hour = int(input("Hour of search (24-hour clock): "))
     minute = int(input("Minute of search: "))
 
-    start_time = epoch(year, month, day, hour, minute)
+    start_time = epoch(2023, 12, 14, 9, 29)
 
     token = getToken()
 
     # Check if the token is null
     if token:
-        loadStream(token, cid, start_time)
+        loadStream(token, "c94be2a0-ca3f-4f3a-b208-8db8945bf40b", start_time)
     else:
         print("Failed to get token, terminating application.")
