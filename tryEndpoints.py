@@ -40,10 +40,12 @@ URL_AC_GROUPS = "https://api.verkada.com/access/v1/access_groups"
 URL_AC_USERS = "https://api.verkada.com/access/v1/access_users"
 URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
+URL_TOKEN= "https://api.verkada.com/cameras/v1/footage/token"
 
 # Set general testing variables
 ORG_ID = creds.slc_id  # Org ID
 API_KEY = creds.slc_key  # API Key
+STREAM_API_KEY = creds.slc_stream_key
 CAMERA_ID = creds.slc_camera_id  # Device ID of camera
 TEST_USER = creds.slc_test_user  # Command User ID
 TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
@@ -177,20 +179,37 @@ def print_colored_centered(time, passed, failed, failed_modules):
 passed{Fore.RED} in {short_time}s "
     text2_pass = f"{Fore.GREEN} {passed} passed in \
 {short_time}s "
+    text2_fail_retry = f"{Fore.RED} {failed} failed, {Fore.GREEN}{passed} \
+passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
+{short_time}s "
+    text2_pass_retry = f"{Fore.GREEN} {passed} passed,{Fore.YELLOW} \
+{RETRY_COUNT} retries{Fore.GREEN} in {short_time}s "
+
 
     # Print the padded and colored text with "=" characters on both sides
-    print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
+    # An extra line that can be printed if running in live terminal
+    # print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
 
     # Print the retry count if > 0
-    if RETRY_COUNT > 0:
-        print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
+    # Good if running in live terminal
+    #if RETRY_COUNT > 0:
+    #    print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
 
     if failed > 0:
         for module in failed_modules:
             print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
-        print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
+        
+        if RETRY_COUNT > 0:
+            print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
+        
+        else:
+            print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
     else:
-        print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
+        if RETRY_COUNT > 0:
+            print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
+        
+        else:
+            print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
 
 
 ##############################################################################
@@ -963,6 +982,55 @@ def getUser():
             FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
 
 
+def getJWT(org_id=ORG_ID, api_key=STREAM_API_KEY):
+    """
+    Generates a JWT token for the streaming API. This token will be integrated
+inside of a link to grant access to footage.
+
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: Returns the JWT token to allow access via a link to footage.
+    :rtype: str
+    """
+    global RETRY_COUNT
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getJWT")
+
+    # Define the request headers
+    headers = {
+        'x-api-key': api_key
+    }
+
+    # Set the parameters of the request
+    params = {
+        'org_id': org_id,
+        'expiration': 60
+    }
+    for _ in range(MAX_RETRIES):
+
+        # Send GET request to get the JWT
+        response = requests.get(URL_TOKEN, headers=headers, params=params)
+
+        if response.status_code == 429:
+            log.info(f"getJWT retrying in {RETRY_DELAY}s. Response: 429")
+
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+            
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+        
+        else:
+            break
+
+    log.info(f"getJWT response received: {response.status_code}")
+
+    if response.status_code != 200:
+        with FAILED_ENDPOINTS_LOCK:
+            FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
+
+
 ##############################################################################
                             # Test Access Control #
 ##############################################################################
@@ -1192,7 +1260,8 @@ def changePlates():
 ##############################################################################
 
 if __name__ == '__main__':
-    print(f"Time of execution: {datetime.datetime.now()}")
+    print(f"Time of execution: "
+          f"{datetime.datetime.now().strftime('%m/%d %H:%M:%S')}")
 
     t_POI = threading.Thread(target=testPOI)
     t_LPOI = threading.Thread(target=testLPOI)
@@ -1208,11 +1277,12 @@ if __name__ == '__main__':
     t_getACUsers = threading.Thread(target=getACUsers)
     t_changeCards = threading.Thread(target=changeCards)
     t_changePlates = threading.Thread(target=changePlates)
+    t_jwt = threading.Thread(target=getJWT)
 
     threads = [t_getCloudSettings, t_getCounts, t_getTrends,
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
-               t_changePlates]
+               t_changePlates, t_jwt]
 
     start_time = time.time()
 
@@ -1233,6 +1303,6 @@ if __name__ == '__main__':
     end_time = time.time()
     elapsed = end_time - start_time
 
-    passed = 23 - len(FAILED_ENDPOINTS)
+    passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
         FAILED_ENDPOINTS), FAILED_ENDPOINTS)
