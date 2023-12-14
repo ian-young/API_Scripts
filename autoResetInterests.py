@@ -9,14 +9,14 @@ ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
 
 # Set timeout for a 429
-MAX_RETRIES = 5
+MAX_RETRIES = 10
 DEFAULT_RETRY_DELAY = 0.25
 BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
-    level = logging.DEBUG,
+    level = logging.WARNING,
     format = "%(levelname)s: %(message)s"
     )
 # Mute non-essential logging from requests library
