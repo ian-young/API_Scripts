@@ -1,8 +1,12 @@
 # Author: Ian Young
 # Credit: open-meteo for free weather forecasts
+# End game with this script is to check if there will be any snowfall today.
+# If there is a chance of snowfall, a message will be sent out to "subscribed"
+# users.
 
 import requests
 import logging
+import time
 from datetime import datetime
 
 # Set the logger
@@ -15,6 +19,9 @@ logging.basicConfig(
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+MAX_RETRIES = 5
+RETRY_DELAY = 0.25
 
 
 def get_snowfall_data(latitude, longitude):
@@ -40,14 +47,23 @@ def get_snowfall_data(latitude, longitude):
         'timezone': 'America/Denver'
     }
 
-    log.DEBUG("Sending weather request.")
-    response = requests.get(base_url, params=params)
-    log.debug(f"Request received: {response.status_code}")
+    for _ in range(MAX_RETRIES):
+        log.debug("Sending weather request.")
+        response = requests.get(base_url, params=params)
+        log.debug(f"Request received: {response.status_code}")
 
-    data = response.json()
+        if response.status_code == 504:
+            log.warning(f"Timeout. Retrying in: {RETRY_DELAY}s.")
+            time.sleep(RETRY_DELAY)
+
+        else:
+            break  # Didn't time out, leave loop
+
+    data = response.json()  # Format the raw data to JSON
 
     if response.status_code == 200:
         return data
+
     else:
         log.critical(
             f"Error {response.status_code}: "
