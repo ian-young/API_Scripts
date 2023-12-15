@@ -5,8 +5,8 @@
 
 import creds, datetime, logging, requests, threading, time
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+ORG_ID = creds.demo_id
+API_KEY = creds.demo_key
 
 # Set timeout for a 429
 MAX_RETRIES = 5
@@ -24,9 +24,8 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([])  # Label of plate !Not plate number!
-PERSISTENT_PERSONS = sorted(['P. Parker'])  # PoI label
-PERSISTENT_PID = sorted(['0be9660d-60ba-49ba-9989-d6bd41a3f5bd'])  # PoI ID
+PERSISTENT_PLATES = [""]
+PERSISTENT_PERSONS = [""]
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\

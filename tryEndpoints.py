@@ -43,7 +43,8 @@ URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 
 # Set general testing variables
 ORG_ID = creds.slc_id  # Org ID
-API_KEY = creds.slc_key  # API Key
+API_KEY = creds.slc_key  # API key
+STREAM_API_KEY = creds.slc_stream_key  # API key with streaming permissions
 CAMERA_ID = creds.slc_camera_id  # Device ID of camera
 TEST_USER = creds.slc_test_user  # Command User ID
 TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
@@ -937,7 +938,6 @@ def getUser():
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
 
     params = {
-        'org_id': ORG_ID,
         'user_id': TEST_USER
     }
 
@@ -961,6 +961,56 @@ def getUser():
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
+
+
+def getJWT(org_id=ORG_ID, api_key=STREAM_API_KEY):
+    """
+    Generates a JWT token for the streaming API. This token will be integrated
+inside of a link to grant access to footage.
+
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: Returns the JWT token to allow access via a link to footage.
+    :rtype: str
+    """
+    global RETRY_COUNT
+
+    log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getJWT")
+
+    # Define the request headers
+    headers = {
+        'x-api-key': api_key
+    }
+
+    # Set the parameters of the request
+    params = {
+        'org_id': org_id,
+        'expiration': 60
+    }
+    
+    for _ in range(MAX_RETRIES):
+
+        # Send GET request to get the JWT
+        response = requests.get(URL_TOKEN, headers=headers, params=params)
+
+        if response.status_code == 429:
+            log.info(f"getJWT retrying in {RETRY_DELAY}s. Response: 429")
+
+            with RETRY_COUNT_LOCK:
+                RETRY_COUNT += 1
+            
+            time.sleep(RETRY_DELAY)  # Wait for throttle refresh
+        
+        else:
+            break
+
+    log.info(f"getJWT response received: {response.status_code}")
+
+    if response.status_code != 200:
+        with FAILED_ENDPOINTS_LOCK:
+            FAILED_ENDPOINTS.append(f"getJWT: {response.status_code}")
 
 
 ##############################################################################
@@ -1229,7 +1279,7 @@ if __name__ == '__main__':
     run_thread_with_rate_limit(threads)
     t_POI.join()
     t_LPOI.join()
-
+    # getUser()
     end_time = time.time()
     elapsed = end_time - start_time
 
