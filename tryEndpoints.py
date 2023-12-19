@@ -44,8 +44,8 @@ URL_TOKEN= "https://api.verkada.com/cameras/v1/footage/token"
 
 # Set general testing variables
 ORG_ID = creds.slc_id  # Org ID
-API_KEY = creds.slc_key  # API Key
-STREAM_API_KEY = creds.slc_stream_key
+API_KEY = creds.slc_key  # API key
+STREAM_API_KEY = creds.slc_stream_key  # API key with streaming permissions
 CAMERA_ID = creds.slc_camera_id  # Device ID of camera
 TEST_USER = creds.slc_test_user  # Command User ID
 TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
@@ -956,7 +956,6 @@ def getUser():
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
 
     params = {
-        'org_id': ORG_ID,
         'user_id': TEST_USER
     }
 
@@ -1008,6 +1007,7 @@ inside of a link to grant access to footage.
         'org_id': org_id,
         'expiration': 60
     }
+    
     for _ in range(MAX_RETRIES):
 
         # Send GET request to get the JWT
@@ -1299,7 +1299,7 @@ if __name__ == '__main__':
     run_thread_with_rate_limit(threads)
     t_POI.join()
     t_LPOI.join()
-
+    # getUser()
     end_time = time.time()
     elapsed = end_time - start_time
 
