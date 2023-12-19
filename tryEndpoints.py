@@ -22,6 +22,33 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s"
 )
 
+# Mute non-essential logging from requests library
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+try:
+    import RPi.GPIO as GPIO  # type: ignore
+    
+    retry_pin = 11
+    fail_pin = 13
+    run_pin = 7
+    success_pin = 15
+
+    try:
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(run_pin, GPIO.OUT)
+        GPIO.setup(retry_pin, GPIO.OUT)
+        GPIO.setup(fail_pin, GPIO.OUT)
+        if success_pin:
+            GPIO.setup(success_pin, GPIO.OUT)
+    except RuntimeError:
+        GPIO = None
+        log.debug("GPIO Runtime error")
+except ImportError:
+    GPIO = None
+    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+
 colorama.init(autoreset=True)
 
 # Set URLs
@@ -44,8 +71,8 @@ URL_TOKEN= "https://api.verkada.com/cameras/v1/footage/token"
 
 # Set general testing variables
 ORG_ID = creds.slc_id  # Org ID
-API_KEY = creds.slc_key  # API Key
-STREAM_API_KEY = creds.slc_stream_key
+API_KEY = creds.slc_key  # API key
+STREAM_API_KEY = creds.slc_stream_key  # API key with streaming permissions
 CAMERA_ID = creds.slc_camera_id  # Device ID of camera
 TEST_USER = creds.slc_test_user  # Command User ID
 TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
@@ -171,6 +198,10 @@ def print_colored_centered(time, passed, failed, failed_modules):
     """
     global RETRY_COUNT
 
+    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
+    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
+    sthread = threading.Thread(target=flashLED, args=(success_pin, passed))
+
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
 
@@ -190,26 +221,41 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
     # An extra line that can be printed if running in live terminal
     # print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
 
-    # Print the retry count if > 0
-    # Good if running in live terminal
-    #if RETRY_COUNT > 0:
-    #    print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
-
     if failed > 0:
         for module in failed_modules:
             print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
         
         if RETRY_COUNT > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
-        
+            rthread.start()
+            fthread.start()
+            sthread.start()
+            sthread.join()
+            rthread.join()
+            fthread.join()        
         else:
             print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
+            sthread.start()
+            fthread.start()
+            sthread.join()
+            fthread.join() 
     else:
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
-        
+            rthread.start()
+            sthread.start()
+            rthread.join()
+            sthread.join() 
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
+            sthread.start()
+            sthread.join()
+
+def flashLED(pin, count):
+    for _ in (0, count):
+        GPIO.output(pin, True)
+        time.sleep(0.5)
+        GPIO.output(pin, False)
 
 
 ##############################################################################
@@ -956,7 +1002,6 @@ def getUser():
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
 
     params = {
-        'org_id': ORG_ID,
         'user_id': TEST_USER
     }
 
@@ -1008,6 +1053,7 @@ inside of a link to grant access to footage.
         'org_id': org_id,
         'expiration': 60
     }
+    
     for _ in range(MAX_RETRIES):
 
         # Send GET request to get the JWT
@@ -1283,7 +1329,8 @@ if __name__ == '__main__':
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates, t_jwt]
-
+    if GPIO:
+        GPIO.output(run_pin, True)
     start_time = time.time()
 
     t_POI.start()
@@ -1299,10 +1346,14 @@ if __name__ == '__main__':
     run_thread_with_rate_limit(threads)
     t_POI.join()
     t_LPOI.join()
-
+    # getUser()
     end_time = time.time()
     elapsed = end_time - start_time
+    if GPIO:
+        GPIO.output(run_pin, False)
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
         FAILED_ENDPOINTS), FAILED_ENDPOINTS)
+    if GPIO:
+        GPIO.cleanup()
