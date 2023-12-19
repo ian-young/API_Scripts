@@ -18,14 +18,15 @@ log = logging.getLogger()
 logging.basicConfig(
     level = logging.WARNING,
     format = "%(levelname)s: %(message)s"
-    )
+)
+
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = ["Cool Car"]
-PERSISTENT_PERSONS = ["P. Parker"]
+PERSISTENT_PLATES = [""]
+PERSISTENT_PERSONS = ["Santa"]
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
