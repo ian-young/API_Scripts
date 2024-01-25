@@ -236,8 +236,8 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
         else:
             print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
             sthread.start()
-            sthread.join()
             fthread.start()
+            sthread.join()
             fthread.join() 
     else:
         if RETRY_COUNT > 0:
@@ -249,7 +249,7 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
             sthread.start()
-            sthread.start()
+            sthread.join()
 
 def flashLED(pin, count):
     for _ in (0, count):
