@@ -205,13 +205,10 @@ def print_colored_centered(time, passed, failed, failed_modules):
     :rtype: None
     """
     global RETRY_COUNT
-    if GPIO:
-        rthread = threading.Thread(
-            target=flashLED, args=(retry_pin, RETRY_COUNT, 0.5))
-        fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
-        sthread = threading.Thread(
-            target=flashLED, args=(success_pin, passed, 0.1))
-        csthread = threading.Thread(target=flashLED, args=(success_pin, 1, 5))
+
+    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
+    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
+    sthread = threading.Thread(target=flashLED, args=(success_pin, passed))
 
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
@@ -237,33 +234,29 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
 
         if RETRY_COUNT > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
-            if GPIO:
-                rthread.start()
-                fthread.start()
-                sthread.start()
-                sthread.join()
-                rthread.join()
-                fthread.join()
+            rthread.start()
+            fthread.start()
+            sthread.start()
+            sthread.join()
+            rthread.join()
+            fthread.join()        
         else:
             print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
-            if GPIO:
-                sthread.start()
-                fthread.start()
-                sthread.join()
-                fthread.join()
+            sthread.start()
+            fthread.start()
+            sthread.join()
+            fthread.join() 
     else:
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
-            if GPIO:
-                rthread.start()
-                csthread.start()
-                rthread.join()
-                csthread.join()
+            rthread.start()
+            sthread.start()
+            rthread.join()
+            sthread.join() 
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
-            if GPIO:
-                flashLED(success_pin, 1, 1)
-
+            sthread.start()
+            sthread.join()
 
 def flashLED(pin, count, speed):
     """
@@ -1469,9 +1462,7 @@ if __name__ == '__main__':
     log_execution()
 
     if GPIO:
-        # GPIO.output(run_pin, False)  # Solid light while running
-        local_stop_event.set()
-        flash_thread.join()
+        GPIO.output(run_pin, False)
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
