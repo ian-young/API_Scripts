@@ -23,8 +23,8 @@ logging.basicConfig(
 )
 
 # Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
@@ -198,9 +198,9 @@ def print_colored_centered(time, passed, failed, failed_modules):
     """
     global RETRY_COUNT
 
-    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
-    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
-    sthread = threading.Thread(target=flashLED, args=(success_pin, passed))
+    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT, 0.5))
+    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
+    sthread = threading.Thread(target=flashLED, args=(success_pin, passed, 0.1))
 
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
@@ -251,12 +251,12 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
             sthread.start()
             sthread.join()
 
-def flashLED(pin, count):
-    for _ in (0, count):
+def flashLED(pin, count, speed):
+    for _ in range(count):
         GPIO.output(pin, True)
-        time.sleep(0.5)
+        time.sleep(speed)
         GPIO.output(pin, False)
-        time.sleep(0.5)
+        time.sleep(speed)
 
 
 ##############################################################################
