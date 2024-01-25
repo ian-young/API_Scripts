@@ -255,6 +255,18 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
             flashLED(success_pin, 1, 1)
 
 def flashLED(pin, count, speed):
+    """
+    Flashes an LED that is wired into the GPIO board of a raspberry pi
+
+    :param pin: target GPIO pin on the board.
+    :type pin: int
+    :param count: How many times the LED should flash.
+    :type passed: int
+    :param speed: How long each flash should last in seconds.
+    :type failed: int
+    :return: None
+    :rtype: None
+    """
     for _ in range(count):
         GPIO.output(pin, True)
         time.sleep(speed)
