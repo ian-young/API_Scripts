@@ -23,8 +23,8 @@ logging.basicConfig(
 )
 
 # Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
@@ -198,9 +198,13 @@ def print_colored_centered(time, passed, failed, failed_modules):
     """
     global RETRY_COUNT
 
-    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
-    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
-    sthread = threading.Thread(target=flashLED, args=(success_pin, passed))
+    rthread = threading.Thread(target=flashLED, args=
+            (retry_pin, RETRY_COUNT, 0.5))
+    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
+    sthread = threading.Thread(target=flashLED, args=
+            (success_pin, passed, 0.1))
+    csthread = threading.Thread(target=flashLED, args=
+            (success_pin, 1, 3))
 
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
@@ -243,19 +247,52 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
             rthread.start()
-            sthread.start()
+            csthread.start()
             rthread.join()
-            sthread.join() 
+            csthread.join() 
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
-            sthread.start()
-            sthread.join()
+            flashLED(success_pin, 1, 1)
 
-def flashLED(pin, count):
-    for _ in (0, count):
+def flashLED(pin, count, speed):
+    """
+    Flashes an LED that is wired into the GPIO board of a raspberry pi
+
+    :param pin: target GPIO pin on the board.
+    :type pin: int
+    :param count: How many times the LED should flash.
+    :type passed: int
+    :param speed: How long each flash should last in seconds.
+    :type failed: int
+    :return: None
+    :rtype: None
+    """
+    for _ in range(count):
         GPIO.output(pin, True)
-        time.sleep(0.5)
+        time.sleep(speed)
         GPIO.output(pin, False)
+        time.sleep(speed)
+
+def workLED(pin, local_stop_event, speed):
+    """
+    Flashes an LED that is wired into the GPIO board of a raspberry pi for
+    the duration of work.
+
+    :param pin: target GPIO pin on the board.
+    :type pin: int
+    :param local_stop_event: Thread-local event to indicate when the program's
+    work is done and the LED can stop flashing.
+    :type local_stop_event: Bool 
+    :param speed: How long each flash should last in seconds.
+    :type failed: int
+    :return: None
+    :rtype: None
+    """
+    while not local_stop_event.is_set():
+        GPIO.output(pin, True)
+        time.sleep(speed)
+        GPIO.output(pin, False)
+        time.sleep(speed * 2)
 
 
 ##############################################################################
@@ -1330,13 +1367,19 @@ if __name__ == '__main__':
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates, t_jwt]
     if GPIO:
-        GPIO.output(run_pin, True)
+        # GPIO.output(run_pin, True)  # Solid light while running
+        local_stop_event = threading.Event()
+        flash_thread = threading.Thread(target=flashLED, 
+                                        args=(run_pin, local_stop_event, 0.5))
+        flash_thread.start()
     start_time = time.time()
-
-    t_POI.start()
-    log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+    try:
+        t_POI.start()
+        log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
 {t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
-    time.sleep(1)
+        time.sleep(1)
+    except ConnectionError:
+        log.warning("NewConnectionError caught.")
 
     t_LPOI.start()
     log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
@@ -1350,7 +1393,9 @@ if __name__ == '__main__':
     end_time = time.time()
     elapsed = end_time - start_time
     if GPIO:
-        GPIO.output(run_pin, False)
+        # GPIO.output(run_pin, False)  # Solid light while running
+        local_stop_event.set()
+        flash_thread.join()
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
