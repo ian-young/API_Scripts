@@ -19,9 +19,19 @@ logging.basicConfig(
     level = logging.WARNING,
     format = "%(levelname)s: %(message)s"
     )
+
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+try:
+    import RPi.GPIO as GPIO  # type: ignore
+    GPIO.setmode(GPIO.BOARD)
+    if GPIO.gpio_function(7) != GPIO.OUT:
+        GPIO.setup(7, GPIO.OUT)
+except ImportError:
+    GPIO = None
+    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = [""]
@@ -689,6 +699,7 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
+    GPIO.output(7, True)
     start_time = time.time()
     PoI = threading.Thread(target=runPeople)
     LPoI = threading.Thread(target=runPlates)
@@ -701,5 +712,6 @@ if __name__ == "__main__":
     PoI.join()
     LPoI.join()
     elapsed_time = time.time() - start_time
+    GPIO.output(7, False)
 
     log.info(f"Total time to complete: {elapsed_time:.2f}") 
