@@ -198,9 +198,13 @@ def print_colored_centered(time, passed, failed, failed_modules):
     """
     global RETRY_COUNT
 
-    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT, 0.5))
+    rthread = threading.Thread(target=flashLED, args=
+            (retry_pin, RETRY_COUNT, 0.5))
     fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
-    sthread = threading.Thread(target=flashLED, args=(success_pin, passed, 0.1))
+    sthread = threading.Thread(target=flashLED, args=
+            (success_pin, passed, 0.1))
+    csthread = threading.Thread(target=flashLED, args=
+            (success_pin, 1, 3))
 
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
@@ -243,13 +247,12 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
             rthread.start()
-            sthread.start()
+            csthread.start()
             rthread.join()
-            sthread.join() 
+            csthread.join() 
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
-            sthread.start()
-            sthread.join()
+            flashLED(success_pin, 1, 1)
 
 def flashLED(pin, count, speed):
     for _ in range(count):
