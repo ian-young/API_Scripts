@@ -32,6 +32,7 @@ try:
     retry_pin = 11
     fail_pin = 13
     run_pin = 7
+    success_pin = 15
 
     try:
         GPIO.setwarnings(False)
@@ -39,6 +40,8 @@ try:
         GPIO.setup(run_pin, GPIO.OUT)
         GPIO.setup(retry_pin, GPIO.OUT)
         GPIO.setup(fail_pin, GPIO.OUT)
+        if success_pin:
+            GPIO.setup(success_pin, GPIO.OUT)
     except RuntimeError:
         GPIO = None
         log.debug("GPIO Runtime error")
@@ -195,6 +198,10 @@ def print_colored_centered(time, passed, failed, failed_modules):
     """
     global RETRY_COUNT
 
+    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
+    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
+    sthread = threading.Thread(target=flashLED, args=(success_pin, passed))
+
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
 
@@ -220,23 +227,29 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
         
         if RETRY_COUNT > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
-            rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
-            fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
             rthread.start()
             fthread.start()
+            sthread.start()
+            sthread.join()
             rthread.join()
             fthread.join()        
         else:
             print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
-            fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
+            sthread.start()
+            sthread.join()
             fthread.start()
             fthread.join() 
     else:
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
-        
+            rthread.start()
+            sthread.start()
+            rthread.join()
+            sthread.join() 
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
+            sthread.start()
+            sthread.start()
 
 def flashLED(pin, count):
     for _ in (0, count):
@@ -1338,8 +1351,9 @@ if __name__ == '__main__':
     elapsed = end_time - start_time
     if GPIO:
         GPIO.output(run_pin, False)
-        GPIO.cleanup()
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
         FAILED_ENDPOINTS), FAILED_ENDPOINTS)
+    if GPIO:
+        GPIO.cleanup()
