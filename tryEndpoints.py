@@ -28,7 +28,8 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
-    if GPIO.gpio_function(7) != GPIO.out:
+    GPIO.setmode(GPIO.BOARD)
+    if GPIO.gpio_function(7) != GPIO.OUT:
         GPIO.setup(7, GPIO.OUT)
 except ImportError:
     GPIO = None
