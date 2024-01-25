@@ -28,9 +28,20 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
-    GPIO.setmode(GPIO.BOARD)
-    if GPIO.gpio_function(7) != GPIO.OUT:
-        GPIO.setup(7, GPIO.OUT)
+    
+    retry_pin = 11
+    fail_pin = 13
+    run_pin = 7
+
+    try:
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(run_pin, GPIO.OUT)
+        GPIO.setup(retry_pin, GPIO.OUT)
+        GPIO.setup(fail_pin, GPIO.OUT)
+    except RuntimeError:
+        GPIO = None
+        log.debug("GPIO Runtime error")
 except ImportError:
     GPIO = None
     log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
@@ -203,26 +214,35 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
     # An extra line that can be printed if running in live terminal
     # print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
 
-    # Print the retry count if > 0
-    # Good if running in live terminal
-    #if RETRY_COUNT > 0:
-    #    print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
-
     if failed > 0:
         for module in failed_modules:
             print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
         
         if RETRY_COUNT > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
-        
+            rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
+            fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
+            rthread.start()
+            fthread.start()
+            rthread.join()
+            fthread.join()        
         else:
             print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
+            fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
+            fthread.start()
+            fthread.join() 
     else:
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
         
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
+
+def flashLED(pin, count):
+    for _ in (0, count):
+        GPIO.output(pin, True)
+        time.sleep(0.5)
+        GPIO.output(pin, False)
 
 
 ##############################################################################
@@ -1296,8 +1316,8 @@ if __name__ == '__main__':
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates, t_jwt]
-
-    GPIO.output(7, True)
+    if GPIO:
+        GPIO.output(run_pin, True)
     start_time = time.time()
 
     t_POI.start()
@@ -1316,7 +1336,9 @@ if __name__ == '__main__':
     # getUser()
     end_time = time.time()
     elapsed = end_time - start_time
-    GPIO.output(7, False)
+    if GPIO:
+        GPIO.output(run_pin, False)
+        GPIO.cleanup()
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
