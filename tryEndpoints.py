@@ -1393,9 +1393,7 @@ if __name__ == '__main__':
     end_time = time.time()
     elapsed = end_time - start_time
     if GPIO:
-        # GPIO.output(run_pin, False)  # Solid light while running
-        local_stop_event.set()
-        flash_thread.join()
+        GPIO.output(run_pin, False)
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
