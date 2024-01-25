@@ -9,7 +9,8 @@ logging.basicConfig(
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
-    GPIO.setup(7, GPIO.OUT)
+    if GPIO.gpio_function(7) != GPIO.out:
+        GPIO.setup(7, GPIO.OUT)
 except ImportError:
     GPIO = None
     log.critical("RPi.GPIO is not availbale. Running on a non-Pi platform")

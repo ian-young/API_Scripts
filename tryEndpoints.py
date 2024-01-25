@@ -22,6 +22,18 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s"
 )
 
+# Mute non-essential logging from requests library
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+try:
+    import RPi.GPIO as GPIO  # type: ignore
+    if GPIO.gpio_function(7) != GPIO.out:
+        GPIO.setup(7, GPIO.OUT)
+except ImportError:
+    GPIO = None
+    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+
 colorama.init(autoreset=True)
 
 # Set URLs
@@ -1284,6 +1296,7 @@ if __name__ == '__main__':
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates, t_jwt]
 
+    GPIO.output(7, True)
     start_time = time.time()
 
     t_POI.start()
@@ -1302,6 +1315,7 @@ if __name__ == '__main__':
     # getUser()
     end_time = time.time()
     elapsed = end_time - start_time
+    GPIO.output(7, False)
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
