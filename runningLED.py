@@ -10,7 +10,7 @@ logging.basicConfig(
 try:
     import RPi.GPIO as GPIO  # type: ignore
 
-    gpio_pin = 7
+    gpio_pin = 15
     
     try:
         GPIO.setmode(GPIO.BOARD)
@@ -27,8 +27,21 @@ except ImportError:
 
 def work():
     log.debug("Running work function")
-    for _ in range(0, 5):
-        time.sleep(1)
+    #for _ in range(0, 9):
+    #   time.sleep(1)
+    flashLED(gpio_pin, 5)
+
+
+
+def flashLED(pin, count):
+    for _ in (0, count):
+        log.debug("Flash on")
+        GPIO.output(pin, True)
+        time.sleep(0.5)
+        GPIO.output(pin, False)
+        time.sleep(0.5)
+        log.debug("Flash off")
+
 
 if GPIO:
     GPIO.output(gpio_pin, True)
