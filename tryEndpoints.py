@@ -1348,11 +1348,13 @@ if __name__ == '__main__':
     if GPIO:
         GPIO.output(run_pin, True)
     start_time = time.time()
-
-    t_POI.start()
-    log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+    try:
+        t_POI.start()
+        log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
 {t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
-    time.sleep(1)
+        time.sleep(1)
+    except NewConnectionError:
+        log.warning("NewConnectionError caught.")
 
     t_LPOI.start()
     log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \

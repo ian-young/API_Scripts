@@ -34,13 +34,17 @@ def work():
 
 
 def flashLED(pin, count):
-    for _ in (0, count):
-        log.debug("Flash on")
-        GPIO.output(pin, True)
-        time.sleep(0.5)
-        GPIO.output(pin, False)
-        time.sleep(0.5)
-        log.debug("Flash off")
+    try:
+        #for _ in range(count):
+        while True:
+            log.debug("Flash on")
+            GPIO.output(pin, True)
+            time.sleep(0.5)
+            GPIO.output(pin, False)
+            time.sleep(0.5)
+            log.debug("Flash off")
+    except KeyboardInterrupt:
+        print(f"\nExiting.")
 
 
 if GPIO:
