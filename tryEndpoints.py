@@ -22,6 +22,33 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s"
 )
 
+# Mute non-essential logging from requests library
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+
+try:
+    import RPi.GPIO as GPIO  # type: ignore
+    
+    retry_pin = 11
+    fail_pin = 13
+    run_pin = 7
+    success_pin = 15
+
+    try:
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(run_pin, GPIO.OUT)
+        GPIO.setup(retry_pin, GPIO.OUT)
+        GPIO.setup(fail_pin, GPIO.OUT)
+        if success_pin:
+            GPIO.setup(success_pin, GPIO.OUT)
+    except RuntimeError:
+        GPIO = None
+        log.debug("GPIO Runtime error")
+except ImportError:
+    GPIO = None
+    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+
 colorama.init(autoreset=True)
 
 # Set URLs
@@ -44,8 +71,8 @@ URL_TOKEN= "https://api.verkada.com/cameras/v1/footage/token"
 
 # Set general testing variables
 ORG_ID = creds.slc_id  # Org ID
-API_KEY = creds.slc_key  # API Key
-STREAM_API_KEY = creds.slc_stream_key
+API_KEY = creds.slc_key  # API key
+STREAM_API_KEY = creds.slc_stream_key  # API key with streaming permissions
 CAMERA_ID = creds.slc_camera_id  # Device ID of camera
 TEST_USER = creds.slc_test_user  # Command User ID
 TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
@@ -171,6 +198,14 @@ def print_colored_centered(time, passed, failed, failed_modules):
     """
     global RETRY_COUNT
 
+    rthread = threading.Thread(target=flashLED, args=
+            (retry_pin, RETRY_COUNT, 0.5))
+    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
+    sthread = threading.Thread(target=flashLED, args=
+            (success_pin, passed, 0.1))
+    csthread = threading.Thread(target=flashLED, args=
+            (success_pin, 1, 3))
+
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
 
@@ -190,26 +225,74 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
     # An extra line that can be printed if running in live terminal
     # print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
 
-    # Print the retry count if > 0
-    # Good if running in live terminal
-    #if RETRY_COUNT > 0:
-    #    print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
-
     if failed > 0:
         for module in failed_modules:
             print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
         
         if RETRY_COUNT > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
-        
+            rthread.start()
+            fthread.start()
+            sthread.start()
+            sthread.join()
+            rthread.join()
+            fthread.join()        
         else:
             print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
+            sthread.start()
+            fthread.start()
+            sthread.join()
+            fthread.join() 
     else:
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
-        
+            rthread.start()
+            csthread.start()
+            rthread.join()
+            csthread.join() 
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
+            flashLED(success_pin, 1, 1)
+
+def flashLED(pin, count, speed):
+    """
+    Flashes an LED that is wired into the GPIO board of a raspberry pi
+
+    :param pin: target GPIO pin on the board.
+    :type pin: int
+    :param count: How many times the LED should flash.
+    :type passed: int
+    :param speed: How long each flash should last in seconds.
+    :type failed: int
+    :return: None
+    :rtype: None
+    """
+    for _ in range(count):
+        GPIO.output(pin, True)
+        time.sleep(speed)
+        GPIO.output(pin, False)
+        time.sleep(speed)
+
+def workLED(pin, local_stop_event, speed):
+    """
+    Flashes an LED that is wired into the GPIO board of a raspberry pi for
+    the duration of work.
+
+    :param pin: target GPIO pin on the board.
+    :type pin: int
+    :param local_stop_event: Thread-local event to indicate when the program's
+    work is done and the LED can stop flashing.
+    :type local_stop_event: Bool 
+    :param speed: How long each flash should last in seconds.
+    :type failed: int
+    :return: None
+    :rtype: None
+    """
+    while not local_stop_event.is_set():
+        GPIO.output(pin, True)
+        time.sleep(speed)
+        GPIO.output(pin, False)
+        time.sleep(speed * 2)
 
 
 ##############################################################################
@@ -956,7 +1039,6 @@ def getUser():
     log.info(f"{Fore.LIGHTBLACK_EX}Running{Style.RESET_ALL} getUser")
 
     params = {
-        'org_id': ORG_ID,
         'user_id': TEST_USER
     }
 
@@ -1008,6 +1090,7 @@ inside of a link to grant access to footage.
         'org_id': org_id,
         'expiration': 60
     }
+    
     for _ in range(MAX_RETRIES):
 
         # Send GET request to get the JWT
@@ -1028,7 +1111,7 @@ inside of a link to grant access to footage.
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"getUser: {response.status_code}")
+            FAILED_ENDPOINTS.append(f"getJWT: {response.status_code}")
 
 
 ##############################################################################
@@ -1283,13 +1366,20 @@ if __name__ == '__main__':
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates, t_jwt]
-
+    if GPIO:
+        # GPIO.output(run_pin, True)  # Solid light while running
+        local_stop_event = threading.Event()
+        flash_thread = threading.Thread(target=flashLED, 
+                                        args=(run_pin, local_stop_event, 0.5))
+        flash_thread.start()
     start_time = time.time()
-
-    t_POI.start()
-    log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
+    try:
+        t_POI.start()
+        log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
 {t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
-    time.sleep(1)
+        time.sleep(1)
+    except ConnectionError:
+        log.warning("NewConnectionError caught.")
 
     t_LPOI.start()
     log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
@@ -1299,10 +1389,16 @@ if __name__ == '__main__':
     run_thread_with_rate_limit(threads)
     t_POI.join()
     t_LPOI.join()
-
+    # getUser()
     end_time = time.time()
     elapsed = end_time - start_time
+    if GPIO:
+        # GPIO.output(run_pin, False)  # Solid light while running
+        local_stop_event.set()
+        flash_thread.join()
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
         FAILED_ENDPOINTS), FAILED_ENDPOINTS)
+    if GPIO:
+        GPIO.cleanup()

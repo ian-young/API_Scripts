@@ -5,8 +5,8 @@
 
 import creds, datetime, logging, requests, threading, time
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+ORG_ID = creds.demo_id
+API_KEY = creds.demo_key
 
 # Set timeout for a 429
 MAX_RETRIES = 10
@@ -24,9 +24,28 @@ logging.basicConfig(
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+try:
+    import RPi.GPIO as GPIO  # type: ignore
+
+    work_pin = 7
+    lpoi_pin = 13
+    poi_pin = 11
+
+    try:
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(work_pin, GPIO.OUT)
+    except RuntimeError:
+        GPIO = None
+        log.debug("Runtime error while initializing GPIO boad.")
+except ImportError:
+    GPIO = None
+    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = [""]
-PERSISTENT_PERSONS = ["Santa"]
+PERSISTENT_PERSONS = [""]
+
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -145,6 +164,28 @@ def cleanList(list):
     """
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
+
+
+def flashLED(pin, local_stop_event, speed):
+    """
+    Flashes an LED that is wired into the GPIO board of a raspberry pi for
+    the duration of work.
+
+    :param pin: target GPIO pin on the board.
+    :type pin: int
+    :param local_stop_event: Thread-local event to indicate when the program's
+    work is done and the LED can stop flashing.
+    :type local_stop_event: Bool 
+    :param speed: How long each flash should last in seconds.
+    :type failed: int
+    :return: None
+    :rtype: None
+    """
+    while not local_stop_event.is_set():
+        GPIO.output(pin, True)
+        time.sleep(speed)
+        GPIO.output(pin, False)
+        time.sleep(speed * 2)
 
 
 ##############################################################################
@@ -320,6 +361,12 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     if not delete:
         log.warning("Person - There's nothing here")
         return
+    
+    local_stop_event = threading.Event()
+
+    if GPIO and poi_pin:
+        flash_thread = threading.Thread(target=flashLED, args=(poi_pin, local_stop_event, 0.5))
+        flash_thread.start()
 
     log.info("Person - Purging...")
 
@@ -339,6 +386,11 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Person - Purge complete.")
     log.info(f"Person - Time to complete: {elapsed_time:.2f}")
+
+    if GPIO and poi_pin:
+        local_stop_event.set()
+        flash_thread.join()
+
     return 1  # Completed
 
 
@@ -588,6 +640,12 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     if not delete:
         log.warning("Plate - There's nothing here")
         return
+    
+    local_stop_event = threading.Event()
+
+    if GPIO and poi_pin:
+        flash_thread = threading.Thread(target=flashLED, args=(lpoi_pin, local_stop_event, 0.5))
+        flash_thread.start()
 
     log.info("Plate - Purging...")
 
@@ -607,6 +665,11 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Plate - Purge complete.")
     log.info(f"Plate - Time to complete: {elapsed_time:.2f}")
+
+    if GPIO and poi_pin:
+        local_stop_event.set()
+        flash_thread.join()
+    
     return 1  # Completed
 
 
@@ -690,6 +753,8 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
+    if GPIO:
+        GPIO.output(work_pin, True)
     start_time = time.time()
     PoI = threading.Thread(target=runPeople)
     LPoI = threading.Thread(target=runPlates)
@@ -702,5 +767,7 @@ if __name__ == "__main__":
     PoI.join()
     LPoI.join()
     elapsed_time = time.time() - start_time
+    if GPIO:
+        GPIO.output(work_pin, False)
 
     log.info(f"Total time to complete: {elapsed_time:.2f}") 
