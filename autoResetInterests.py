@@ -28,8 +28,8 @@ try:
     import RPi.GPIO as GPIO  # type: ignore
 
     work_pin = 7
-    lpoi_pin = None
-    poi_pin = None
+    lpoi_pin = 13
+    poi_pin = 11
 
     try:
         GPIO.setwarnings(False)
@@ -167,12 +167,14 @@ def cleanList(list):
 
 def flashLED(pin, local_stop_event, speed):
     """
-    Flashes an LED that is wired into the GPIO board of a raspberry pi
+    Flashes an LED that is wired into the GPIO board of a raspberry pi for
+    the duration of work.
 
     :param pin: target GPIO pin on the board.
     :type pin: int
-    :param count: How many times the LED should flash.
-    :type passed: int
+    :param local_stop_event: Thread-local event to indicate when the program's
+    work is done and the LED can stop flashing.
+    :type local_stop_event: Bool 
     :param speed: How long each flash should last in seconds.
     :type failed: int
     :return: None

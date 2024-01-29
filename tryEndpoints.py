@@ -273,6 +273,27 @@ def flashLED(pin, count, speed):
         GPIO.output(pin, False)
         time.sleep(speed)
 
+def workLED(pin, local_stop_event, speed):
+    """
+    Flashes an LED that is wired into the GPIO board of a raspberry pi for
+    the duration of work.
+
+    :param pin: target GPIO pin on the board.
+    :type pin: int
+    :param local_stop_event: Thread-local event to indicate when the program's
+    work is done and the LED can stop flashing.
+    :type local_stop_event: Bool 
+    :param speed: How long each flash should last in seconds.
+    :type failed: int
+    :return: None
+    :rtype: None
+    """
+    while not local_stop_event.is_set():
+        GPIO.output(pin, True)
+        time.sleep(speed)
+        GPIO.output(pin, False)
+        time.sleep(speed * 2)
+
 
 ##############################################################################
                                 #  Test PoI  #
@@ -1346,14 +1367,18 @@ if __name__ == '__main__':
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates, t_jwt]
     if GPIO:
-        GPIO.output(run_pin, True)
+        # GPIO.output(run_pin, True)  # Solid light while running
+        local_stop_event = threading.Event()
+        flash_thread = threading.Thread(target=flashLED, 
+                                        args=(run_pin, local_stop_event, 0.5))
+        flash_thread.start()
     start_time = time.time()
     try:
         t_POI.start()
         log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
 {t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
         time.sleep(1)
-    except NewConnectionError:
+    except ConnectionError:
         log.warning("NewConnectionError caught.")
 
     t_LPOI.start()
@@ -1368,7 +1393,9 @@ if __name__ == '__main__':
     end_time = time.time()
     elapsed = end_time - start_time
     if GPIO:
-        GPIO.output(run_pin, False)
+        # GPIO.output(run_pin, False)  # Solid light while running
+        local_stop_event.set()
+        flash_thread.join()
 
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
