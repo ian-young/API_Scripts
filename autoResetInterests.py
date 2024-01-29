@@ -65,7 +65,9 @@ class RateLimiter:
         :param rate_limit: The value of how many threads may be made each sec.
         :type rate_limit: int
         :param max_events_per_sec: Maximum events allowed per second.
-        :type: int
+        :type: int, optional
+        :param pacing: Sets the interval of the clock in seconds.
+        :type pacing: int, optional
         :return: None
         :rtype: None
         """
