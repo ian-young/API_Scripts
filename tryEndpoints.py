@@ -204,7 +204,7 @@ def print_colored_centered(time, passed, failed, failed_modules):
     sthread = threading.Thread(target=flashLED, args=
             (success_pin, passed, 0.1))
     csthread = threading.Thread(target=flashLED, args=
-            (success_pin, 1, 3))
+            (success_pin, 1, 5))
 
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
@@ -1369,8 +1369,8 @@ if __name__ == '__main__':
     if GPIO:
         # GPIO.output(run_pin, True)  # Solid light while running
         local_stop_event = threading.Event()
-        flash_thread = threading.Thread(target=flashLED, 
-                                        args=(run_pin, local_stop_event, 0.5))
+        flash_thread = threading.Thread(target=workLED, 
+                                        args=(run_pin, local_stop_event, 0.25))
         flash_thread.start()
     start_time = time.time()
     try:
