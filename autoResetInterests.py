@@ -15,14 +15,15 @@ BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
+log.setLevel(logging.WARNING)
 logging.basicConfig(
     level = logging.WARNING,
     format = "%(levelname)s: %(message)s"
     )
 
 # Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 try:
     import RPi.GPIO as GPIO  # type: ignore

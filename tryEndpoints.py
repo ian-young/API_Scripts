@@ -12,14 +12,23 @@ from colorama import Fore, Style
 import threading
 import shutil
 import time
-import datetime
+from datetime import datetime, timedelta
 import logging
+import re
+
+# Set log file path
+log_file_path = "/Users/ian.young/Documents/.scripts/Python/API_Scripts/endpoint_data.log"
 
 # Set logger
 log = logging.getLogger()
+log.setLevel(logging.WARNING)
 logging.basicConfig(
     level=logging.WARNING,
-    format="%(levelname)s: %(message)s"
+    format="%(levelname)s: %(message)s",
+    handlers=[
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()
+    ]
 )
 
 # Mute non-essential logging from requests library
@@ -28,7 +37,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
-    
+
     retry_pin = 11
     fail_pin = 13
     run_pin = 7
@@ -67,7 +76,7 @@ URL_AC_GROUPS = "https://api.verkada.com/access/v1/access_groups"
 URL_AC_USERS = "https://api.verkada.com/access/v1/access_users"
 URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
-URL_TOKEN= "https://api.verkada.com/cameras/v1/footage/token"
+URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
 
 # Set general testing variables
 ORG_ID = creds.slc_id  # Org ID
@@ -93,7 +102,7 @@ RETRY_COUNT_LOCK = threading.Lock()
 
 
 ##############################################################################
-                                # Misc #
+                                    # Misc #
 ##############################################################################
 
 
@@ -114,7 +123,6 @@ class RateLimiter:
         self.max_events_per_sec = max_events_per_sec
         self.pacing = pacing
 
-
     def acquire(self):
         """
         States whether or not the program may create new threads or not.
@@ -130,35 +138,35 @@ class RateLimiter:
                 self.start_time = current_time
                 self.event_count = self.pacing
                 return True
-            
+
             # How much time has passed since starting
             elapsed_time = current_time - self.start_time
 
             # Check if it's been less than 1sec and less than 10 events have
             # been made.
             if elapsed_time < self.pacing / self.rate_limit \
-                and self.event_count < self.max_events_per_sec:
+                    and self.event_count < self.max_events_per_sec:
                 self.event_count += 1
                 return True
-            
+
             # Check if it is the first wave of events
             elif elapsed_time >= self.pacing / self.rate_limit:
                 self.start_time = current_time
                 self.event_count = 2
                 return True
-            
+
             else:
                 # Calculate the time left before next wave
                 remaining_time = self.pacing - \
                     (current_time - self.start_time)
                 time.sleep(remaining_time)  # Wait before next wave
                 return True
-            
+
 
 def run_thread_with_rate_limit(threads, rate_limit=10):
     """
     Run a thread with rate limiting.
-        
+
     :param target: The target function to be executed in the thread:
     :type targe: function:
     :return: The thread that was created and ran
@@ -170,7 +178,7 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
         with threading.Lock():
             limiter.acquire()
             log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
-{thread.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+{thread.name} at time {datetime.now().strftime('%H:%M:%S')}")
             thread.start()
 
     for thread in threads:
@@ -197,14 +205,13 @@ def print_colored_centered(time, passed, failed, failed_modules):
     :rtype: None
     """
     global RETRY_COUNT
-
-    rthread = threading.Thread(target=flashLED, args=
-            (retry_pin, RETRY_COUNT, 0.5))
-    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
-    sthread = threading.Thread(target=flashLED, args=
-            (success_pin, passed, 0.1))
-    csthread = threading.Thread(target=flashLED, args=
-            (success_pin, 1, 5))
+    if GPIO:
+        rthread = threading.Thread(
+            target=flashLED, args=(retry_pin, RETRY_COUNT, 0.5))
+        fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
+        sthread = threading.Thread(
+            target=flashLED, args=(success_pin, passed, 0.1))
+        csthread = threading.Thread(target=flashLED, args=(success_pin, 1, 5))
 
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
@@ -220,7 +227,6 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
     text2_pass_retry = f"{Fore.GREEN} {passed} passed,{Fore.YELLOW} \
 {RETRY_COUNT} retries{Fore.GREEN} in {short_time}s "
 
-
     # Print the padded and colored text with "=" characters on both sides
     # An extra line that can be printed if running in live terminal
     # print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
@@ -228,31 +234,36 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
     if failed > 0:
         for module in failed_modules:
             print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
-        
+
         if RETRY_COUNT > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
-            rthread.start()
-            fthread.start()
-            sthread.start()
-            sthread.join()
-            rthread.join()
-            fthread.join()        
+            if GPIO:
+                rthread.start()
+                fthread.start()
+                sthread.start()
+                sthread.join()
+                rthread.join()
+                fthread.join()
         else:
             print(f"{Fore.RED}{text2_fail:=^{terminal_width+15}}")
-            sthread.start()
-            fthread.start()
-            sthread.join()
-            fthread.join() 
+            if GPIO:
+                sthread.start()
+                fthread.start()
+                sthread.join()
+                fthread.join()
     else:
         if RETRY_COUNT > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
-            rthread.start()
-            csthread.start()
-            rthread.join()
-            csthread.join() 
+            if GPIO:
+                rthread.start()
+                csthread.start()
+                rthread.join()
+                csthread.join()
         else:
             print(f"{Fore.GREEN}{text2_pass:=^{terminal_width+5}}")
-            flashLED(success_pin, 1, 1)
+            if GPIO:
+                flashLED(success_pin, 1, 1)
+
 
 def flashLED(pin, count, speed):
     """
@@ -272,6 +283,7 @@ def flashLED(pin, count, speed):
         time.sleep(speed)
         GPIO.output(pin, False)
         time.sleep(speed)
+
 
 def workLED(pin, local_stop_event, speed):
     """
@@ -295,8 +307,67 @@ def workLED(pin, local_stop_event, speed):
         time.sleep(speed * 2)
 
 
+def log_execution():
+    """
+    Writes the final output from running the program into a file to ingest
+    later to plot the results.
+    """
+    # Save all current entries in the file before changing
+    with open(log_file_path, 'r') as log_file:
+        entries = log_file.readlines()
+
+    # Filter out anything older than 24-hours
+    filtered_entries = filter_entries(entries)
+
+    # Overwrite the original file with the filtered entries
+    with open("endpoint_data.log", "w") as file:
+        file.writelines(filtered_entries)
+
+    # Append the new data to the file
+    with open(log_file_path, 'a') as log_file:
+        log_file.write(
+            f"Time of execution: "
+            f"{datetime.now().strftime('%m/%d %H:%M:%S')}\n")
+        log_file.write(f"Failed endpoints: {len(FAILED_ENDPOINTS)}\n")
+        log_file.write(f"Retries: {RETRY_COUNT}\n")
+
+
+def parse_entry(entry):
+    # Use regular expression to extract the time string in the entry
+    time_match = re.search(r"(\d{2}/\d{2} \d{2}:\d{2}:\d{2})", entry)
+    if time_match:
+        time_str = time_match.group(1)
+        # Set the year to the current year
+        current_year = datetime.now().year
+        return datetime.strptime(f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S")
+
+
+def filter_entries(entries):
+    filtered_entries = []
+    current_time = datetime.now()
+
+    include_entry = False
+
+    for entry in entries:
+        execution_time = parse_entry(entry)
+        if execution_time:
+            time_difference = current_time - execution_time
+
+            # Check if the entry is within the last 24 hours
+            if time_difference < timedelta(days=1):
+                include_entry = True
+                filtered_entries.append(entry)
+            else:
+                include_entry = False
+
+        elif include_entry:
+            filtered_entries.append(entry)
+
+    return filtered_entries
+
+
 ##############################################################################
-                                #  Test PoI  #
+                            #  Test PoI  #
 ##############################################################################
 
 
@@ -311,7 +382,7 @@ def getPersonID():
     """
     Accepts a string as a search value and returns the person id
  associated with it
-    
+
     :return: The person id for the search value hard-coded into label.
     :rtype: str
     """
@@ -344,7 +415,7 @@ def getPersonID():
 def createPOI():
     """
     Creates a PoI to test the responsiveness of the API endpoint.
-    
+
     :return: None
     :rtype: None
     """
@@ -390,7 +461,7 @@ feca744209047e57&ipo=images')
     for _ in range(MAX_RETRIES):
         response = requests.post(
             URL_PEOPLE, json=payload, headers=headers, params=params)
-        
+
         if response.status_code == 429:
             log.info(f"createPoI retrying in {RETRY_DELAY}s. Response: 429")
 
@@ -426,11 +497,12 @@ def getPOI():
     }
 
     for _ in range(MAX_RETRIES):
-        response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
+        response = requests.get(
+            URL_PEOPLE, headers=GENERAL_HEADER, params=params)
 
         if response.status_code == 429:
             log.info(f"getPoI retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
@@ -438,9 +510,9 @@ def getPOI():
 
         else:
             break
-    
+
     log.info(f"getPoI response received: {response.status_code}")
-    
+
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
             FAILED_ENDPOINTS.append(f"getPoI: {response.status_code}")
@@ -449,7 +521,7 @@ def getPOI():
 def updatePOI():
     """
     Tests the patch requests for the people endpoint
-    
+
     :return: None
     :rtype: None
     """
@@ -474,15 +546,15 @@ def updatePOI():
     for _ in range(MAX_RETRIES):
         response = requests.patch(
             URL_PEOPLE, json=payload, headers=headers, params=params)
-        
+
         if response.status_code == 429:
             log.info(f"updatePoI retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -499,7 +571,7 @@ def updatePOI():
 def deletePOI():
     """
     Tests the delete request for the people endpoint
-    
+
     :return: None
     :rtype: None
     """
@@ -520,15 +592,15 @@ def deletePOI():
 
     for _ in range(MAX_RETRIES):
         response = requests.delete(URL_PEOPLE, headers=headers, params=params)
-            
+
         if response.status_code == 429:
             log.info(f"deletePoI retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -540,7 +612,7 @@ def deletePOI():
 
 
 ##############################################################################
-                                #  Test LPoI  #
+                            #  Test LPoI  #
 ##############################################################################
 
 
@@ -554,7 +626,7 @@ def testLPOI():
 def createPlate():
     """
     Creates a Plate to test the API endpoint
-    
+
     :return: None
     :rtype: None
     """
@@ -582,15 +654,15 @@ def createPlate():
     for _ in range(MAX_RETRIES):
         response = requests.post(
             URL_PLATE, json=payload, headers=headers, params=params)
-            
+
         if response.status_code == 429:
             log.info(f"createPlate retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -604,7 +676,7 @@ def createPlate():
 def getPlate():
     """
     Looks to see if it can get Plates
-    
+
     :return: None
     :rtype: None
     """
@@ -624,15 +696,15 @@ def getPlate():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(URL_PLATE, headers=headers, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getPlate retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -646,7 +718,7 @@ def getPlate():
 def updatePlate():
     """
     Tests the patch requests for the Plate endpoint
-    
+
     :return: None
     :rtype: None
     """
@@ -671,15 +743,15 @@ def updatePlate():
     for _ in range(MAX_RETRIES):
         response = requests.patch(
             URL_PLATE, json=payload, headers=headers, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"updatePlate retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -693,7 +765,7 @@ def updatePlate():
 def deletePlate():
     """
     Tests the delete request for the Plate endpoint
-    
+
     :return: None
     :rtype: None
     """
@@ -710,15 +782,15 @@ def deletePlate():
     for _ in range(MAX_RETRIES):
         response = requests.delete(
             URL_PLATE, headers=GENERAL_HEADER, params=params)
-            
+
         if response.status_code == 429:
             log.info(f"deletePlate retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -730,14 +802,14 @@ def deletePlate():
 
 
 ##############################################################################
-                                # Test Cameras #
+                            # Test Cameras #
 ##############################################################################
 
 
 def getCloudSettings():
     """
     Tests to see if it can retrieve cloud backup settings for a camera
-    
+
     :return: None
     :rtype: None
     """
@@ -752,17 +824,18 @@ def getCloudSettings():
     }
 
     for _ in range(MAX_RETRIES):
-        response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params)
-                
+        response = requests.get(
+            URL_CLOUD, headers=GENERAL_HEADER, params=params)
+
         if response.status_code == 429:
             log.info(f"getCloudSettings retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -777,7 +850,7 @@ def getCloudSettings():
 def getCounts():
     """
     Tests if it can get object counts from a camera
-    
+
     :return: None
     :rtype: None
     """
@@ -792,15 +865,15 @@ def getCounts():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getCounts retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -814,7 +887,7 @@ def getCounts():
 def getTrends():
     """
     Tests if it can get trend counts from a camera
-    
+
     :return: None
     :rtype: None
     """
@@ -831,16 +904,16 @@ def getTrends():
     for _ in range(MAX_RETRIES):
         response = requests.get(
             URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getTrendLineData retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -854,7 +927,7 @@ def getTrends():
 def getCameraData():
     """
     Tests if it can get camera data on a given camera
-    
+
     :return: None
     :rtype: None
     """
@@ -871,16 +944,16 @@ def getCameraData():
     for _ in range(MAX_RETRIES):
         response = requests.get(
             URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getCameraData retrying in {RETRY_DELAY}s\
 . Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -894,7 +967,7 @@ def getCameraData():
 def getThumbed():
     """
     Tests if it can get a thumbnail from a camera
-    
+
     :return: None
     :rtype: None
     """
@@ -912,16 +985,16 @@ def getThumbed():
     for _ in range(MAX_RETRIES):
         response = requests.get(
             URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getThumbnail retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -940,7 +1013,7 @@ def getThumbed():
 def getAudit():
     """
     Tests the ability to retrieve audit logs
-    
+
     :return: None
     :rtype: None
     """
@@ -957,16 +1030,16 @@ def getAudit():
     for _ in range(MAX_RETRIES):
         response = requests.get(URL_AUDIT, headers=GENERAL_HEADER,
                                 params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getAuditLogs retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -980,7 +1053,7 @@ def getAudit():
 def updateUser():
     """
     Tests the ability to update a user
-    
+
     :return: None
     :rtype: None
     """
@@ -1007,15 +1080,15 @@ def updateUser():
     for _ in range(MAX_RETRIES):
         response = requests.put(URL_CORE, json=payload,
                                 headers=headers, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"updateUser retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1029,7 +1102,7 @@ def updateUser():
 def getUser():
     """
     Tests the ability to retrieve information on a user
-    
+
     :return: None
     :rtype: None
     """
@@ -1043,17 +1116,17 @@ def getUser():
     }
 
     for _ in range(MAX_RETRIES):
-        response = requests.get(URL_CORE, headers=GENERAL_HEADER, 
+        response = requests.get(URL_CORE, headers=GENERAL_HEADER,
                                 params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getUser retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1090,7 +1163,7 @@ inside of a link to grant access to footage.
         'org_id': org_id,
         'expiration': 60
     }
-    
+
     for _ in range(MAX_RETRIES):
 
         # Send GET request to get the JWT
@@ -1101,9 +1174,9 @@ inside of a link to grant access to footage.
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
-            
+
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-        
+
         else:
             break
 
@@ -1122,7 +1195,7 @@ inside of a link to grant access to footage.
 def getGroups():
     """
     Tests the ability to get AC Groups
-    
+
     :return: None
     :rtype: None
     """
@@ -1138,15 +1211,15 @@ def getGroups():
     for _ in range(MAX_RETRIES):
         response = requests.get(
             URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getGroups retrying in {RETRY_DELAY}s. Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1160,7 +1233,7 @@ def getGroups():
 def getACUsers():
     """
     Tests the ability to get AC users
-    
+
     :return: None
     :rtype: None
     """
@@ -1176,16 +1249,16 @@ def getACUsers():
     for _ in range(MAX_RETRIES):
         response = requests.get(
             URL_AC_USERS, headers=GENERAL_HEADER, params=params)
-                
+
         if response.status_code == 429:
             log.info(f"getAccessUsers retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1197,10 +1270,9 @@ def getACUsers():
 
 
 def changeCards():
-    
     """
     Tests the ability to change credentials
-    
+
     :return: None
     :rtype: None
     """
@@ -1222,16 +1294,16 @@ def changeCards():
     for _ in range(MAX_RETRIES):
         active_response = requests.put(
             activate_url, headers=GENERAL_HEADER, params=params)
-                
+
         if active_response.status_code == 429:
             log.info(f"activateCard retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1240,16 +1312,16 @@ def changeCards():
     for _ in range(MAX_RETRIES):
         deactive_response = requests.put(
             deactivate_url, headers=GENERAL_HEADER, params=params)
-                
+
         if deactive_response.status_code == 429:
             log.info(f"deactivateCard retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1270,7 +1342,7 @@ def changeCards():
 def changePlates():
     """
     Tests the ability to change access plates
-    
+
     :return: None
     :rtype: None
     """
@@ -1292,16 +1364,16 @@ def changePlates():
     for _ in range(MAX_RETRIES):
         active_response = requests.put(
             activate_url, headers=GENERAL_HEADER, params=params)
-                
+
         if active_response.status_code == 429:
             log.info(f"activatePlate retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1311,16 +1383,16 @@ def changePlates():
     for _ in range(MAX_RETRIES):
         deactive_response = requests.put(
             deactivate_url, headers=GENERAL_HEADER, params=params)
-                
+
         if deactive_response.status_code == 429:
             log.info(f"deactivatePlate retrying in {RETRY_DELAY}s.\
  Response: 429")
-                        
+
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-            
+
         else:
             break
 
@@ -1344,7 +1416,7 @@ def changePlates():
 
 if __name__ == '__main__':
     print(f"Time of execution: "
-          f"{datetime.datetime.now().strftime('%m/%d %H:%M:%S')}")
+          f"{datetime.now().strftime('%m/%d %H:%M:%S')}")
 
     t_POI = threading.Thread(target=testPOI)
     t_LPOI = threading.Thread(target=testLPOI)
@@ -1369,21 +1441,21 @@ if __name__ == '__main__':
     if GPIO:
         # GPIO.output(run_pin, True)  # Solid light while running
         local_stop_event = threading.Event()
-        flash_thread = threading.Thread(target=workLED, 
+        flash_thread = threading.Thread(target=workLED,
                                         args=(run_pin, local_stop_event, 0.25))
         flash_thread.start()
     start_time = time.time()
     try:
         t_POI.start()
         log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
-{t_POI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+{t_POI.name} at time {datetime.now().strftime('%H:%M:%S')}")
         time.sleep(1)
     except ConnectionError:
         log.warning("NewConnectionError caught.")
 
     t_LPOI.start()
     log.info(f"{Fore.LIGHTYELLOW_EX}Starting thread{Style.RESET_ALL} \
-{t_LPOI.name} at time {datetime.datetime.now().strftime('%H:%M:%S')}")
+{t_LPOI.name} at time {datetime.now().strftime('%H:%M:%S')}")
     time.sleep(1)
 
     run_thread_with_rate_limit(threads)
@@ -1392,6 +1464,9 @@ if __name__ == '__main__':
     # getUser()
     end_time = time.time()
     elapsed = end_time - start_time
+
+    log_execution()
+
     if GPIO:
         # GPIO.output(run_pin, False)  # Solid light while running
         local_stop_event.set()
