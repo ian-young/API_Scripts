@@ -9,17 +9,14 @@ import requests
 import logging
 import time
 import pytz
-from os import getenv
-from dotenv import load_dotenv
+import creds  # File with credentials
 from datetime import datetime
 from tzlocal import get_localzone
 
-load_dotenv()
-
 # Set final, global credential variables
-USERNAME = getenv("lab_username")
-PASSWORD = getenv("lab_password")
-ORG_ID = getenv("lab_id")
+USERNAME = creds.mc_u
+PASSWORD = creds.get_password()
+ORG_ID = creds.mc_oid
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -166,11 +163,19 @@ def name_verkada_camera_archives(archive_library):
     """
     local_timezone = get_localzone()
 
+    local_timezone = get_localzone()
+
     log.info("----------------------")  # Aesthetic dividing line
     if archive_library:
         for archive in archive_library:
             epoch_timestamp = archive.get("startBefore")
+            epoch_timestamp = archive.get("startBefore")
             if epoch_timestamp:
+                date_utc = datetime.utcfromtimestamp(epoch_timestamp)
+                date_utc = pytz.utc.localize(date_utc)
+                date_local = date_utc.astimezone(local_timezone)
+                print(local_timezone)
+                date = date_local.strftime("%b %d, %Y %H:%M")
                 date_utc = datetime.utcfromtimestamp(epoch_timestamp)
                 date_utc = pytz.utc.localize(date_utc)
                 date_local = date_utc.astimezone(local_timezone)
@@ -185,6 +190,7 @@ def name_verkada_camera_archives(archive_library):
                 log.info(f"{date}\nArchive label: {archive.get('label')}\n"
                          f"{archive.get('videoExportId')}")
                 log.info("----------------------")  # Aesthetic dividing line
+
 
             elif archive.get('tags') != []:
                 log.info(f"{date}\nArchive has no name. "
