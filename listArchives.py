@@ -8,8 +8,10 @@
 import requests
 import logging
 import time
+import pytz
 import creds  # File with credentials
 from datetime import datetime
+from tzlocal import get_localzone
 
 # Set final, global credential variables
 USERNAME = creds.lab_username
@@ -159,14 +161,18 @@ def name_verkada_camera_archives(archive_library):
     :param archive_library: Library of all archives visible to the user.
     :type archive_library: list
     """
+    local_timezone = get_localzone()
+
     log.info("----------------------")  # Aesthetic dividing line
     if archive_library:
         for archive in archive_library:
-            epoch_timestamp = archive.get("timeExported")
-
+            epoch_timestamp = archive.get("startBefore")
             if epoch_timestamp:
-                date = datetime.utcfromtimestamp(
-                    epoch_timestamp).strftime("%h %m, %Y %H:%M")
+                date_utc = datetime.utcfromtimestamp(epoch_timestamp)
+                date_utc = pytz.utc.localize(date_utc)
+                date_local = date_utc.astimezone(local_timezone)
+                print(local_timezone)
+                date = date_local.strftime("%b %d, %Y %H:%M")
                 log.debug(f"Exported time: {date}")
 
             else:
@@ -176,7 +182,7 @@ def name_verkada_camera_archives(archive_library):
                 log.info(f"{date}\nArchive label: {archive.get('label')}\n"
                          f"{archive.get('videoExportId')}")
                 log.info("----------------------")  # Aesthetic dividing line
-            
+
             elif archive.get('tags') != []:
                 log.info(f"{date}\nArchive has no name. "
                          f"Tags {archive.get('tags')}\n"
