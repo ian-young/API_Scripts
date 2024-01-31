@@ -198,9 +198,13 @@ def print_colored_centered(time, passed, failed, failed_modules):
     """
     global RETRY_COUNT
 
-    rthread = threading.Thread(target=flashLED, args=(retry_pin, RETRY_COUNT))
-    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed))
-    sthread = threading.Thread(target=flashLED, args=(success_pin, passed))
+    rthread = threading.Thread(target=flashLED, args=
+            (retry_pin, RETRY_COUNT, 0.5))
+    fthread = threading.Thread(target=flashLED, args=(fail_pin, failed, 1))
+    sthread = threading.Thread(target=flashLED, args=
+            (success_pin, passed, 0.1))
+    csthread = threading.Thread(target=flashLED, args=
+            (success_pin, 1, 5))
 
     terminal_width, _ = shutil.get_terminal_size()
     short_time = round(time, 2)
@@ -1330,7 +1334,11 @@ if __name__ == '__main__':
                t_getUser, t_getGroups, t_getACUsers, t_changeCards,
                t_changePlates, t_jwt]
     if GPIO:
-        GPIO.output(run_pin, True)
+        # GPIO.output(run_pin, True)  # Solid light while running
+        local_stop_event = threading.Event()
+        flash_thread = threading.Thread(target=workLED, 
+                                        args=(run_pin, local_stop_event, 0.25))
+        flash_thread.start()
     start_time = time.time()
 
     t_POI.start()
