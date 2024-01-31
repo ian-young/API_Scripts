@@ -27,44 +27,31 @@ def parse_log_file(log_file_path):
     :return: Returns the formatted and parsed data from the log file.
     :rtype: list
     """
-    try:
-        with open(log_file_path, 'r') as log_file:
-            lines = log_file.readlines()
+    with open(log_file_path, 'r') as log_file:
+        lines = log_file.readlines()
 
-            data = {'time': [], 'failed': [], 'retries': []}
-            current_time = None
+        data = {'time': [], 'failed': [], 'retries': []}
+        current_time = None
 
-            for line in lines:
-                time_match = re.match(
-                    r"Time of execution: (\d+/\d+ \d+:\d+:\d+)", line)
-                failed_match = re.match(r"Failed endpoints: (\d+)", line)
-                retries_match = re.match(r"Retries: (\d+)", line)
+        for line in lines:
+            time_match = re.match(
+                r"Time of execution: (\d+/\d+ \d+:\d+:\d+)", line)
+            failed_match = re.match(r"Failed endpoints: (\d+)", line)
+            retries_match = re.match(r"Retries: (\d+)", line)
 
-                if time_match:
-                    if time_match:
-                        current_year = datetime.datetime.now().year  # Get the current year
-                        current_time = datetime.datetime.strptime(
-                            f"{current_year}/{time_match.group(1)}",
-                            '%Y/%m/%d %H:%M:%S')
-                        log.info(f"Found time: {current_time}")
+            if time_match:
+                current_time = datetime.datetime.strptime(
+                    time_match.group(1), '%m/%d %H:%M:%S')  # Strip date
+            elif failed_match and current_time:
+                data['time'].append(current_time)
+                data['failed'].append(int(failed_match.group(1)))
+            elif retries_match and current_time:
+                data['retries'].append(int(retries_match.group(1)))
+                current_time = None
+            else:
+                log.error("An error has occured while extracting the data.")
 
-                elif failed_match and current_time:
-                    data['time'].append(current_time)
-                    data['failed'].append(int(failed_match.group(1)))
-                    log.info(f"Found failed: {int(failed_match.group(1))}")
-                elif retries_match and current_time:
-                    data['retries'].append(int(retries_match.group(1)))
-                    current_time = None
-                    log.info(f"Found retries: {int(retries_match.group(1))}")
-
-        log.info(f"Parsed data: {data}")
-
-        return data
-
-    except Exception as e:
-        log.error(
-            f"An error has occurred while extracting the data. Error: {e}")
-        raise e
+    return data
 
 
 def create_bar_graph(data):
