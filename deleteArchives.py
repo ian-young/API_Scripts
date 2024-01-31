@@ -39,7 +39,7 @@ LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
     format="%(levelname)s: %(message)s"
 )
 
@@ -48,30 +48,7 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Mark what archives are to be "persistent"
-PERSISTENT_ARCHIVES = [
-    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1706411022|1706411033|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1702781302|1702781309|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1694822217|1694822237|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1694291875|1694291886|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1693881720|1693881728|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-    "4e6abc02-5242-47e7-b862-0b7b33db1de0|1689959460|1689959520|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-    "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683758763|1683758809|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-       "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683596280|1683596310|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6"
-]
-
-log.info("Building search tree.")
-AVL_TREE = avlTree.build_avl_tree(PERSISTENT_ARCHIVES)
-log.info(f"{Fore.GREEN}Search tree built.{Style.RESET_ALL}")
-
-AGE_LIMIT = 14  # Delete anything older than 14 days
+PERSISTENT_ARCHIVES = ["b68397f9-2656-4c75-9840-976ad69f0f32|1706664601|1706664609|724dff55-e498-420c-8de9-a77f497129c9"]
 
 
 def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
@@ -414,52 +391,20 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
         return
     log.debug(f"{Fore.GREEN}Test complete. Continuing...{Style.RESET_ALL}")
 
-    if age_limit == 0:
-        # Iterate through all video export IDs and remove them
-        log.debug("Iterating through archive values.")
-        for archive in archive_library:
-            video_export_id = archive.get("videoExportId")
+    # Iterate through all video export IDs and remove them
+    log.debug("Iterating through archive values")
+    for archive in archives:
+        video_export_id = archive.get("videoExportId")
+        if (video_export_id not in PERSISTENT_ARCHIVES):
+            log.debug(f"\nRunning for {video_export_id}")
+            thread = threading.Thread(
+                target=remove_verkada_camera_archive,
+                args=(video_export_id, x_verkada_token,
+                      x_verkada_auth, usr))
 
-            log.debug("Searching AVL tree.")
-            result_node = avlTree.search_in_avl_tree(AVL_TREE,
-                                                     video_export_id)
-
-            # Check if the archive has been marked "persistent"
-            if result_node is None:
-                log.debug(
-                    f"Age limit set to zero. Skipping age check."
-                    f"\nRunning for {Fore.MAGENTA}{video_export_id}"
-                    f"{Style.RESET_ALL}"
-                )
-
-                thread = threading.Thread(
-                    target=remove_verkada_camera_archive,
-                    args=(
-                        video_export_id,
-                        x_verkada_token,
-                        x_verkada_auth,
-                        usr
-                    ))
-                # Add the thread to the array
-                threads.append(thread)
-
-    else:
-        threads.extend(check_archive_timestamp(
-            archive_library,
-            x_verkada_token,
-            x_verkada_auth,
-            usr,
-            age_limit
-        ))
-
-    if threads:
-        try:
             # Start in seperate thread to speed up runtime
-            for thread in threads:
-                log.debug(
-                    f"Starting {Fore.LIGHTYELLOW_EX}{thread.name}"
-                    f"{Style.RESET_ALL}.")
-                thread.start()
+            threads.append(thread)
+            thread.start()
 
             # Join all threads back to the main parent thread
             for thread in threads:
@@ -530,13 +475,15 @@ def remove_verkada_camera_archive(video_export_id, x_verkada_token,
             # JSON response of updated value for the archive
             removed_archive = response.json().get("videoExports", [])
 
-            # Communicate with the user which archive has been deleted
-            if removed_archive:
-                for archive in removed_archive:
-                    log.info(f"Removed Archive: {name}")
-            else:
-                log.warning(f"Failed to remove Archive with videoExportId: \
-     {name}")
+        if removed_archive:
+            for archive in removed_archive:
+                if archive.get('label') != '':
+                    log.info(f"Removed Archive: {archive.get('label')}")
+                else:
+                    log.info(f"Removed {archive.get('videoExportId')}")
+        else:
+            log.warning(f"Failed to remove Archive with videoExportId: \
+{video_export_id}")
 
                 return removed_archive
 
