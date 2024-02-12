@@ -14,9 +14,9 @@ from datetime import datetime
 from tzlocal import get_localzone
 
 # Set final, global credential variables
-USERNAME = creds.mc_u
-PASSWORD = creds.get_password()
-ORG_ID = creds.mc_oid
+USERNAME = creds.lab_username
+PASSWORD = creds.lab_password
+ORG_ID = creds.lab_id
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
