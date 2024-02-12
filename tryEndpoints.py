@@ -1172,7 +1172,6 @@ def getACUsers():
 
 
 def changeCards():
-    
     """
     Tests the ability to change credentials
     

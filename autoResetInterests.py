@@ -32,11 +32,15 @@ CALL_COUNT_LOCK = threading.Lock()
 
 # Set logger
 log = logging.getLogger()
+log.setLevel(logging.WARNING)
 logging.basicConfig(
 <<<<<<< HEAD
     level = logging.WARNING,
     format = "%(levelname)s: %(message)s"
     )
+# Mute non-essential logging from requests library
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.WARNING)
