@@ -5,8 +5,8 @@
 
 import creds, datetime, logging, requests, threading, time
 
-ORG_ID = creds.demo_id
-API_KEY = creds.demo_key
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set timeout for a 429
 MAX_RETRIES = 10
@@ -44,8 +44,8 @@ except ImportError:
     log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = [""]
-PERSISTENT_PERSONS = [""]
+PERSISTENT_PLATES = sorted([])
+PERSISTENT_PERSONS = sorted([])
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -224,6 +224,13 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
 
         # Extract as a list
         persons = data.get('persons_of_interest')
+
+        try:
+            iter(persons)
+        except (TypeError, AttributeError):
+            log.error("People are not iterable.")
+            return
+
         return persons
     else:
         log.critical(
@@ -433,7 +440,10 @@ def runPeople():
     persons = getPeople()
     log.info("persons retrieved.")
 
-    # Run if persons were found
+    # Sort JSON dictionaries by person id
+    persons = sorted(persons, key=lambda x: x['person_id'])
+
+    #Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
         all_person_ids = getPeopleIds(persons)
@@ -455,7 +465,7 @@ def runPeople():
             if person not in safe_person_ids]
 
         if persons_to_delete:
-            purgePeople(persons_to_delete, persons)
+            # purgePeople(persons_to_delete, persons)
             return 1  # Completed
 
         else:
@@ -504,12 +514,20 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
 
         # Extract as a list
         plates = data.get('license_plate_of_interest')
+        
+        try:
+            # Check if the list is iterable
+            iter(plates)
+        except (TypeError, AttributeError):
+            log.error("Plates are not iterable.")
+            return
+
         return plates
     else:
         log.critical(
             f"Plate - Error with retrieving plates.\
 Status code {response.status_code}")
-        return None
+        return
 
 
 def getPlateIds(plates=None):
@@ -712,6 +730,9 @@ def runPlates():
     plates = getPlates()
     log.info("Plates retrieved.")
 
+    # Sort the JSON dictionaries by plate id
+    plates = sorted(plates, key=lambda x: x['plate_id'])
+
     # Run if plates were found
     if plates:
         log.info("Plate - Gather IDs")
@@ -757,6 +778,7 @@ There are no more plates to delete.")
 if __name__ == "__main__":
     if GPIO:
         GPIO.output(work_pin, True)
+        
     start_time = time.time()
     PoI = threading.Thread(target=runPeople)
     LPoI = threading.Thread(target=runPlates)
