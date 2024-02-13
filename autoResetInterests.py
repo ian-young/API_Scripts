@@ -5,8 +5,8 @@
 
 import creds, logging, requests, threading, time
 
-ORG_ID = creds.demo_id
-API_KEY = creds.demo_key
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -80,6 +80,17 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
             iter(persons)
         except (TypeError, AttributeError):
             log.error("People are not iterable.")
+            return
+
+
+        try:
+            iter(persons)
+        except (TypeError, AttributeError):
+            log.error(
+                f"Cannot convert plates into a tree."
+                f"Plates are not iterable."
+                )
+            
             return
 
         return persons
@@ -223,7 +234,7 @@ def runPeople():
     # Sort JSON dictionaries by person id
     persons = sorted(persons, key=lambda x: x['person_id'])
 
-    # Run if persons were found
+    #Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
         all_person_ids = getPeopleIds(persons)
@@ -245,7 +256,7 @@ def runPeople():
             if person not in safe_person_ids]
 
         if persons_to_delete:
-            purgePeople(persons_to_delete, persons)
+            # purgePeople(persons_to_delete, persons)
             return 1  # Completed
 
         else:
@@ -432,7 +443,7 @@ def runPlates():
     log.info("Plates retrieved.")
 
     # Sort the JSON dictionaries by plate id
-    plates = sorted(plates, key=lambda x: x['license_plate'])
+    plates = sorted(plates, key=lambda x: x['plate_id'])
 
     # Run if plates were found
     if plates:
