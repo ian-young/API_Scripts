@@ -86,10 +86,9 @@ def build_avl_tree(arr):
     :return: The root of the built AVL tree.
     :rtype: TreeNode or None
     """
-    # TODO Adjust to reflect compatability with all types
     root = None
-    for string in arr:
-        root = insert_avl(root, string)
+    for value in arr:
+        root = insert_avl(root, value)
     return root
 
 
