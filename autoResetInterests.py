@@ -2,9 +2,15 @@
 # Purpose: Compare plates to a pre-defined array of names.
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
+#TODO Convert to use avlTree rather than lists
+#! Clean the lists before converting.
+#! You might have to load the entire JSON response for a plate into a node.
 
-import creds, datetime, logging, requests, threading, time
+from xml.dom.minidom import Attr
+import avlTree, creds, datetime, logging, requests, threading, time
 
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 ORG_ID = creds.lab_id
 API_KEY = creds.lab_key
 
@@ -228,9 +234,13 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
         try:
             iter(persons)
         except (TypeError, AttributeError):
-            log.error("People are not iterable.")
+            log.error(
+                f"Cannot convert plates into a tree."
+                f"Plates are not iterable."
+                )
+            
             return
-
+        print(persons)
         return persons
     else:
         log.critical(
@@ -440,44 +450,44 @@ def runPeople():
     persons = getPeople()
     log.info("persons retrieved.")
 
-    # Sort JSON dictionaries by person id
-    persons = sorted(persons, key=lambda x: x['person_id'])
-
+    print("-----")
+    tree = avlTree.build_avl_tree(persons)
+    avlTree.print_avl_tree_anytree(tree)
     # Run if persons were found
-    if persons:
-        log.info("Person - Gather IDs")
-        all_person_ids = getPeopleIds(persons)
-        all_person_ids = cleanList(all_person_ids)
-        log.info("Person - IDs aquired.")
+#     if persons:
+#         log.info("Person - Gather IDs")
+#         all_person_ids = getPeopleIds(persons)
+#         all_person_ids = cleanList(all_person_ids)
+#         log.info("Person - IDs aquired.")
 
-        safe_person_ids = []
+#         safe_person_ids = []
 
-        log.info("Searching for safe persons.")
-        # Create the list of safe persons
-        for person in PERSISTENT_PERSONS:
-            safe_person_ids.append(getPersonId(person, persons))
-        safe_person_ids = cleanList(safe_person_ids)
-        log.info("Safe persons found.")
+#         log.info("Searching for safe persons.")
+#         # Create the list of safe persons
+#         for person in PERSISTENT_PERSONS:
+#             safe_person_ids.append(getPersonId(person, persons))
+#         safe_person_ids = cleanList(safe_person_ids)
+#         log.info("Safe persons found.")
 
-        # New list that filters persons that are safe
-        persons_to_delete = [
-            person for person in all_person_ids 
-            if person not in safe_person_ids]
+#         # New list that filters persons that are safe
+#         persons_to_delete = [
+#             person for person in all_person_ids 
+#             if person not in safe_person_ids]
 
-        if persons_to_delete:
-            purgePeople(persons_to_delete, persons)
-            return 1  # Completed
+#         if persons_to_delete:
+#             purgePeople(persons_to_delete, persons)
+#             return 1  # Completed
 
-        else:
-            log.info(
-                "Person - The organization has already been purged.\
-There are no more persons to delete.")
+#         else:
+#             log.info(
+#                 "Person - The organization has already been purged.\
+# There are no more persons to delete.")
 
-            return 1  # Completed
-    else:
-        log.warning("No persons were found.")
+#             return 1  # Completed
+#     else:
+#         log.warning("No persons were found.")
 
-        return 1  # Copmleted
+#         return 1  # Copmleted
 
 
 ##############################################################################
@@ -519,7 +529,11 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
             # Check if the list is iterable
             iter(plates)
         except (TypeError, AttributeError):
-            log.error("Plates are not iterable.")
+            log.error(
+                f"Cannot convert plates into a tree."
+                f"Plates are not iterable."
+                )
+            
             return
 
         return plates
@@ -527,6 +541,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         log.critical(
             f"Plate - Error with retrieving plates.\
 Status code {response.status_code}")
+        return
         return
 
 
@@ -785,11 +800,11 @@ if __name__ == "__main__":
 
     # Start the threads running independantly
     PoI.start()
-    LPoI.start()
+    #--LPoI.start()
 
     # Join the threads back to parent process
     PoI.join()
-    LPoI.join()
+    #--LPoI.join()
     elapsed_time = time.time() - start_time
     if GPIO:
         GPIO.output(work_pin, False)

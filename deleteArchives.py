@@ -33,7 +33,6 @@ DELETE_URL = "https://vsubmit.command.verkada.com/library/export/delete"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
 # Set up the logger
-# logging.getLogger().setLevel(logging.DEBUG)
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 logging.basicConfig(
@@ -61,7 +60,7 @@ d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
 d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
     "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683758763|1683758809|\
 d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-    "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683596280|1683596310|\
+       "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683596280|1683596310|\
 d7a77639-e451-4d35-b18f-8fd8ae2cd0a6"
 ]
 
