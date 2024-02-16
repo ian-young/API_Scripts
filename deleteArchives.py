@@ -20,6 +20,7 @@ ORG_ID = creds.mc_oid
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 ARCHIVE_URL = "https://vsubmit.command.verkada.com/library/export/list"
 DELETE_URL = "https://vsubmit.command.verkada.com/library/export/delete"
+LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
 # Set up the logger
 log = logging.getLogger()
@@ -32,7 +33,31 @@ logging.basicConfig(
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-# Mark what archives are to be "persistant"
+# Mark what archives are to be "persistent"
+PERSISTENT_ARCHIVES = [
+    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1706411022|1706411033|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
+    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1702781302|1702781309|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
+    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1694822217|1694822237|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
+    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1694291875|1694291886|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
+    "c94be2a0-ca3f-4f3a-b208-8db8945bf40b|1693881720|1693881728|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
+    "4e6abc02-5242-47e7-b862-0b7b33db1de0|1689959460|1689959520|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
+    "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683758763|1683758809|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
+    "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683596280|1683596310|\
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6"
+]
+
+log.info("Building search tree.")
+AVL_TREE = avlTree.build_avl_tree(PERSISTENT_ARCHIVES)
+log.info(f"{Fore.GREEN}Search tree built.{Style.RESET_ALL}")
+
+AGE_LIMIT = 14  # Delete anything older than 14 days
 
 
 def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
@@ -93,6 +118,44 @@ def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
     except requests.exceptions.RequestException as e:
         log.error(f"Verkada API Error: {e}")
         return None, None, None
+
+
+def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
+    headers = {
+        "X-CSRF-Token": x_verkada_token,
+        "X-Verkada-Auth": x_verkada_auth,
+        "x-verkada-orginization": org_id
+    }
+
+    body = {
+        "logoutCurrentEmailOnly": True
+    }
+    try:
+        response = session.post(LOGOUT_URL, headers=headers, json=body)
+        response.raise_for_status()
+
+        log.info("Logging out:")
+
+    except requests.exceptions.Timeout:
+        log.error("The request has timed out.")
+
+    except requests.exceptions.TooManyRedirects:
+        log.error("Too many HTTP redirects.")
+
+    except requests.HTTPError as e:
+        log.error(f"An error has occured\n{e}")
+
+    except requests.exceptions.ConnectionError:
+        log.error("Error connecting to the server.")
+
+    except requests.exceptions.RequestException:
+        log.error("API error.")
+
+    except KeyboardInterrupt:
+        log.warning("Keyboard interrupt detected. Exiting...")
+
+    finally:
+        session.close()
 
 
 def read_verkada_camera_archives(x_verkada_token, x_verkada_auth, usr,
@@ -272,11 +335,10 @@ def remove_verkada_camera_archive(video_export_id, x_verkada_token,
 
 # Check if the script is being imported or ran directly
 if __name__ == "__main__":
-    try:
-        start_time = time.time()
-
-        # Start the user session
-        with requests.Session() as session:
+    with requests.Session() as session:
+        start_time = time.time()  # Start timing the script
+        try:
+            # Initialize the user session.
             csrf_token, user_token, user_id = login_and_get_tokens()
 
             if csrf_token and user_token and user_id:
@@ -288,9 +350,16 @@ if __name__ == "__main__":
                 log.critical("No credentials were provided during the authentication \
 process.")
 
-        elapsed_time = time.time() - start_time
-        log.info(f"Total time to complete {elapsed_time:.2f}")
-    except KeyboardInterrupt:
-        print(f"\nKeyboard interrupt detected. Aborting...")
+            # Calculate the time take to run and post it to the log
+            elapsed_time = time.time() - start_time
+            log.info(f"Total time to complete {elapsed_time:.2f}")
 
-log.debug("Session closed. Exiting...")
+            session.close()
+
+        # Gracefully handle an interrupt
+        except KeyboardInterrupt:
+            print(f"\nKeyboard interrupt detected. Aborting...")
+
+        finally:
+            session.close()
+            log.debug("Session closed. Exiting...")
