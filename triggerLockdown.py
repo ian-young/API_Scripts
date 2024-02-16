@@ -12,7 +12,16 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s"
 )
 
+# Static URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
+LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
+
+# User loging credentials
+USERNAME = creds.slc_username
+PASSWORD = creds.slc_password
+ORG_ID = creds.slc_id
+
+LOCKDOWN_ID = "9884e9b2-1871-4aaf-86d7-0dc12b4ff024"  # String or list
 
 
 def login_and_get_tokens(username, password, org_id):
@@ -52,22 +61,64 @@ def login_and_get_tokens(username, password, org_id):
 
     # Handle exceptions
     except requests.exceptions.Timeout:
+        session.close()
         return None, None, None
 
     except requests.exceptions.TooManyRedirects:
+        session.close()
         return None, None, None
 
     except requests.exceptions.HTTPError:
+        session.close()
         return None, None, None
 
     except requests.exceptions.ConnectionError:
+        session.close()
         return None, None, None
 
     except requests.exceptions.RequestException:
+        session.close()
         return None, None, None
 
     except KeyboardInterrupt:
-        print("Keyboard interrupt detected. Exiting...")
+        log.warning("Keyboard interrupt detected. Exiting...")
+        session.close()
+
+
+def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
+    headers = {
+        "X-CSRF-Token": x_verkada_token,
+        "X-Verkada-Auth": x_verkada_auth,
+        "x-verkada-orginization": org_id
+    }
+
+    body = {
+        "logoutCurrentEmailOnly": True
+    }
+    try:
+        log.info("Logging out")
+        response = session.post(LOGOUT_URL, headers=headers, json=body)
+        response.raise_for_status()
+
+    except requests.exceptions.Timeout:
+        log.error("The request has timed out.")
+
+    except requests.exceptions.TooManyRedirects:
+        log.error("Too many HTTP redirects.")
+
+    except requests.HTTPError as e:
+        log.error(f"An error has occured\n{e}")
+
+    except requests.exceptions.ConnectionError:
+        log.error("Error connecting to the server.")
+
+    except requests.exceptions.RequestException:
+        log.error("API error.")
+
+    except KeyboardInterrupt:
+        log.warning("Keyboard interrupt detected. Exiting...")
+
+    finally:
         session.close()
 
 
@@ -112,7 +163,7 @@ def trigger_lockdown(x_verkada_token, x_verkada_auth, usr, org_id, lockdown_id):
                     }
 
                     log.debug(f"triggering lockdown: {target}.")
-                    response = session.post(url, headers=headers, body=body)
+                    response = session.post(url, headers=headers, json=body)
                     response.raise_for_status()
 
             else:
@@ -128,23 +179,35 @@ def trigger_lockdown(x_verkada_token, x_verkada_auth, usr, org_id, lockdown_id):
             response = session.post(url, headers=headers, json=body)
             response.raise_for_status()
 
+    # Handle exceptions
     except requests.exceptions.Timeout:
         log.error("The request has timed out.")
+        logout(csrf_token, user_token)
+        session.close()
 
     except requests.exceptions.TooManyRedirects:
         log.error("Too many HTTP redirects.")
+        logout(csrf_token, user_token)
+        session.close()
 
     except requests.HTTPError as e:
         log.error(f"An error has occured\n{e}")
+        logout(csrf_token, user_token)
+        session.close()
 
     except requests.exceptions.ConnectionError:
         log.error("Error connecting to the server.")
+        logout(csrf_token, user_token)
+        session.close()
 
     except requests.exceptions.RequestException:
         log.error("API error.")
+        logout(csrf_token, user_token)
+        session.close()
 
     except KeyboardInterrupt:
-        print("Keyboard interrupt detected. Exiting...")
+        log.warning("Keyboard interrupt detected. Exiting...")
+        logout(csrf_token, user_token)
         session.close()
 
 
@@ -153,16 +216,21 @@ if __name__ == "__main__":
         with requests.Session() as session:
             log.debug("Retrieving credentials.")
             csrf_token, user_token, user_id = login_and_get_tokens(
-                creds.slc_username, creds.slc_password, creds.slc_id)
+                USERNAME, PASSWORD, ORG_ID)
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
                 trigger_lockdown(csrf_token, user_token, user_id,
-                                 creds.slc_id, "9884e9b2-1871-4aaf-86d7-0dc12b4ff024")
+                                 ORG_ID, LOCKDOWN_ID)
                 log.debug("All lockdowns triggered.")
+
+                logout(csrf_token, user_token)
 
             else:
                 log.warning("Did not receive the necessary credentials.")
 
     except KeyboardInterrupt:
         print("Keyboard interrupt detected. Exiting...")
+
+    finally:
+        session.close()
