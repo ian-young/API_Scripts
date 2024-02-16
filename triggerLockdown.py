@@ -21,6 +21,8 @@ USERNAME = creds.slc_username
 PASSWORD = creds.slc_password
 ORG_ID = creds.slc_id
 
+LOCKDOWN_ID = "9884e9b2-1871-4aaf-86d7-0dc12b4ff024"  # String or list
+
 
 def login_and_get_tokens(username, password, org_id):
     """
@@ -214,12 +216,12 @@ if __name__ == "__main__":
         with requests.Session() as session:
             log.debug("Retrieving credentials.")
             csrf_token, user_token, user_id = login_and_get_tokens(
-                creds.slc_username, creds.slc_password, creds.slc_id)
+                USERNAME, PASSWORD, ORG_ID)
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
                 trigger_lockdown(csrf_token, user_token, user_id,
-                                 creds.slc_id, "9884e9b2-1871-4aaf-86d7-0dc12b4ff024")
+                                 ORG_ID, LOCKDOWN_ID)
                 log.debug("All lockdowns triggered.")
 
                 logout(csrf_token, user_token)
