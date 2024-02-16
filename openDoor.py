@@ -21,6 +21,8 @@ USERNAME = creds.slc_username
 PASSWORD = creds.slc_password
 ORG_ID = creds.slc_id
 
+VIRTUAL_DEVICE = "5eff4677-974d-44ca-a6ba-fb7595265e0a"  # String or list
+
 
 def login_and_get_tokens(username, password, org_id):
     """
@@ -204,12 +206,12 @@ if __name__ == "__main__":
         try:
             log.debug("Retrieving credentials.")
             csrf_token, user_token, user_id = login_and_get_tokens(
-                creds.slc_username, creds.slc_password, creds.slc_id)
+                USERNAME, PASSWORD, ORG_ID)
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
                 unlock_door(csrf_token, user_token, user_id,
-                            "5eff4677-974d-44ca-a6ba-fb7595265e0a")
+                            VIRTUAL_DEVICE)
                 log.debug("All door(s) unlocked.")
 
                 logout(csrf_token, user_token)

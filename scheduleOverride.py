@@ -23,6 +23,7 @@ PASSWORD = creds.slc_password
 ORG_ID = creds.slc_id
 
 UNLOCK_PERIOD = 5  # Change this integer to change override time (minutes).
+VIRTUAL_DEVICE = "5eff4677-974d-44ca-a6ba-fb7595265e0a"  # String or list
 
 
 def login_and_get_tokens(username, password, org_id):
@@ -123,11 +124,12 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
         session.close()
 
 
-def schedule_override(x_verkada_token, x_verkada_auth, usr, org_id, door, time):
+def schedule_override(x_verkada_token, x_verkada_auth, usr, org_id, door,
+                      time):
     """
-    Unlocks the given door(s) inside of Verkada Command with a valid Command
-    user session. The door unlock event will appear as a remote unlock in the
-    audit logs.
+    Sets a schedule override for the given door(s) inside of Verkada Command 
+    with a valid Command user session. The schedule overrride event will 
+    appear in the audit logs.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
@@ -247,13 +249,12 @@ if __name__ == "__main__":
         try:
             log.debug("Retrieving credentials.")
             csrf_token, user_token, user_id = login_and_get_tokens(
-                creds.slc_username, creds.slc_password, creds.slc_id)
+                USERNAME, PASSWORD, ORG_ID)
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
                 schedule_override(csrf_token, user_token, user_id,
-                                  creds.slc_id,
-                                  "5eff4677-974d-44ca-a6ba-fb7595265e0a", UNLOCK_PERIOD)
+                                  ORG_ID, VIRTUAL_DEVICE, UNLOCK_PERIOD)
                 log.debug("All door(s) unlocked.")
 
                 logout(csrf_token, user_token)
