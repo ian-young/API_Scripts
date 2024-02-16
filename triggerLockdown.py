@@ -84,6 +84,10 @@ def trigger_lockdown(x_verkada_token, x_verkada_auth, usr, org_id, lockdown_id):
     :type x_verkada_auth: str
     :param usr: The user ID for a valid user in the Verkad organization.
     :type usr: str
+    :param org_id: The Verkada organization ID of the target org.
+    :type org_id: str
+    :param lockdown_id: The id of the lockdown to trigger.
+    :type lockdown_id: str, list[str]
     """
     url = f"https://vcerberus.command.verkada.com/organizations/{org_id}/lockdowns/trigger"
     headers = {
