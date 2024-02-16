@@ -1,9 +1,10 @@
 # Author: Ian Young
-# Purpose: Opens lockdowns both literally and figuratively
+# Purpose: Opens doors both literally and figuratively
 
 import creds
 import requests
 import logging
+from datetime import datetime, timedelta
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
@@ -13,6 +14,7 @@ logging.basicConfig(
 )
 
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
+UNLOCK_PERIOD = 5  # Change this integer to change override time (minutes).
 
 
 def login_and_get_tokens(username, password, org_id):
@@ -71,10 +73,10 @@ def login_and_get_tokens(username, password, org_id):
         session.close()
 
 
-def trigger_lockdown(x_verkada_token, x_verkada_auth, usr, org_id, lockdown_id):
+def schedule_override(x_verkada_token, x_verkada_auth, usr, org_id, door, time):
     """
-    Triggers the given lockdown(s) inside of Verkada Command with a valid Command
-    user session. The lockdown trigger event will appear as a remote trigger in the
+    Unlocks the given door(s) inside of Verkada Command with a valid Command
+    user session. The door unlock event will appear as a remote unlock in the
     audit logs.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
@@ -86,46 +88,76 @@ def trigger_lockdown(x_verkada_token, x_verkada_auth, usr, org_id, lockdown_id):
     :type usr: str
     :param org_id: The Verkada organization ID of the target org.
     :type org_id: str
-    :param lockdown_id: The id of the lockdown to trigger.
-    :type lockdown_id: str, list[str]
+    :param door: The target door ID
+    :type: str, list[str]
+    :param time: The length of the override in minutes
+    :type time: int
     """
-    url = f"https://vcerberus.command.verkada.com/organizations/{org_id}/lockdowns/trigger"
+    url = f"https://vcerberus.command.verkada.com/organizations/{org_id}/schedules"
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
         "User": usr
     }
+
+    current_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    end_time = (datetime.now() + timedelta(minutes=time)
+                ).strftime("%Y-%m-%dT%H:%M:%S")
     try:
-        # Check to see if a list of lockdowns was given
+        # Check to see if a list of doors was given
         log.debug("Checking if a list was provided.")
 
-        if isinstance(lockdown_id, list):
+        if isinstance(door, list):
             log.debug("List provided -> Checking if list is iterable.")
 
-            if hasattr(lockdown_id, "__iter__"):
+            if hasattr(door, "__iter__"):
                 log.debug(
-                    "List provided -> list is iterable -> attempting triggers.")
+                    "List provided -> list is iterable -> attempting unlocks.")
 
-                for target in lockdown_id:
-                    body = {
-                        "lockdownId": target
-                    }
+                data = {
+                    "sitesEnabled": True,
+                    "schedules": [
+                        {
+                            "priority": "MANUAL",
+                            "startDateTime": current_time,
+                            "endDateTime": end_time,
+                            "deleted": False,
+                            "name": "",
+                            "type": "DOOR",
+                            "doors": door,
+                            "events": [],
+                            "defaultDoorLockState": "UNLOCKED"
+                        }
+                    ]
+                }
 
-                    log.debug(f"triggering lockdown: {target}.")
-                    response = session.post(url, headers=headers, body=body)
-                    response.raise_for_status()
+                log.debug(f"Unlocking virutal devices: {door}.")
+                response = session.post(url, headers=headers, json=data)
+                response.raise_for_status()
 
             else:
                 log.critical("List is not iterable.")
 
-        # Run for a single lockdown
+        # Run for a single door
         else:
-            body = {
-                "lockdownId": lockdown_id
+            data = {
+                "sitesEnabled": True,
+                "schedules": [
+                    {
+                        "priority": "MANUAL",
+                        "startDateTime": current_time,
+                        "endDateTime": end_time,
+                        "deleted": False,
+                        "name": "",
+                        "type": "DOOR",
+                        "doors": [str(door)],
+                        "events": [],
+                        "defaultDoorLockState": "UNLOCKED"
+                    }
+                ]
             }
-
-            log.debug(f"triggering {lockdown_id}.")
-            response = session.post(url, headers=headers, json=body)
+            log.debug(f"Unlocking {door}.")
+            response = session.post(url, headers=headers, json=data)
             response.raise_for_status()
 
     except requests.exceptions.Timeout:
@@ -157,9 +189,10 @@ if __name__ == "__main__":
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
-                trigger_lockdown(csrf_token, user_token, user_id,
-                                 creds.slc_id, "9884e9b2-1871-4aaf-86d7-0dc12b4ff024")
-                log.debug("All lockdowns triggered.")
+                schedule_override(csrf_token, user_token, user_id,
+                                  creds.slc_id,
+                                  "5eff4677-974d-44ca-a6ba-fb7595265e0a", UNLOCK_PERIOD)
+                log.debug("All door(s) unlocked.")
 
             else:
                 log.warning("Did not receive the necessary credentials.")
