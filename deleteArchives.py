@@ -30,6 +30,7 @@ ORG_ID = creds.lab_id
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 ARCHIVE_URL = "https://vsubmit.command.verkada.com/library/export/list"
 DELETE_URL = "https://vsubmit.command.verkada.com/library/export/delete"
+LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
 # Set up the logger
 log = logging.getLogger()
@@ -59,7 +60,7 @@ d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
 d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
     "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683758763|1683758809|\
 d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
-       "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683596280|1683596310|\
+    "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683596280|1683596310|\
 d7a77639-e451-4d35-b18f-8fd8ae2cd0a6"
 ]
 
@@ -138,6 +139,44 @@ def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
     except requests.exceptions.RequestException as e:
         log.error(f"{Fore.RED}Verkada API Error: {e}{Style.RESET_ALL}")
         return None, None, None
+
+
+def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
+    headers = {
+        "X-CSRF-Token": x_verkada_token,
+        "X-Verkada-Auth": x_verkada_auth,
+        "x-verkada-orginization": org_id
+    }
+
+    body = {
+        "logoutCurrentEmailOnly": True
+    }
+    try:
+        response = session.post(LOGOUT_URL, headers=headers, json=body)
+        response.raise_for_status()
+
+        log.info("Logging out:")
+
+    except requests.exceptions.Timeout:
+        log.error("The request has timed out.")
+
+    except requests.exceptions.TooManyRedirects:
+        log.error("Too many HTTP redirects.")
+
+    except requests.HTTPError as e:
+        log.error(f"An error has occured\n{e}")
+
+    except requests.exceptions.ConnectionError:
+        log.error("Error connecting to the server.")
+
+    except requests.exceptions.RequestException:
+        log.error("API error.")
+
+    except KeyboardInterrupt:
+        log.warning("Keyboard interrupt detected. Exiting...")
+
+    finally:
+        session.close()
 
 
 def read_verkada_camera_archives(x_verkada_token, x_verkada_auth, usr,
@@ -525,11 +564,10 @@ def remove_verkada_camera_archive(video_export_id, x_verkada_token,
 
 # Check if the script is being imported or ran directly
 if __name__ == "__main__":
-    try:
+    with requests.Session() as session:
         start_time = time.time()  # Start timing the script
-
-        # Initialize the user session.
-        with requests.Session() as session:
+        try:
+            # Initialize the user session.
             csrf_token, user_token, user_id = login_and_get_tokens()
 
             # Continue if the required information has been received
@@ -557,12 +595,16 @@ if __name__ == "__main__":
                     f"the authentication process.{Style.RESET_ALL}"
                 )
 
-        # Calculate the time take to run and post it to the log
-        elapsed_time = time.time() - start_time
-        log.info(f"Total time to complete {elapsed_time:.2f}")
+            # Calculate the time take to run and post it to the log
+            elapsed_time = time.time() - start_time
+            log.info(f"Total time to complete {elapsed_time:.2f}")
 
-    # Gracefully handle an interrupt
-    except KeyboardInterrupt:
-        print(f"\nKeyboard interrupt detected. Aborting...")
+            session.close()
 
-log.debug("Session closed. Exiting...")
+        # Gracefully handle an interrupt
+        except KeyboardInterrupt:
+            print(f"\nKeyboard interrupt detected. Aborting...")
+
+        finally:
+            session.close()
+            log.debug("Session closed. Exiting...")
