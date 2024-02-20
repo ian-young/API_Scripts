@@ -234,7 +234,7 @@ def runPeople():
     # Sort JSON dictionaries by person id
     persons = sorted(persons, key=lambda x: x['person_id'])
 
-    #Run if persons were found
+    # Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
         all_person_ids = getPeopleIds(persons)
@@ -256,7 +256,7 @@ def runPeople():
             if person not in safe_person_ids]
 
         if persons_to_delete:
-            # purgePeople(persons_to_delete, persons)
+            purgePeople(persons_to_delete, persons)
             return 1  # Completed
 
         else:
@@ -443,7 +443,7 @@ def runPlates():
     log.info("Plates retrieved.")
 
     # Sort the JSON dictionaries by plate id
-    plates = sorted(plates, key=lambda x: x['plate_id'])
+    plates = sorted(plates, key=lambda x: x['license_plate'])
 
     # Run if plates were found
     if plates:
