@@ -3,23 +3,6 @@
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
 
-<<<<<<< HEAD
-import datetime, logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
-
-load_dotenv()
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
-
-# Set timeout for a 429
-MAX_RETRIES = 10
-DEFAULT_RETRY_DELAY = 0.25
-BACKOFF = 0.25
-=======
 import creds, logging, requests, threading, time
 
 ORG_ID = creds.lab_id
@@ -28,164 +11,38 @@ API_KEY = creds.lab_key
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
 CALL_COUNT_LOCK = threading.Lock()
->>>>>>> fa8b25f (Added multi-threading.)
 
 # Set logger
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
 logging.basicConfig(
-<<<<<<< HEAD
-    level = logging.WARNING,
+    level = logging.INFO,
     format = "%(levelname)s: %(message)s"
     )
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-try:
-    import RPi.GPIO as GPIO  # type: ignore
-    GPIO.setmode(GPIO.BOARD)
-    if GPIO.gpio_function(7) != GPIO.OUT:
-        GPIO.setup(7, GPIO.OUT)
-except ImportError:
-    GPIO = None
-    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
-=======
-    level = logging.INFO,
-    format = "%(levelname)s: %(message)s"
-    )
->>>>>>> fa8b25f (Added multi-threading.)
-
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([])
-PERSISTENT_PERSONS = sorted([])
+PERSISTENT_PLATES = []
+PERSISTENT_PERSONS = []
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
 analytics/lpr/license_plate_of_interest"
 PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
-
 ##############################################################################
                                 #  Misc  #
 ##############################################################################
 
 
-<<<<<<< HEAD
-class RateLimiter:
-    def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
-        """
-        Initilization of the rate limiter.
-
-        :param rate_limit: The value of how many threads may be made each sec.
-        :type rate_limit: int
-        :param max_events_per_sec: Maximum events allowed per second.
-        :type: int, optional
-        :param pacing: Sets the interval of the clock in seconds.
-        :type pacing: int, optional
-        :return: None
-        :rtype: None
-        """
-        self.rate_limit = rate_limit
-        self.lock = threading.Lock()  # Local lock to prevent race conditions
-        self.max_events_per_sec = max_events_per_sec
-        self.pacing = pacing
-
-
-    def acquire(self):
-        """
-        States whether or not the program may create new threads or not.
-
-        :return: Boolean value stating whether new threads may be made or not.
-        :rtype: bool
-        """
-        with self.lock:
-            current_time = time.time()  # Define current time
-
-            if not hasattr(self, 'start_time'):
-                # Check if attribue 'start_time' exists, if not, make it.
-                self.start_time = current_time
-                self.event_count = self.pacing
-                return True
-            
-            # How much time has passed since starting
-            elapsed_time = current_time - self.start_time
-
-            # Check if it's been less than 1sec and less than 10 events have
-            # been made.
-            if elapsed_time < self.pacing / self.rate_limit \
-                and self.event_count < self.max_events_per_sec:
-                self.event_count += 1
-                return True
-            
-            # Check if it is the first wave of events
-            elif elapsed_time >= self.pacing / self.rate_limit:
-                self.start_time = current_time
-                self.event_count = 2
-                return True
-            
-            else:
-                # Calculate the time left before next wave
-                remaining_time = self.pacing - \
-                    (current_time - self.start_time)
-                time.sleep(remaining_time)  # Wait before next wave
-                return True
-            
-
-class APIThrottleException(Exception):
-    """
-    Exception raised when the API request rate limit is exceeded.
-
-    :param message: A human-readable description of the exception.
-    :type message: str
-    """
-    def __init__(self, message="API throttle limit exceeded."):
-        self.message = message
-        super().__init__(self.message)
-
-
-def run_thread_with_rate_limit(threads, rate_limit=10):
-    """
-    Run a thread with rate limiting.
-        
-    :param target: The target function to be executed in the thread:
-    :type targe: function:
-    :return: The thread that was created and ran
-    :rtype: thread
-    """
-    limiter = RateLimiter(rate_limit=rate_limit)
-
-    def run_thread(thread):
-        with threading.Lock():
-            limiter.acquire()
-            log.debug(f"Starting thread {thread.name} at time \
-{datetime.datetime.now().strftime('%H:%M:%S')}")
-            thread.start()
-
-    for thread in threads:
-        run_thread(thread)
-
-    for thread in threads:
-        thread.join()
-=======
 class APIThrottleException(Exception):
     pass
->>>>>>> fa8b25f (Added multi-threading.)
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
 
@@ -196,20 +53,7 @@ def cleanList(list):
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
-<<<<<<< HEAD
-    """
-    Returns JSON-formatted persons in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of people in an organization.
-    :rtype: list
-    """
-=======
     """Returns JSON-formatted persons in a Command org"""
->>>>>>> fa8b25f (Added multi-threading.)
     global CALL_COUNT
 
     headers = {
@@ -231,17 +75,6 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
 
         # Extract as a list
         persons = data.get('persons_of_interest')
-
-        try:
-            iter(persons)
-        except (TypeError, AttributeError):
-            log.error(
-                f"Cannot convert plates into a tree."
-                f"Plates are not iterable."
-                )
-            
-            return
-        print(persons)
         return persons
     else:
         log.critical(
@@ -251,16 +84,7 @@ Status code {response.status_code}")
 
 
 def getPeopleIds(persons=None):
-    """
-    Returns an array of all PoI labels in an organization.
-    
-    :param persons: A list of dictionaries representing PoIs in an
-organization. Each dictionary should have 'person_id' key.
-Defaults to None.
-    :type persons: list, optional
-    :return: A list of IDs of the PoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     person_id = []
 
     for person in persons:
@@ -273,17 +97,7 @@ Defaults to None.
 
 
 def getPersonId(person=PERSISTENT_PERSONS, persons=None):
-    """
-    Returns the Verkada ID for a given PoI.
-    
-    :param person: The label of a PoI whose ID is being searched for.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-Each dictionary should have the 'person_id' key. Defaults to None.
-    :type persons: list, optional
-    :return: The person ID of the given PoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given PoI"""
     person_id = None  # Pre-define
 
     for name in persons:
@@ -299,113 +113,13 @@ Each dictionary should have the 'person_id' key. Defaults to None.
 
 
 def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
-<<<<<<< HEAD
-    """
-    Deletes the given person from the organization.
-
-    :param person: The person to be deleted.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
-    local_data = threading.local()
-    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
-
-=======
     """Deletes the given person"""
->>>>>>> fa8b25f (Added multi-threading.)
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
     log.info(f"Running for person: {printPersonName(person, persons)}")
-<<<<<<< HEAD
-
-    params = {
-        'org_id': org_id,
-        'person_id': person
-    }
-
-    try:
-        for _ in range(MAX_RETRIES):
-            response = requests.delete(PERSON_URL, headers=headers, params=params)
-
-            if response.status_code == 429:
-                log.info(f"{printPersonName(person, persons)} response: 429. \
-Retrying in {local_data.RETRY_DELAY}s.")
-                
-                time.sleep(local_data.RETRY_DELAY)
-
-                local_data.RETRY_DELAY += BACKOFF
-
-            else:
-                break
-    
-        if response.status_code == 429:
-            raise APIThrottleException("API throttled")
-        
-        elif response.status_code == 504:
-            log.warning(f"Person - Timed out.")
-
-        elif response.status_code == 400:
-            log.warning(f"Person - Contact support: endpoint failure")
-        
-        elif response.status_code != 200:
-            log.error(f"\
-Person - An error has occured. Status code {response.status_code}")
-        
-    except APIThrottleException:
-                    log.critical("Person - Hit API request rate limit of 500 requests per minute.")
-
-
-
-def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all PoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of PoIs to be deleted from the organization.
-    :type delete: list
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
-    global CALL_COUNT
-
-    if not delete:
-        log.warning("Person - There's nothing here")
-        return
-
-    log.info("Person - Purging...")
-
-    start_time = time.time()
-    threads = []
-    for person in delete:
-        # Toss delete function into a new thread
-        thread = threading.Thread(
-            target=delete_person, args=(person, persons, org_id, api_key)
-        )
-        threads.append(thread)  # Add the thread to the pile
-
-    run_thread_with_rate_limit(threads)
-
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-
-    log.info("Person - Purge complete.")
-    log.info(f"Person - Time to complete: {elapsed_time:.2f}")
-=======
 
     params = {
         'org_id': org_id,
@@ -469,23 +183,11 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Person - Purge complete.")
     log.info(f"Person - Time to complete: {elapsed_time}")
->>>>>>> fa8b25f (Added multi-threading.)
     return 1  # Completed
 
 
 def printPersonName(to_delete, persons):
-    """
-    Returns the label of a PoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     person_name = None  # Pre-define
 
     for person in persons:
@@ -500,56 +202,26 @@ was no name found, as well.
 
 
 def runPeople():
-<<<<<<< HEAD
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
-=======
     """Allows the program to be ran if being imported as a module"""
     # Uncomment the lines below if you want to manually set these values
     # each time the program is ran
 
->>>>>>> fa8b25f (Added multi-threading.)
     log.info("Retrieving persons")
     persons = getPeople()
     log.info("persons retrieved.")
 
-    print("-----")
-    tree = avlTree.build_avl_tree(persons)
-    avlTree.print_avl_tree_anytree(tree)
+    # Sort JSON dictionaries by person id
+    persons = sorted(persons, key=lambda x: x['person_id'])
+
     # Run if persons were found
-<<<<<<< HEAD
-#     if persons:
-#         log.info("Person - Gather IDs")
-#         all_person_ids = getPeopleIds(persons)
-#         all_person_ids = cleanList(all_person_ids)
-#         log.info("Person - IDs aquired.")
-=======
     if persons:
         log.info("Person - Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
         log.info("Person - IDs aquired.")
->>>>>>> fa8b25f (Added multi-threading.)
 
-#         safe_person_ids = []
+        safe_person_ids = []
 
-<<<<<<< HEAD
-#         log.info("Searching for safe persons.")
-#         # Create the list of safe persons
-#         for person in PERSISTENT_PERSONS:
-#             safe_person_ids.append(getPersonId(person, persons))
-#         safe_person_ids = cleanList(safe_person_ids)
-#         log.info("Safe persons found.")
-
-#         # New list that filters persons that are safe
-#         persons_to_delete = [
-#             person for person in all_person_ids 
-#             if person not in safe_person_ids]
-=======
         log.info("Searching for safe persons.")
         # Create the list of safe persons
         for person in PERSISTENT_PERSONS:
@@ -561,22 +233,11 @@ def runPeople():
         persons_to_delete = [
             person for person in all_person_ids 
             if person not in safe_person_ids]
->>>>>>> fa8b25f (Added multi-threading.)
 
-#         if persons_to_delete:
-#             purgePeople(persons_to_delete, persons)
-#             return 1  # Completed
+        if persons_to_delete:
+            purgePeople(persons_to_delete, persons)
+            return 1  # Completed
 
-<<<<<<< HEAD
-#         else:
-#             log.info(
-#                 "Person - The organization has already been purged.\
-# There are no more persons to delete.")
-
-#             return 1  # Completed
-#     else:
-#         log.warning("No persons were found.")
-=======
         else:
             log.info(
                 "Person - The organization has already been purged.\
@@ -585,9 +246,8 @@ There are no more persons to delete.")
             return 1  # Completed
     else:
         log.warning("No persons were found.")
->>>>>>> fa8b25f (Added multi-threading.)
 
-#         return 1  # Copmleted
+        return 1  # Copmleted
 
 
 ##############################################################################
@@ -596,20 +256,7 @@ There are no more persons to delete.")
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
-<<<<<<< HEAD
-    """
-    Returns JSON-formatted plates in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of license plates in an organization.
-    :rtype: list
-    """
-=======
     """Returns JSON-formatted plates in a Command org"""
->>>>>>> fa8b25f (Added multi-threading.)
     global CALL_COUNT
 
     headers = {
@@ -631,18 +278,6 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
 
         # Extract as a list
         plates = data.get('license_plate_of_interest')
-        
-        try:
-            # Check if the list is iterable
-            iter(plates)
-        except (TypeError, AttributeError):
-            log.error(
-                f"Cannot convert plates into a tree."
-                f"Plates are not iterable."
-                )
-            
-            return
-
         return plates
     else:
         log.critical(
@@ -652,20 +287,7 @@ Status code {response.status_code}")
 
 
 def getPlateIds(plates=None):
-<<<<<<< HEAD
-    """
-    Returns an array of all LPoI labels in an organization.
-    
-    :param plates: A list of dictionaries representing LPoIs in an
-organization. Each dictionary should have 'license_plate' key. 
-Defaults to None.
-    :type plates: list, optional
-    :return: A list of IDs of the LPoIs in an organization.
-    :rtype: list
-    """
-=======
     """Returns an array of all LPoI labels in an organization"""
->>>>>>> fa8b25f (Added multi-threading.)
     plate_id = []
 
     for plate in plates:
@@ -679,21 +301,7 @@ Defaults to None.
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-<<<<<<< HEAD
-    """
-    Returns the Verkada ID for a given LPoI.
-    
-    :param plate: The label of a LPoI whose ID is being searched for.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-Each dictionary should have the 'license_plate' key. Defaults to None.
-    :type plates: list, optional
-    :return: The plate ID of the given LPoI.
-    :rtype: str
-    """
-=======
     """Returns the Verkada ID for a given LPoI"""
->>>>>>> fa8b25f (Added multi-threading.)
     plate_id = None  # Pre-define
 
     for name in plates:
@@ -709,111 +317,13 @@ Each dictionary should have the 'license_plate' key. Defaults to None.
 
 
 def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
-<<<<<<< HEAD
-    """
-    Deletes the given plate from the organization.
-
-    :param plate: The plate to be deleted.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
-    local_data = threading.local()
-    local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
-
-=======
     """Deletes the given person"""
->>>>>>> fa8b25f (Added multi-threading.)
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
     }
 
     log.info(f"Running for plate: {printPlateName(plate, plates)}")
-<<<<<<< HEAD
-
-    params = {
-        'org_id': org_id,
-        'license_plate': plate
-    }
-
-    try:
-        for _ in range(MAX_RETRIES):
-            response = requests.delete(PLATE_URL, headers=headers, params=params)
-
-            if response.status_code == 429:
-                log.info(f"{printPlateName(plate, plates)} response: 429. \
-Retrying in {local_data.RETRY_DELAY}s.")
-                
-                time.sleep(local_data.RETRY_DELAY)
-
-                local_data.RETRY_DELAY += BACKOFF
-
-            else:
-                break
-    
-        if response.status_code == 429:
-            raise APIThrottleException("API throttled")
-        
-        elif response.status_code == 504:
-            log.warning(f"Plate - Timed out.")
-        
-        elif response.status_code == 400:
-            log.warning(f"Plate - Contact support: endpoint failure")
-
-        elif response.status_code != 200:
-            log.error(f"\
-Plate - An error has occured. Status code {response.status_code}")
-        
-    except APIThrottleException:
-                    log.critical("Plate - Hit API request rate limit of 500 requests per minute.")
-
-
-def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all LPoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of LPoIs to be deleted from the organization.
-    :type delete: list
-    :param plates: A list of LPoIs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
-    
-    if not delete:
-        log.warning("Plate - There's nothing here")
-        return
-
-    log.info("Plate - Purging...")
-
-    start_time = time.time()
-    threads = []
-    for plate in delete:
-        # Toss delete function into a new thread
-        thread = threading.Thread(
-            target=delete_plate, args=(plate, plates, org_id, api_key)
-        )
-        threads.append(thread)  # Add the thread to the pile
-
-    run_thread_with_rate_limit(threads)
-
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-
-    log.info("Plate - Purge complete.")
-    log.info(f"Plate - Time to complete: {elapsed_time:.2f}")
-=======
 
     params = {
         'org_id': org_id,
@@ -876,23 +386,11 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Plate - Purge complete.")
     log.info(f"Plate - Time to complete: {elapsed_time}")
->>>>>>> fa8b25f (Added multi-threading.)
     return 1  # Completed
 
 
 def printPlateName(to_delete, plates):
-    """
-    Returns the description of a LPoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     plate_name = None  # Pre-define
 
     for plate in plates:
@@ -907,25 +405,13 @@ was no name found, as well.
 
 
 def runPlates():
-<<<<<<< HEAD
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     log.info("Retrieving plates")
     plates = getPlates()
     log.info("Plates retrieved.")
 
     # Sort the JSON dictionaries by plate id
     plates = sorted(plates, key=lambda x: x['license_plate'])
-=======
-    """Allows the program to be ran if being imported as a module"""
-    log.info("Retrieving plates")
-    plates = getPlates()
-    log.info("Plates retrieved.")
->>>>>>> fa8b25f (Added multi-threading.)
 
     # Run if plates were found
     if plates:
@@ -970,27 +456,12 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
-<<<<<<< HEAD
-    GPIO.output(7, True)
-=======
->>>>>>> fa8b25f (Added multi-threading.)
     start_time = time.time()
     PoI = threading.Thread(target=runPeople)
     LPoI = threading.Thread(target=runPlates)
 
     # Start the threads running independantly
     PoI.start()
-<<<<<<< HEAD
-    #--LPoI.start()
-
-    # Join the threads back to parent process
-    PoI.join()
-    #--LPoI.join()
-    elapsed_time = time.time() - start_time
-    GPIO.output(7, False)
-
-    log.info(f"Total time to complete: {elapsed_time:.2f}") 
-=======
     LPoI.start()
 
     # Join the threads back to parent process
@@ -999,4 +470,3 @@ if __name__ == "__main__":
     elapsed_time = time.time() - start_time
 
     log.info(f"Total time to complete: {elapsed_time}") 
->>>>>>> fa8b25f (Added multi-threading.)
