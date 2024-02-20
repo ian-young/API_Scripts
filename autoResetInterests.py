@@ -34,8 +34,8 @@ except ImportError:
     log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = [""]
-PERSISTENT_PERSONS = [""]
+PERSISTENT_PLATES = sorted([])
+PERSISTENT_PERSONS = sorted([])
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -390,6 +390,9 @@ def runPeople():
     persons = getPeople()
     log.info("persons retrieved.")
 
+    # Sort JSON dictionaries by person id
+    persons = sorted(persons, key=lambda x: x['person_id'])
+
     # Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
@@ -657,6 +660,9 @@ def runPlates():
     log.info("Retrieving plates")
     plates = getPlates()
     log.info("Plates retrieved.")
+
+    # Sort the JSON dictionaries by plate id
+    plates = sorted(plates, key=lambda x: x['license_plate'])
 
     # Run if plates were found
     if plates:
