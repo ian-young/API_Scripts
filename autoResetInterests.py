@@ -25,8 +25,8 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = [""]
-PERSISTENT_PERSONS = [""]
+PERSISTENT_PLATES = sorted([''])  # Label of plate !Not plate number!
+PERSISTENT_PERSONS = sorted([''])  # PoI label
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -165,6 +165,13 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
 
         # Extract as a list
         persons = data.get('persons_of_interest')
+
+        try:
+            iter(persons)
+        except (TypeError, AttributeError):
+            log.error("People are not iterable.")
+            return
+
         return persons
     else:
         log.critical(
@@ -318,6 +325,9 @@ def runPeople():
     persons = getPeople()
     log.info("persons retrieved.")
 
+    # Sort JSON dictionaries by person id
+    persons = sorted(persons, key=lambda x: x['person_id'])
+
     # Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
@@ -380,12 +390,20 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
 
         # Extract as a list
         plates = data.get('license_plate_of_interest')
+        
+        try:
+            # Check if the list is iterable
+            iter(plates)
+        except (TypeError, AttributeError):
+            log.error("Plates are not iterable.")
+            return
+
         return plates
     else:
         log.critical(
             f"Plate - Error with retrieving plates.\
 Status code {response.status_code}")
-        return None
+        return
 
 
 def getPlateIds(plates=None):
@@ -542,6 +560,9 @@ def runPlates():
     plates = getPlates()
     log.info("Plates retrieved.")
 
+    # Sort the JSON dictionaries by plate id
+    plates = sorted(plates, key=lambda x: x['license_plate'])
+
     # Run if plates were found
     if plates:
         log.info("Plate - Gather IDs")
@@ -585,6 +606,9 @@ There are no more plates to delete.")
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":
+    if GPIO:
+        GPIO.output(work_pin, True)
+        
     start_time = time.time()
     PoI = threading.Thread(target=runPeople)
     LPoI = threading.Thread(target=runPlates)
