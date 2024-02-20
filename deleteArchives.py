@@ -5,7 +5,6 @@
 # once made.
 
 # Import essential libraries
-from distutils.command import build
 from re import search
 import requests
 import logging
@@ -25,9 +24,9 @@ colorama.init(autoreset=True)  # Initialize colorized output
 load_dotenv()
 
 # Set final, global credential variables
-USERNAME = getenv("lab_username")
-PASSWORD = getenv("lab_password")
-ORG_ID = getenv("lab_id")
+USERNAME = creds.lab_username
+PASSWORD = creds.lab_password
+ORG_ID = creds.lab_id
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -97,6 +96,7 @@ def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
     }
 
     try:
+        # Request the user session
         # Request the user session
         log.debug("Requesting session.")
         response = session.post(LOGIN_URL, json=login_data)
@@ -213,6 +213,7 @@ def read_verkada_camera_archives(x_verkada_token, x_verkada_auth, usr,
     }
 
     try:
+        # Request the JSON archive library
         # Request the JSON archive library
         log.debug("Requesting archives.")
         response = session.post(ARCHIVE_URL, json=body, headers=headers)
@@ -395,80 +396,56 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
     :return: None
     :rtype: None
     """
-    threads = []  # Array to be filled with archives to delete
+    threads = []
 
-    log.debug("Archive library: ")
-    for archive in archive_library:
-        log.debug(f"{Fore.LIGHTBLACK_EX}{archive}{Style.RESET_ALL}")
-        log.debug("------------")
+    # Retrieve Verkada camera archives
+    log.debug("Retrieving archives.")
+    archives = read_verkada_camera_archives(
+        x_verkada_token,
+        x_verkada_auth,
+        usr
+    )
+    log.debug("Archives received.")
 
     try:
         # Check if archives is iterable
-        log.debug("Testing if archive library variable is iterable.")
-        iter(archive_library)
+        log.debug("Testing if archive variable is iterable.")
+        iter(archives)
     except (TypeError, AttributeError):
         log.error(
             f"{Fore.RED}Error: Archives is not iterable or is None."
             f"{Style.RESET_ALL}"
         )
         return
-    log.debug(f"{Fore.GREEN}Test complete. Continuing...{Style.RESET_ALL}")
+    log.debug("Test complete. Continuing.")
 
-    if age_limit == 0:
-        # Iterate through all video export IDs and remove them
-        log.debug("Iterating through archive values.")
-        for archive in archive_library:
-            video_export_id = archive.get("videoExportId")
+    # Iterate through all video export IDs and remove them
+    log.debug("Iterating through archive values")
+    for archive in archives:
+        video_export_id = archive.get("videoExportId")
 
-            log.debug("Searching AVL tree.")
-            result_node = avlTree.search_in_avl_tree(AVL_TREE,
-                                                     video_export_id)
+        # Check if the archive has been marked "persistent"
+        if (video_export_id not in PERSISTENT_ARCHIVES):
+            log.debug(f"\nRunning for {video_export_id}")
+            thread = threading.Thread(
+                target=remove_verkada_camera_archive,
+                args=(
+                    video_export_id,
+                    x_verkada_token,
+                    x_verkada_auth,
+                    usr
+                ))
 
-            # Check if the archive has been marked "persistent"
-            if result_node is None:
-                log.debug(
-                    f"Age limit set to zero. Skipping age check."
-                    f"\nRunning for {Fore.MAGENTA}{video_export_id}"
-                    f"{Style.RESET_ALL}"
-                )
-
-                thread = threading.Thread(
-                    target=remove_verkada_camera_archive,
-                    args=(
-                        video_export_id,
-                        x_verkada_token,
-                        x_verkada_auth,
-                        usr
-                    ))
-                # Add the thread to the array
-                threads.append(thread)
-
-    else:
-        threads.extend(check_archive_timestamp(
-            archive_library,
-            x_verkada_token,
-            x_verkada_auth,
-            usr,
-            age_limit
-        ))
-
-    if threads:
-        try:
             # Start in seperate thread to speed up runtime
-            for thread in threads:
-                log.debug(
-                    f"Starting {Fore.LIGHTYELLOW_EX}{thread.name}"
-                    f"{Style.RESET_ALL}.")
-                thread.start()
+            log.debug(f"Starting thread {thread.name}.")
+            threads.append(thread)
+            thread.start()
 
-            # Join all threads back to the main parent thread
-            for thread in threads:
-                log.debug(
-                    f"Joining thread "
-                    f"{Fore.LIGHTYELLOW_EX}{thread.name}{Style.RESET_ALL} "
-                    f"back to main."
-                )
-                thread.join()
+    # Join all threads back to the main parent thread
+    for thread in threads:
+        try:
+            log.debug(f"Joining thread {thread.name} back to main.")
+            thread.join()
 
         except threading.ThreadError as te:
             log.error(
@@ -511,52 +488,46 @@ def remove_verkada_camera_archive(video_export_id, x_verkada_token,
         "User": usr
     }
 
-    log.debug("Searching AVL tree.")
-    result_node = avlTree.search_in_avl_tree(AVL_TREE, video_export_id)
+    try:
+        # Post the delete request to the server
+        log.debug("Requesting deletion.")
+        response = session.post(DELETE_URL, json=body, headers=headers)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        log.debug("Deletion processed. Returning JSON values.")
 
-    if result_node is None:
-        try:
-            # Post the delete request to the server
-            log.debug(
-                f"Requesting deletion for "
-                f"{Fore.MAGENTA}{name}{Style.RESET_ALL}."
-            )
-            response = session.post(DELETE_URL, json=body, headers=headers)
-            response.raise_for_status()  # Raise an exception for HTTP errors
-            log.info(
-                f"{Fore.GREEN}Deletion for {Fore.MAGENTA}"
-                f"{name}{Fore.GREEN} processed{Style.RESET_ALL}."
-            )
-            # JSON response of updated value for the archive
-            removed_archive = response.json().get("videoExports", [])
+        # JSON response of updated value for the archive
+        removed_archive = response.json().get("videoExports", [])
 
-            # Communicate with the user which archive has been deleted
-            if removed_archive:
-                for archive in removed_archive:
-                    log.info(f"Removed Archive: {name}")
-            else:
-                log.warning(f"Failed to remove Archive with videoExportId: \
-     {name}")
+        # Communicate with the user which archive has been deleted
+        if removed_archive:
+            for archive in removed_archive:
+                if archive.get('label') != '':
+                    log.info(f"Removed Archive: {archive.get('label')}")
+                else:
+                    log.info(f"Removed {archive.get('videoExportId')}")
+        else:
+            log.warning(f"Failed to remove Archive with videoExportId: \
+{video_export_id}")
 
-                return removed_archive
+            return removed_archive
 
-        # Handle exceptions
-        except requests.exceptions.Timeout:
-            log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
 
-        except requests.exceptions.TooManyRedirects:
-            log.error(
-                f"{Fore.RED}Too many redirects. Aborting...{Style.RESET_ALL}")
+    except requests.exceptions.TooManyRedirects:
+        log.error(
+            f"{Fore.RED}Too many redirects. Aborting...{Style.RESET_ALL}")
 
-        except requests.exceptions.HTTPError:
-            log.error(f"Returned with a non-200 code: {response.status_code}")
+    except requests.exceptions.HTTPError:
+        log.error(f"Returned with a non-200 code: {response.status_code}")
 
-        except requests.exceptions.ConnectionError:
-            log.error(
-                f"{Fore.RED}Error connecting to the server.{Style.RESET_ALL}")
+    except requests.exceptions.ConnectionError:
+        log.error(
+            f"{Fore.RED}Error connecting to the server.{Style.RESET_ALL}")
 
-        except requests.exceptions.RequestException as e:
-            log.error(f"{Fore.RED}Verkada API Error: {e}{Style.RESET_ALL}")
+    except requests.exceptions.RequestException as e:
+        log.error(f"{Fore.RED}Verkada API Error: {e}{Style.RESET_ALL}")
     else:
         log.debug(
             f"Skipping {Fore.MAGENTA}{name}{Style.RESET_ALL}. "
@@ -567,12 +538,14 @@ def remove_verkada_camera_archive(video_export_id, x_verkada_token,
 
 # Check if the script is being imported or ran directly
 if __name__ == "__main__":
-    with requests.Session() as session:
+    try:
         start_time = time.time()  # Start timing the script
-        try:
-            # Initialize the user session.
+
+        # Initialize the user session.
+        with requests.Session() as session:
             csrf_token, user_token, user_id = login_and_get_tokens()
 
+            # Continue if the required information has been received
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
                 log.debug("Retrieving archive library.")
@@ -584,30 +557,22 @@ if __name__ == "__main__":
                 )
 
                 log.debug("Entering remove archives method.")
-                remove_verkada_camera_archives(
-                    csrf_token, user_token, user_id, archives)
-                log.debug(
-                    f"{Fore.GREEN}Program completed successfully."
-                    f"{Style.RESET_ALL}"
-                )
+                remove_verkada_camera_archives(csrf_token, user_token, user_id, archives)
+                log.debug("Program completed successfully.")
 
             # Handles when the required credentials were not received
             else:
-                log.critical(
-                    f"{Fore.RED}No credentials were provided during "
-                    f"the authentication process.{Style.RESET_ALL}"
-                )
+                log.critical("No credentials were provided during the \
+authentication process.")
 
-            # Calculate the time take to run and post it to the log
-            elapsed_time = time.time() - start_time
-            log.info(f"Total time to complete {elapsed_time:.2f}")
+        # Calculate the time take to run and post it to the log
+        elapsed_time = time.time() - start_time
+        log.info(f"Total time to complete {elapsed_time:.2f}")
 
-            session.close()
+    # Gracefully handle an interrupt
+    except KeyboardInterrupt:
+        print(f"\nKeyboard interrupt detected. Aborting...")
 
-        # Gracefully handle an interrupt
-        except KeyboardInterrupt:
-            print(f"\nKeyboard interrupt detected. Aborting...")
-
-        finally:
-            session.close()
-            log.debug("Session closed. Exiting...")
+    finally:
+        session.close()
+        log.debug("Session closed. Exiting...")
