@@ -460,6 +460,9 @@ def runPeople():
     # Sort JSON dictionaries by person id
     persons = sorted(persons, key=lambda x: x['person_id'])
 
+    # Sort JSON dictionaries by person id
+    persons = sorted(persons, key=lambda x: x['person_id'])
+
     # Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
