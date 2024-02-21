@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/ian.young/Documents/.scripts/Python/API_Scripts/c projects",
+      "program": "/Users/ian.young/Documents/.scripts/Python/API_Scripts/c projects/build/Debug/outDebug"
+    }
+  ]
+}
