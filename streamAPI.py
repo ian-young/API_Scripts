@@ -1,23 +1,36 @@
 # Author: Ian Young
-# Comment out the constant API Key and Org ID and uncomment the inputs in the main method
-# to allow for manual input. You will need to install timg in order to print in terminal.
+# Purpose: Print two thumbnails from given camera(s) in the terminal. The
+# thumbnails are pulled from the live footage and from a targeted time.
 
 import requests
 from PIL import Image
 import subprocess
 import datetime
 import creds
+import logging
 
 TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
 STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
 API_KEY = creds.lab_key
 ORG_ID = creds.lab_id
+CAMERA = ""  # Can be a list or single String
+
+log = logging.getLogger()
+log.setLevel(logging.WARNING)
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(levelname)s: %(message)s"
+)
+
+# Mute non-essential logging from requests library
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 def getToken(org_id=ORG_ID, api_key=API_KEY):
     """
     Generates a JWT token for the streaming API. This token will be integrated
-inside of a link to grant access to footage.
+    inside of a link to grant access to footage.
 
     :param org_id: Organization ID. Defaults to ORG_ID.
     :type org_id: str, optional
@@ -57,7 +70,7 @@ inside of a link to grant access to footage.
 def loadStream(jwt, camera_id, start_time, org_id=ORG_ID):
     """
     Loads the HLS video and saves a snapshot of the first frame of the clip.
-    
+
     :param jwt: The token that grants the API access to the footage.
     :type jwt: str
     :param camera_id: The camera ID of the device to pull footage from.
@@ -154,8 +167,7 @@ def epoch(year, month, day, hour, minute):
 
 # Check if being ran directly or is imported by another program
 if __name__ == "__main__":
-    # org = str(input("Org ID: "))
-    # key = str(input("API key: "))
+
     cid = str(input("ID of the camera to pull from: "))
     year = int(input("Year of search: "))
     month = int(input("Month of search (integer): "))
@@ -169,6 +181,21 @@ if __name__ == "__main__":
 
     # Check if the token is null
     if token:
-        loadStream(token, "c94be2a0-ca3f-4f3a-b208-8db8945bf40b", start_time)
+        if isinstance(CAMERA, list):
+            log.debug("List provided -> Checking if list is iterable.")
+
+            if hasattr(CAMERA, "__iter__"):
+                log.debug(
+                    "List provided -> list is iterable -> attempting triggers.")
+
+                for target in CAMERA:
+                    loadStream(token, target, start_time)
+
+            else:
+                log.critical("List is not iterable.")
+
+        # Run for a single lockdown
+        else:
+            loadStream(token, CAMERA, start_time)
     else:
         print("Failed to get token, terminating application.")
