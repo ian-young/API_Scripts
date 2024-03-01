@@ -4,6 +4,8 @@ import matplotlib.dates as mdates
 import re
 import logging
 import datetime
+
+from matplotlib.ticker import MaxNLocator
 from endpointTests import log_file_path as logfile
 
 # Set logger
@@ -179,6 +181,11 @@ def create_line_graph(data):
     # Customize x-axis ticks for better readability
     ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+    # Configure the y-axis
+    ax.set_ylim(bottom=0)
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_ticks(range(0, max(max(data['failed']), max(data['retries'])) + 1))
 
     ax.legend()
 
