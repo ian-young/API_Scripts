@@ -4,6 +4,7 @@ import matplotlib.dates as mdates
 import re
 import logging
 import datetime
+import pytz
 
 from matplotlib.ticker import MaxNLocator
 from endpointTests import log_file_path as logfile
@@ -51,6 +52,7 @@ def parse_log_file(log_file_path):
                         current_time = datetime.datetime.strptime(
                             f"{current_year}/{time_match.group(1)}",
                             '%Y/%m/%d %H:%M:%S')
+                        current_time = pytz.timezone('America/Denver').localize(current_time)
                         log.info(f"Found time: {current_time}")
 
                 elif failed_match and current_time:
