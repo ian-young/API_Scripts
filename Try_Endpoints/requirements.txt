@@ -1,6 +1,7 @@
 requests
 pybase64
 colorama
+dotenv
 matplotlib
 Flask
 pytz
