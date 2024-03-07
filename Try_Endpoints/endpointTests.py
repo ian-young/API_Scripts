@@ -18,9 +18,7 @@ import logging
 import re
 
 # Set log file path & working directory
-working_directory = "."
-#--working_directory = "/usr/src/app"
-#--log_file_path = f"{working_directory}/endpoint_data.log"
+working_directory = "/usr/src/app/data"
 log_file_path = f"{working_directory}/endpoint_data.log"
 
 # Set logger
