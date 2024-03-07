@@ -12,6 +12,9 @@ RUN apt-get update \
 # Set up the working directory
 WORKDIR /usr/src/app
 
+# Create file for data to be stored
+RUN mkdir -p /usr/src/app/data
+
 # Create log directory
 RUN mkdir -p /var/log
 
