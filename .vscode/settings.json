@@ -1,5 +1,0 @@
-{
-    "python.analysis.autoImportCompletions": true,
-    "todo-tree.tree.showBadges": true,
-    "python.REPL.enableREPLSmartSend": false
-}
