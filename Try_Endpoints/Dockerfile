@@ -1,6 +1,9 @@
 # Use an official Python runtime as a parent image
 FROM debian:stable-slim
 
+# Set the timezone
+ENV TZ=:/etc/timezone
+
 # Install necessary packages
 RUN apt-get update \
     && apt-get install -y cron python3 python3-pip python3-venv xauth\
@@ -9,14 +12,12 @@ RUN apt-get update \
 # Set up the working directory
 WORKDIR /usr/src/app
 
-# Create file for data to be stored
-RUN mkdir -p /usr/src/app/data
-
 # Create log directory
 RUN mkdir -p /var/log
 
 # Copy the current directory contents into the container
-COPY . /usr/src/app/
+COPY cleanGraph.py crontab docker.py endpointTests.py entrypoint.sh nginx.conf updateGraph.py webserver.py /usr/src/app/
+COPY requirements.txt /usr/src/app/
 
 # Create and activate a virtual environment
 RUN python3 -m venv /venv
