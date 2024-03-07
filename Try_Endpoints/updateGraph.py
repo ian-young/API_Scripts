@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.ticker import MaxNLocator
 import re
 import logging
 import datetime
+import pytz
 from endpointTests import log_file_path as log_file
 from endpointTests import working_directory as directory
 
@@ -77,7 +79,6 @@ def create_line_graph(data):
     :type data: list
     """
     # Set the background color to dark gray
-    # Dark gray background
     _, ax = plt.subplots(figsize=(10, 6), facecolor='black')
 
     # Set the chart background color to dark gray
@@ -105,9 +106,19 @@ def create_line_graph(data):
     # Add grid lines to the y-axis
     ax.yaxis.grid(color='gray', linestyle=':', linewidth=0.5)
 
-    # Customize x-axis ticks for better readability
-    ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+     # Calculate the appropriate interval for x-axis ticks
+    time_range = max(data['time']) - min(data['time'])
+    if time_range < datetime.timedelta(hours=6):
+        interval = 1  # 6 ticks for less than 6 hours
+    else:
+        interval = int(time_range.total_seconds() / 6 / 3600)  # 6 ticks for more than 6 hours
+
+    # Apply time zone to the x-axis
+    ax.get_xaxis().set_major_formatter(mdates.DateFormatter('%H:%M'))
+    ax.get_xaxis().set_major_locator(mdates.HourLocator(interval=interval))
+    
+    # Set y-axis ticks to use full integers
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.legend()
 
