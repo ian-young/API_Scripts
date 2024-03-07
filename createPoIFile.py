@@ -2,18 +2,21 @@
 # This script will create a POI when given a name and file path to an image
 
 import base64
-import creds
 import colorama
 from colorama import Fore, Style
 import requests
 import threading
+from os import getenv
+from dotenv import load_dotenv
 
 colorama.init(autoreset=True)
 
+load_dotenv()
+
 # Globally-defined Verkada PoI URL
 URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-API_KEY = creds.lab_key
-ORG_ID = creds.lab_id
+API_KEY = getenv("lab_key")
+ORG_ID = getenv("lab_id")
 IMAGE_PATH = "/Users/ian.young/Pictures/thispersondoesnotexist2.jpg"
 CALL_COUNT = 0
 CALL_COUNT_LOCK = threading.Lock()

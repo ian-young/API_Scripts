@@ -8,12 +8,15 @@
 import requests
 import logging
 import time
-import creds  # File with credentials
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Set final, global credential variables
-USERNAME = creds.demo_username
-PASSWORD = creds.demo_password
-ORG_ID = creds.demo_id
+USERNAME = getenv("demo_username")
+PASSWORD = getenv("demo_password")
+ORG_ID = getenv("demo_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"

@@ -4,10 +4,13 @@
 
 import requests
 import datetime
-import creds
+from os import getenv
+from dotenv import load_dotenv
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+load_dotenv()
+
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 URL = "https://api.verkada.com/cameras/v1/footage/link"
 
 

@@ -1,10 +1,14 @@
 # Author: Ian Young
 # NOTE: comment out the globally defined API_KEY and uncomment the other API lines if
 # you'd like to enter it manually each time you run the script.
-import requests, creds
+import requests
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Globally defined variables
-API_KEY = creds.lab_key
+API_KEY = getenv("lab_key")
 URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 
