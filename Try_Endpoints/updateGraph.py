@@ -1,17 +1,13 @@
-#!/usr/bin/env python
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import re
 import logging
 import datetime
-import pytz
-
-from matplotlib.ticker import MaxNLocator
-from endpointTests import log_file_path as logfile
+from endpointTests import log_file_path as log_file
+from endpointTests import working_directory as directory
 
 # Set logger
 log = logging.getLogger()
-log.setLevel(logging.WARNING)
 logging.basicConfig(
     level=logging.WARNING,
     format="%(levelname)s: %(message)s"
@@ -19,9 +15,9 @@ logging.basicConfig(
 
 logging.getLogger("matplotlib").setLevel(logging.CRITICAL)
 
-# Set paths
-log_file_path = logfile
-image_path = "/usr/src/app/endpoint_graph.png"
+# Update with your log file path
+log_file_path = log_file
+image_path = f"{directory}/endpoint_graph.png"
 
 
 def parse_log_file(log_file_path):
@@ -52,7 +48,6 @@ def parse_log_file(log_file_path):
                         current_time = datetime.datetime.strptime(
                             f"{current_year}/{time_match.group(1)}",
                             '%Y/%m/%d %H:%M:%S')
-                        current_time = pytz.timezone('America/Denver').localize(current_time)
                         log.info(f"Found time: {current_time}")
 
                 elif failed_match and current_time:
@@ -72,76 +67,6 @@ def parse_log_file(log_file_path):
         log.error(
             f"An error has occurred while extracting the data. Error: {e}")
         raise e
-
-
-def create_bar_graph(data):
-    """
-    Creates a bar graph given a data set.
-
-    :param data: The data set to work with.
-    :type data: list
-    """
-    # Set the background color to dark gray
-    _, ax = plt.subplots(figsize=(10, 6), facecolor='black')
-
-    # Adjust the width and spacing of each bar
-    bar_width, bar_spacing = 0.5, 0.1
-
-    # Set chart background
-    ax.set_facecolor('#1F1F1F')
-
-    # Bar graph for failed endpoints
-    ax.bar(range(len(data['time'])), data['failed'],
-           width=bar_width, color='red',
-           label='Failed Endpoints', align='center',
-           edgecolor='#1F1F1F')
-
-    # Bar graph for retries
-    retries_x = [i + bar_width + bar_spacing for i in range(
-        len(data['time']))]
-    ax.bar(retries_x, data['retries'],
-           width=bar_width, color='yellow',
-           label='Retries', align='center',
-           edgecolor='#1F1F1F')
-
-    # Set x-axis ticks and labels
-    num_ticks = len(data['time'])
-    x_ticks = [i + bar_width / 2 + bar_spacing for i in range(num_ticks)]
-
-    # Calculate the dynamic interval based on the number of data points
-    # You can adjust the divisor to control the number of ticks
-    interval = max(1, num_ticks // 8)
-
-    ax.set_xticks(x_ticks[::interval])
-    ax.set_xticklabels([time.strftime('%H:%M') for time in
-                       data['time']][::interval], rotation=45, ha="right",
-                       color='white')
-
-    # Set y-axis scale based on the maximum count in both
-    # 'failed' and 'retries'
-    max_y = max(max(data['failed']), max(data['retries']))
-    ax.set_yticks(range(max_y + 1))
-    ax.set_yticklabels(range(max_y + 1), color='white')
-
-    # Set axis label color to white
-    ax.set_xlabel('Time of Execution', color='white')
-    ax.set_ylabel('Count', color='white')  # Set axis label color to white
-    ax.set_title('Failed Endpoints and Retries Over Time',
-                 color='white')  # Set title color to white
-
-    # Set x-axis tick label color to white
-    ax.tick_params(axis='x', colors='white')
-    # Set y-axis tick label color to white
-    ax.tick_params(axis='y', colors='white')
-
-    # Add grid lines to the y-axis
-    ax.yaxis.grid(color='gray', linestyle=':', linewidth=0.5)
-
-    ax.legend()
-
-    plt.tight_layout()
-    plt.savefig(image_path)
-    plt.close()
 
 
 def create_line_graph(data):
@@ -184,11 +109,6 @@ def create_line_graph(data):
     ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
-    # Configure the y-axis
-    ax.set_ylim(bottom=0)
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.yaxis.set_ticks(range(0, max(max(data['failed']), max(data['retries'])) + 1))
-
     ax.legend()
 
     plt.tight_layout()
@@ -198,4 +118,6 @@ def create_line_graph(data):
 
 # Run if being ran directly and not imported
 if __name__ == '__main__':
-    create_line_graph(parse_log_file(log_file_path))
+    log_data = parse_log_file(log_file_path)
+    log.debug(log_data)  # Print the parsed data for debugging
+    create_line_graph(log_data)

@@ -17,14 +17,17 @@ from datetime import datetime, timedelta
 import logging
 import re
 
-# Set log file path
-log_file_path = "/usr/src/app/endpoint_data.log"
+# Set log file path & working directory
+working_directory = "."
+#--working_directory = "/usr/src/app"
+#--log_file_path = f"{working_directory}/endpoint_data.log"
+log_file_path = f"{working_directory}/endpoint_data.log"
 
 # Set logger
 log = logging.getLogger()
-log.setLevel(logging.WARNING)
+log.setLevel(logging.INFO)
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.INFO,
     format="%(levelname)s: %(message)s",
     handlers=[
         logging.FileHandler(log_file_path),
@@ -230,7 +233,7 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
 
     # Print the padded and colored text with "=" characters on both sides
     # An extra line that can be printed if running in live terminal
-    # print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
+    print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
 
     if failed > 0:
         for module in failed_modules:
