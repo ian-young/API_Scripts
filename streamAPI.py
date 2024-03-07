@@ -6,13 +6,16 @@ import requests
 from PIL import Image
 import subprocess
 import datetime
-import creds
 import logging
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
 STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
-API_KEY = creds.lab_key
-ORG_ID = creds.lab_id
+API_KEY = getenv("lab_key")
+ORG_ID = getenv("lab_id")
 CAMERA = ""  # Can be a list or single String
 
 log = logging.getLogger()

@@ -1,9 +1,12 @@
 # Author: Ian Young
 # Purpose: Opens doors both literally and figuratively
 
-import creds
 import requests
 import logging
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
@@ -17,9 +20,9 @@ LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
 # User loging credentials
-USERNAME = creds.slc_username
-PASSWORD = creds.slc_password
-ORG_ID = creds.slc_id
+USERNAME = getenv("slc_username")
+PASSWORD = getenv("slc_password")
+ORG_ID = getenv("slc_id")
 
 VIRTUAL_DEVICE = "5eff4677-974d-44ca-a6ba-fb7595265e0a"  # String or list
 

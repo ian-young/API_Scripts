@@ -1,12 +1,14 @@
 import requests
-from bs4 import BeautifulSoup
-import creds
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 login_url = "https://vprovision.command.verkada.com/user/login"
 dashboard_url = "https://command.verkada.com/dashboard"
-username = creds.mc_u
-password = creds.mc_p
-org_id = creds.mc_oid
+username = getenv("mc_u")
+password = getenv("mc_p")
+org_id = getenv("mc_oid")
 
 # Step 1: Send a POST request with login data
 login_data = {
