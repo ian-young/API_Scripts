@@ -13,18 +13,21 @@ import threading
 import time
 import pytz
 import colorama
-import creds  # File with credentials
 import avlTree  # File to work with trees
 from datetime import datetime, timedelta
+from os import getenv
 from tzlocal import get_localzone
 from colorama import Fore, Style
+from dotenv import load_dotenv
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
+load_dotenv()
+
 # Set final, global credential variables
-USERNAME = creds.lab_username
-PASSWORD = creds.lab_password
-ORG_ID = creds.lab_id
+USERNAME = getenv("lab_username")
+PASSWORD = getenv("lab_password")
+ORG_ID = getenv("lab_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"

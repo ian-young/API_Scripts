@@ -1,8 +1,12 @@
-import creds, logging, requests, threading, time
+import logging, requests, threading, time
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # API credentials
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 # Set logger
 log = logging.getLogger()

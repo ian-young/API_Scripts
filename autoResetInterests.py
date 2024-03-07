@@ -3,12 +3,16 @@
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
 
-import creds, datetime, logging, requests, threading, time
+import datetime, logging, requests, threading, time
+from os import getenv
+from dotenv import load_dotenv
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+load_dotenv()
+
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 # Set timeout for a 429
 MAX_RETRIES = 10

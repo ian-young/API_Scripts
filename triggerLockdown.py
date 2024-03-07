@@ -1,9 +1,10 @@
 # Author: Ian Young
 # Purpose: Opens lockdowns both literally and figuratively
 
-import creds
 import requests
 import logging
+from os import getenv
+from dotenv import load_dotenv
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
@@ -16,10 +17,12 @@ logging.basicConfig(
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
+load_dotenv()
+
 # User loging credentials
-USERNAME = creds.slc_username
-PASSWORD = creds.slc_password
-ORG_ID = creds.slc_id
+USERNAME = getenv("slc_username")
+PASSWORD = getenv("slc_password")
+ORG_ID = getenv("slc_id")
 
 LOCKDOWN_ID = "9884e9b2-1871-4aaf-86d7-0dc12b4ff024"  # String or list
 
