@@ -8,13 +8,18 @@
 import requests
 import logging
 import time
-import creds  # File with credentials
+import pytz
+from os import getenv
+from dotenv import load_dotenv
 from datetime import datetime
+from tzlocal import get_localzone
+
+load_dotenv()
 
 # Set final, global credential variables
-USERNAME = creds.lab_username
-PASSWORD = creds.lab_password
-ORG_ID = creds.lab_id
+USERNAME = getenv("lab_username")
+PASSWORD = getenv("lab_password")
+ORG_ID = getenv("lab_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"

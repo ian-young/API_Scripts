@@ -2,15 +2,17 @@
 # Purpose: Compare plates to a pre-defined array of names.
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
-#TODO Convert to use avlTree rather than lists
-#! Clean the lists before converting.
-#! You might have to load the entire JSON response for a plate into a node.
 
-from xml.dom.minidom import Attr
-import avlTree, creds, datetime, logging, requests, threading, time
+import datetime, logging, requests, threading, time
+from os import getenv
+from dotenv import load_dotenv
 
-ORG_ID = creds.demo_id
-API_KEY = creds.demo_key
+load_dotenv()
+
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 # Set timeout for a 429
 MAX_RETRIES = 10
