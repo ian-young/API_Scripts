@@ -3,10 +3,13 @@
 # These names will be "persistent persons" which are to remain in Command.
 # Any person not marked thusly will be deleted from the org.
 
-import creds, requests, logging, threading, time
+import requests, logging, threading, time
+from dotenv import load_dotenv
+from os import getenv
+load_dotenv()
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0

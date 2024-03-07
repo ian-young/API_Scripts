@@ -7,15 +7,16 @@
 
 import requests
 import base64
-import docker
 import colorama
 from colorama import Fore, Style
 import threading
 import shutil
 import time
-from datetime import datetime, timedelta
 import logging
 import re
+from os import getenv
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Set log file path & working directory
 working_directory = "/usr/src/app/data"
@@ -23,9 +24,9 @@ log_file_path = f"{working_directory}/endpoint_data.log"
 
 # Set logger
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(logging.WARNING)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format="%(levelname)s: %(message)s",
     handlers=[
         logging.FileHandler(log_file_path),
@@ -80,15 +81,17 @@ URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
 
+load_dotenv()
+
 # Set general testing variables
-ORG_ID = docker.slc_id  # Org ID
-API_KEY = docker.slc_key  # API key
-STREAM_API_KEY = docker.slc_stream_key  # API key with streaming permissions
-CAMERA_ID = docker.slc_camera_id  # Device ID of camera
-TEST_USER = docker.slc_test_user  # Command User ID
-TEST_USER_CRED = docker.slc_test_user_cred  # Command user to test AC changes
-CARD_ID = docker.slc_card_id  # Card ID to manipulate
-PLATE = docker.slc_plate  # AC plate cred to manipulate
+ORG_ID = getenv("slc_id")  # Org ID
+API_KEY = getenv("slc_key")  # API key
+STREAM_API_KEY = getenv("slc_stream_key")  # API key with streaming permissions
+CAMERA_ID = getenv("slc_camera_id")  # Device ID of camera
+TEST_USER = getenv("slc_test_user") # Command User ID
+TEST_USER_CRED = getenv("slc_test_user_cred")  # Command user to test AC changes
+CARD_ID = getenv("slc_card_id")  # Card ID to manipulate
+PLATE = getenv("slc_plate")  # AC plate cred to manipulate
 
 GENERAL_HEADER = {
     'accept': 'application/json',
