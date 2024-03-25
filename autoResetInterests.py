@@ -21,9 +21,9 @@ BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
-log.setLevel(logging.WARNING)
+log.setLevel(logging.DEBUG)
 logging.basicConfig(
-    level = logging.WARNING,
+    level = logging.DEBUG,
     format = "%(levelname)s: %(message)s"
     )
 
@@ -51,7 +51,8 @@ except ImportError:
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = sorted([])  # Label of plate !Not plate number!
-PERSISTENT_PERSONS = sorted([])  # PoI label
+PERSISTENT_PERSONS = sorted(['P. Parker'])  # PoI label
+PERSISTENT_PID = sorted(['0be9660d-60ba-49ba-9989-d6bd41a3f5bd'])  # PoI ID
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -463,6 +464,9 @@ def runPeople():
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
+
+        for person in PERSISTENT_PID:
+            safe_person_ids.append(person)
         log.info("Safe persons found.")
 
         # New list that filters persons that are safe
@@ -471,7 +475,7 @@ def runPeople():
             if person not in safe_person_ids]
 
         if persons_to_delete:
-            # purgePeople(persons_to_delete, persons)
+            purgePeople(persons_to_delete, persons)
             return 1  # Completed
 
         else:
@@ -533,7 +537,6 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
         log.critical(
             f"Plate - Error with retrieving plates.\
 Status code {response.status_code}")
-        return
         return
 
 

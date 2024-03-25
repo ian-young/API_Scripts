@@ -305,10 +305,10 @@ like to create? "))
         )
         threads.append(thread_poi)
 
-        thread_lpoi = threading.Thread(
-            target=createPlate, args=(plate_name, plate)
-        )
-        threads.append(thread_lpoi)
+        # thread_lpoi = threading.Thread(
+        #    target=createPlate, args=(plate_name, plate)
+        #)
+        #threads.append(thread_lpoi)
 
     run_thread_with_rate_limit(threads)
 
