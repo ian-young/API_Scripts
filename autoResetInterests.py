@@ -19,9 +19,9 @@ BACKOFF = 0.25
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s"
-)
+    level = logging.DEBUG,
+    format = "%(levelname)s: %(message)s"
+    )
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -54,11 +54,9 @@ except ImportError:
     log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([])  # Label of plate #!Not plate number!#
-PERSISTENT_PERSONS = sorted(['Suspect'])  # PoI label
-PERSISTENT_PID = sorted([])  # PoI ID
-PERSISTENT_LID = sorted([])  # LPoI ID
-
+PERSISTENT_PLATES = sorted([])  # Label of plate !Not plate number!
+PERSISTENT_PERSONS = sorted(['P. Parker'])  # PoI label
+PERSISTENT_PID = sorted(['0be9660d-60ba-49ba-9989-d6bd41a3f5bd'])  # PoI ID
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -478,10 +476,8 @@ def runPeople():
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
 
-        if PERSISTENT_PID:
-            for person in PERSISTENT_PID:
-                safe_person_ids.append(person)
-
+        for person in PERSISTENT_PID:
+            safe_person_ids.append(person)
         log.info("Safe persons found.")
 
         # New list that filters persons that are safe
