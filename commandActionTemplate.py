@@ -190,7 +190,7 @@ def command_action(x_verkada_token, x_verkada_auth, usr,
     log.debug("Requesting camera data")
 
     try:
-        response = session.post(ACTION_URL, json=body, headers=headers)
+        response = session.get(ACTION_URL, headers=headers)
         response.raise_for_status()
         log.debug("-------")
         log.debug("Action completed.")
