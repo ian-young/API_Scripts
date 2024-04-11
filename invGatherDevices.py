@@ -36,9 +36,8 @@ VX_URL = "https://vvx.command.verkada.com/device/list"
 GC_URL = "https://vnet.command.verkada.com/devices/list"
 SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
-DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/{ORG_ID}/device"
-IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/{ORG_ID}/site/"
-SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
+# TODO: Find TD endpoint
+TD_URL = ""
 
 # Set up the logger
 log = logging.getLogger()
