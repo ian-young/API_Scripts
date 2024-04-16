@@ -289,6 +289,10 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 ##############################################################################
+##############################################################################
+
+
+##############################################################################
                                 #   Requests   #
 ##############################################################################
 
@@ -321,7 +325,6 @@ def deleteCameras(x_verkada_token, usr, org_id=ORG_ID):
                 body = {
                     "cameraId": camera
                 }
-
                 response = session.post(
                     CAMERA_DECOM, headers=headers, json=body)
                 response.raise_for_status()  # Raise an exception for HTTP errors
