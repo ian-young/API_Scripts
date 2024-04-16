@@ -15,9 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set final, global credential variables
-USERNAME = getenv("slc_username")
-PASSWORD = getenv("slc_password")
-ORG_ID = getenv("slc_id")
+USERNAME = getenv("lab_username")
+PASSWORD = getenv("lab_password")
+ORG_ID = getenv("lab_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -39,9 +39,9 @@ SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
 
 # Set up the logger
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(levelname)s: %(message)s"
 )
 
@@ -51,6 +51,43 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 devices_serials = []
 ARRAY_LOCK = threading.Lock()
+
+##############################################################################
+                        #   Thread Management   #
+##############################################################################
+
+
+class ResultThread(threading.Thread):
+    """
+    A subclass of threading's Thread. Creates a new thread where the return
+    values are saved to be viewed for later. They may be accessed by typing
+    the objectname.result
+    """
+    def __init__(self, target, *args, **kwargs):
+        super().__init__(target=target, args=args, kwargs=kwargs)
+        self._result = None
+
+    def run(self):
+        self._result = self._target(*self._args, **self._kwargs)
+
+    @property
+    def result(self):
+        return self._result
+
+# Define a helper function to create threads with arguments
+def create_thread_with_args(target, args):
+    """
+    Allows the creation of a ResultThread and still pass arguments to the
+    thread.
+
+    :param target: The function that the thread will be running.
+    :type target: function
+    :param args: The arguments that will be passed through the function.
+    :type args: Any
+    :return: Returns a ResultThread
+    :rtype: thread
+    """
+    return ResultThread(target=lambda: target(*args))
 
 
 ##############################################################################
@@ -128,7 +165,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     :param org_id: The organization ID for the targeted Verkada org.
@@ -172,7 +209,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 ##############################################################################
-                                #   Requests   #
+                            #   Requests   #
 ##############################################################################
 
 
@@ -181,6 +218,8 @@ def list_cameras():
         'x-api-key': getenv("slc_key"),
         'Content-Type': 'application/json'
     }
+
+    camera_ids = []
     log.debug("Requesting camera data")
 
     try:
@@ -191,14 +230,13 @@ def list_cameras():
 
         cameras = response.json()['cameras']
 
-        print("-------")
-        print("Cameras")
+        # print("-------")
+        # print("Cameras:")
         for camera in cameras:
-            print(camera['camera_id'])
-            with ARRAY_LOCK:
-                devices_serials.append(camera['camera_id'])
+            camera_ids.append(camera['camera_id'])
+            # print(camera['camera_id'])
 
-        return cameras
+        return camera_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -250,23 +288,26 @@ def get_sites(x_verkada_token, x_verkada_auth, usr,
     }
 
     url = SITES + org_id
+    site_ids = []
 
     try:
         # Request the JSON archive library
         log.debug("Requesting access control devices.")
-        print(url)
+        # print(url)
         response = session.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Access control JSON retrieved. Parsing and logging.")
 
         sites = response.json()['sites']
 
-        print("-------")
-        print("Sites:")
+        # print("-------")
+        # print("Sites:")
         for site in sites:
-            print(site['siteId'] + " " + site['siteName'])
+            log.debug(site['siteId'] + " " + site['siteName'])
+            site_ids.append(site['siteId'])
+            # print(site['siteId'])
 
-        return sites
+        return site_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -307,7 +348,7 @@ def list_AC(x_verkada_token, x_verkada_auth, usr,
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video export IDs.
+    :return: An array of door controller device IDs.
     :rtype: list
     """
     body = {
@@ -320,6 +361,8 @@ def list_AC(x_verkada_token, x_verkada_auth, usr,
         "User": usr
     }
 
+    access_ids = []
+
     try:
         # Request the JSON archive library
         log.debug("Requesting access control devices.")
@@ -329,36 +372,12 @@ def list_AC(x_verkada_token, x_verkada_auth, usr,
 
         access_devices = response.json()['accessControllers']
 
-        print("-------")
-        print("Door controllers:")
+        # print("-------")
+        # print("Door controllers:")
         for controller in access_devices:
-            print(controller['deviceId'])
+            access_ids.append(controller['deviceId'])
 
-        return access_devices
-
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"Connection timed out.")
-        return None
-
-    except requests.exceptions.TooManyRedirects:
-        log.error(f"Too many redirects.\nAborting...")
-        return None
-
-    except requests.exceptions.HTTPError:
-        log.error(
-            f"Access control returned with a non-200 code: "
-            f"{response.status_code}"
-        )
-        return None
-
-    except requests.exceptions.ConnectionError:
-        log.error(f"Error connecting to the server.")
-        return None
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"Verkada API Error: {e}")
-        return None
+        return access_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -382,6 +401,10 @@ def list_AC(x_verkada_token, x_verkada_auth, usr,
 
     except requests.exceptions.RequestException as e:
         log.error(f"Verkada API Error: {e}")
+        return None
+
+    except KeyError:
+        log.warning("No controllers found.")
         return None
 
 
@@ -399,8 +422,8 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr,
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video export IDs.
-    :rtype: list
+    :return: Arrays of each wireless alarm sensor type device IDs.
+    :rtype: lists
     """
     body = {
         "organizationId": org_id
@@ -412,6 +435,14 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr,
         "User": usr
     }
 
+    dcs_ids = []
+    gbs_ids = []
+    hub_ids = []
+    ms_ids = []
+    pb_ids = []
+    ws_ids = []
+    wr_ids = []
+
     try:
         # Request the JSON archive library
         log.debug("Requesting alarm devices.")
@@ -421,56 +452,48 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr,
 
         alarm_devices = response.json()
 
-        print("-------")
-        print("Door contacts:")
+        # print("-------")
+        # print("Door contacts:")
         for dcs in alarm_devices['doorContactSensor']:
-            print(dcs['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(dcs['deviceId'])
-        print("-------")
-        print("Glass break:")
+            dcs_ids.append(dcs['deviceId'])
+            # print(dcs['deviceId'])
+        # print("-------")
+        # print("Glass break:")
         for gbs in alarm_devices['glassBreakSensor']:
-            print(gbs['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(gbs['deviceId'])
-        print("-------")
-        print("Hub devices:")
+            gbs_ids.append(gbs['deviceId'])
+            # print(gbs['deviceId'])
+        # print("-------")
+        # print("Hub devices:")
         for hub in alarm_devices['hubDevice']:
-            print(hub['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(hub['deviceId'])
-        print("-------")
-        print("Keypads:")
+            hub_ids.append(hub['deviceId'])
+            # print(hub['deviceId'])
+        # print("-------")
+        # print("Keypads:")
         for keypad in alarm_devices['keypadHub']:
-            print(keypad['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(keypad['deviceId'])
-        print("-------")
-        print("Motion sensors:")
+            hub_ids.append(keypad['deviceId'])
+            # print(keypad['deviceId'])
+        # print("-------")
+        # print("Motion sensors:")
         for ms in alarm_devices['motionSensor']:
-            print(ms['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(ms['deviceId'])
-        print("-------")
-        print("Panic buttons:")
+            ms_ids.append(ms['deviceId'])
+            # print(ms['deviceId'])
+        # print("-------")
+        # print("Panic buttons:")
         for pb in alarm_devices['panicButton']:
-            print(pb['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(pb['deviceId'])
-        print("-------")
-        print("Water sensors:")
+            pb_ids.append(pb['deviceId'])
+            # print(pb['deviceId'])
+        # print("-------")
+        # print("Water sensors:")
         for ws in alarm_devices['waterSensor']:
-            print(ws['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(ws['deviceId'])
-        print("-------")
-        print("Wireless Relays:")
+            ws_ids.append(ws['deviceId'])
+            # print(ws['deviceId'])
+        # print("-------")
+        # print("Wireless Relays:")
         for wr in alarm_devices['wirelessRelay']:
-            print(wr['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(wr['deviceId'])
+            wr_ids.append(wr['deviceId'])
+            # print(wr['deviceId'])
 
-        return alarm_devices
+        return dcs_ids, gbs_ids, hub_ids, ms_ids, pb_ids, ws_ids, wr_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -511,7 +534,7 @@ def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr,
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video export IDs.
+    :return: An array of archived video station device IDs.
     :rtype: list
     """
     body = {
@@ -524,6 +547,8 @@ def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr,
         "User": usr
     }
 
+    vx_ids = []
+
     try:
         # Request the JSON archive library
         log.debug("Requesting viewing stations.")
@@ -533,14 +558,13 @@ def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr,
 
         vx_devices = response.json()['viewingStations']
 
-        print("-------")
-        print("Viewing stations:")
+        # print("-------")
+        # print("Viewing stations:")
         for vx in vx_devices:
-            print(vx['viewingStationId'])
-            with ARRAY_LOCK:
-                devices_serials.append(vx['viewingStationId'])
+            vx_ids.append(vx['viewingStationId'])
+            # print(vx['viewingStationId'])
 
-        return vx_devices
+        return vx_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -581,7 +605,7 @@ def list_Gateways(x_verkada_token, x_verkada_auth, usr,
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video export IDs.
+    :return: An array of gateway device IDs.
     :rtype: list
     """
     body = {
@@ -594,6 +618,8 @@ def list_Gateways(x_verkada_token, x_verkada_auth, usr,
         "User": usr
     }
 
+    gc_ids = []
+
     try:
         # Request the JSON archive library
         log.debug("Requesting cellular gateways.")
@@ -603,14 +629,13 @@ def list_Gateways(x_verkada_token, x_verkada_auth, usr,
 
         gc_devices = response.json()
 
-        print("-------")
-        print("Gateways:")
+        # print("-------")
+        # print("Gateways:")
         for gc in gc_devices:
-            print(gc['device_id'])
-            with ARRAY_LOCK:
-                devices_serials.append(gc['device_id'])
+            gc_ids.append(gc['device_id'])
+            # print(gc['device_id'])
 
-        return gc_devices
+        return gc_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -622,10 +647,13 @@ def list_Gateways(x_verkada_token, x_verkada_auth, usr,
         return None
 
     except requests.exceptions.HTTPError:
-        log.error(
-            f"Gateways returned with a non-200 code: "
-            f"{response.status_code}"
-        )
+        if response.status_code == 404:
+            log.warning("No gateways were found in the org.")
+        else:
+            log.error(
+                f"Gateways returned with a non-200 code: "
+                f"{response.status_code}"
+            )
         return None
 
     except requests.exceptions.ConnectionError:
@@ -651,7 +679,7 @@ def list_Sensors(x_verkada_token, x_verkada_auth, usr,
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video export IDs.
+    :return: An array of environmental sensor device IDs.
     :rtype: list
     """
     body = {
@@ -664,6 +692,8 @@ def list_Sensors(x_verkada_token, x_verkada_auth, usr,
         "User": usr
     }
 
+    sv_ids = []
+
     try:
         # Request the JSON archive library
         log.debug("Requesting environmental sensors.")
@@ -673,14 +703,13 @@ def list_Sensors(x_verkada_token, x_verkada_auth, usr,
 
         sv_devices = response.json()['sensorDevice']
 
-        print("-------")
-        print("Environmental sensors:")
+        # print("-------")
+        # print("Environmental sensors:")
         for sv in sv_devices:
-            print(sv['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(sv['deviceId'])
+            sv_ids.append(sv['deviceId'])
+            # print(sv['deviceId'])
 
-        return sv_devices
+        return sv_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -721,7 +750,7 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr,
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video export IDs.
+    :return: An array of BZ11 device IDs.
     :rtype: list
     """
     body = {
@@ -734,6 +763,8 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr,
         "User": usr
     }
 
+    bz_ids = []
+
     try:
         # Request the JSON archive library
         log.debug("Requesting horn speakers.")
@@ -743,14 +774,13 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr,
 
         bz_devices = response.json()['garfunkel']
 
-        print("-------")
-        print("Horn speakers (BZ11):")
+        # print("-------")
+        # print("Horn speakers (BZ11):")
         for bz in bz_devices:
-            print(bz['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(bz['deviceId'])
+            bz_ids.append(bz['deviceId'])
+            # print(bz['deviceId'])
 
-        return bz_devices
+        return bz_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -776,9 +806,13 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr,
         log.error(f"Verkada API Error: {e}")
         return None
 
+    except KeyError:
+        log.warning("No BZ11s found in org.")
+        return None
 
-def list_Intercoms(x_verkada_token, x_verkada_auth, usr,
-                   org_id=ORG_ID):
+
+def list_DeskStaions(x_verkada_token, x_verkada_auth, usr,
+                     org_id=ORG_ID):
     """
     Lists all intercom-related devices (TD and desk station).
 
@@ -814,10 +848,10 @@ def list_Intercoms(x_verkada_token, x_verkada_auth, usr,
         #! Will need to adjust this as the right endpoint is found.
         td_devices = response.json()['deskStation']
 
-        print("-------")
-        print("Intercom-related devices:")
+        # print("-------")
+        # print("Intercom-related devices:")
         for td in td_devices:
-            print(td['deviceId'])
+            # print(td['deviceId'])
             with ARRAY_LOCK:
                 devices_serials.append(td['deviceId'])
 
@@ -864,60 +898,20 @@ if __name__ == "__main__":
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
-
-                log.debug("Retrieving cameras.")
-                c_thread = threading.Thread(target=list_cameras)
-                log.debug("Cameras retrieved")
-
-                log.debug("Retrieving Access controllers.")
-                ac_thread = threading.Thread(
-                    target=list_AC,
-                    args=(csrf_token, user_token, user_id, ORG_ID)
-                )
-                log.debug(f"Controllers retrieved.")
-
-                log.debug("Retrieving Alarm devices.")
-                br_thread = threading.Thread(
-                    target=list_Alarms,
-                    args=(csrf_token, user_token, user_id, ORG_ID)
-                )
-                log.debug(f"Alarm devices retrieved.")
-
-                log.debug("Retrieving viewing stations.")
-                vx_thread = threading.Thread(
-                    target=list_Viewing_Stations,
-                    args=(csrf_token, user_token, user_id, ORG_ID)
-                )
-                log.debug(f"Viewing stations retrieved.")
-
-                log.debug("Retrieving cellular gateways.")
-                gc_thread = threading.Thread(
-                    target=list_Gateways,
-                    args=(csrf_token, user_token, user_id, ORG_ID)
-                )
-                log.debug(f"Cellular gateways retrieved.")
-
-                log.debug("Retrieving environmental sensors.")
-                sv_thread = threading.Thread(
-                    target=list_Sensors,
-                    args=(csrf_token, user_token, user_id, ORG_ID)
-                )
-                log.debug(f"Environmental sensors retrieved.")
-
-                log.debug("Retrieving horn speakers.")
-                bz_thread = threading.Thread(
-                    target=list_Horns,
-                    args=(csrf_token, user_token, user_id, ORG_ID)
-                )
-                log.debug(f"Horn speakers retrieved.")
-
-                #! Need to fix
-                # log.debug("Retrieving desk stations.")
-                # td_thread = threading.Thread(
-                #     target=list_Gateways,
-                #     args=(csrf_token, user_token, user_id, ORG_ID)
-                # )
-                # log.debug(f"intercom devices retrieved.")
+                # Define the threads with arguments
+                c_thread = create_thread_with_args(list_cameras, [])
+                ac_thread = create_thread_with_args(
+                    list_AC, [csrf_token, user_token, user_id, ORG_ID])
+                br_thread = create_thread_with_args(
+                    list_Alarms, [csrf_token, user_token, user_id, ORG_ID])
+                vx_thread = create_thread_with_args(
+                    list_Viewing_Stations, [csrf_token, user_token, user_id, ORG_ID])
+                gc_thread = create_thread_with_args(
+                    list_Gateways, [csrf_token, user_token, user_id, ORG_ID])
+                sv_thread = create_thread_with_args(
+                    list_Sensors, [csrf_token, user_token, user_id, ORG_ID])
+                bz_thread = create_thread_with_args(
+                    list_Horns, [csrf_token, user_token, user_id, ORG_ID])
 
                 threads = [c_thread, ac_thread, br_thread, vx_thread,
                            gc_thread, sv_thread, bz_thread]
@@ -928,6 +922,8 @@ if __name__ == "__main__":
                 for thread in threads:
                     thread.join()
 
+                #--for thread in threads:
+                #--    print(thread.result)
             # Handles when the required credentials were not received
             else:
                 log.critical(
@@ -943,7 +939,7 @@ if __name__ == "__main__":
 
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
-            print(f"\nKeyboard interrupt detected. Logging out & aborting...")
+            log.warning(f"\nKeyboard interrupt detected. Logging out & aborting...")
 
         finally:
             if csrf_token and user_token:
