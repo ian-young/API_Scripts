@@ -1,5 +1,6 @@
 import requests
 import logging
+import threading
 import time
 import gatherDevices  # TODO: Need to adjust to pull IDs and not serials
 from os import getenv
@@ -16,7 +17,7 @@ load_dotenv()
 
 USERNAME = getenv("lab_username")
 PASSWORD = getenv("lab_password")
-ORG_ID = getenv("LAB_ID")
+ORG_ID = getenv("lab_id")
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
@@ -32,13 +33,13 @@ AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/decommiss
 ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
 # Parameters: deviceId and organizationId
 APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
-# Parameters: devicceId
+# Parameters: deviceId
 ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
 # DELETE, not POST (works with desk station, too)
-INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
+# INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
 # DELETE, not POST
-GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/{site_id}?deviceId={device_id}"
-DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
+# GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/{site_id}?deviceId={device_id}"
+# DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
 
 
 def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
@@ -154,8 +155,15 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
         session.close()
 
 
+##############################################################################
+##############################################################################
+
+
 def deleteCameras(x_verkada_token, x_verkada_auth, usr,
                   org_id=ORG_ID):
+    """
+    
+    """
     body = {
         "organizationId": org_id
     }
@@ -174,9 +182,8 @@ def deleteCameras(x_verkada_token, x_verkada_auth, usr,
         if cameras:
             for camera in cameras:
                 params = {
-                    "deviceId": camera['deviceId']
+                    "deviceId": camera
                 }
-
                 response = session.post(
                     CAMERA_DECOM, json=body, headers=headers, params=params)
                 response.raise_for_status()  # Raise an exception for HTTP errors
@@ -211,116 +218,156 @@ def deleteCameras(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def deleteKeypads(x_verkada_token, x_verkada_auth, usr,
-                  org_id=ORG_ID):
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
-    }
-
-    try:
-        # Request the JSON archive library
-        log.debug("Requesting Alarm keypads.")
-        keypads = gatherDevices.list_cameras(x_verkada_token, x_verkada_auth,
-                                             usr, org_id)
-        if keypads:
-            for keypad in keypads:
-                params = {
-                    "deviceId": keypad['deviceId'],
-                    "organizationId": org_id
-                }
-
-                response = session.post(
-                    AKEYPADS_DECOM, headers=headers, params=params)
-                response.raise_for_status()  # Raise an exception for HTTP errors
-
-            log.debug("Keypads deleted.")
-
-        else:
-            log.warning("No keypads were received.")
-
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"Connection timed out.")
-        return None
-
-    except requests.exceptions.TooManyRedirects:
-        log.error(f"Too many redirects.\nAborting...")
-        return None
-
-    except requests.exceptions.HTTPError:
-        log.error(
-            f"Desk stations returned with a non-200 code: "
-            f"{response.status_code}"
-        )
-        return None
-
-    except requests.exceptions.ConnectionError:
-        log.error(f"Error connecting to the server.")
-        return None
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"Verkada API Error: {e}")
-        return None
-
-
 def deleteSensors(x_verkada_token, x_verkada_auth, usr,
                   org_id=ORG_ID):
+    threads = []
+
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
         "User": usr
     }
 
-    try:
-        # Request the JSON archive library
-        log.debug("Requesting Alarm sensors.")
-        sensors = gatherDevices.list_cameras(x_verkada_token, x_verkada_auth,
-                                             usr, org_id)
-        if sensors:
-            # TODO: Need to grab sensor type from JSON
-            for sensor in sensors:
-                params = {
-                    "deviceId": sensor['deviceId'],
-                    "organizationId": org_id
-                }
-
+    def delete_sensor(device_dict):
+        for device in device_dict:
+            params = {
+                "deviceId": device.get("deviceId"),
+                "organizationId": org_id,
+                "deviceType": device.get("deviceType")
+            }
+            try:
                 response = session.post(
                     ASENSORS_DECOM, headers=headers, params=params)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
-            log.debug("Alarm sensors deleted.")
+                log.debug(f"Deleted wireless sensor: {
+                          device.get('deviceType')}"
+                          )
 
-        else:
-            log.warning("No Alarm sensors were received.")
+            # Handle exceptions
+            except requests.exceptions.Timeout:
+                log.error(f"Connection timed out.")
+                return None
 
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"Connection timed out.")
-        return None
+            except requests.exceptions.TooManyRedirects:
+                log.error(f"Too many redirects.\nAborting...")
+                return None
 
-    except requests.exceptions.TooManyRedirects:
-        log.error(f"Too many redirects.\nAborting...")
-        return None
+            except requests.exceptions.HTTPError:
+                log.error(
+                    f"Wireless alarm sensor returned with a non-200 code: "
+                    f"{response.status_code}"
+                )
+                return None
 
-    except requests.exceptions.HTTPError:
-        log.error(
-            f"Desk stations returned with a non-200 code: "
-            f"{response.status_code}"
-        )
-        return None
+            except requests.exceptions.ConnectionError:
+                log.error(f"Error connecting to the server.")
+                return None
 
-    except requests.exceptions.ConnectionError:
-        log.error(f"Error connecting to the server.")
-        return None
+            except requests.exceptions.RequestException as e:
+                log.error(f"Verkada API Error: {e}")
+                return None
 
-    except requests.exceptions.RequestException as e:
-        log.error(f"Verkada API Error: {e}")
-        return None
+    def delete_keypads(device_ids):
+        for device_id in device_ids:
+            params = {
+                "deviceId": device_id,
+                "organizationId": org_id
+            }
+
+            try:
+                response = session.post(
+                    AKEYPADS_DECOM, headers=headers, params=params)
+                response.raise_for_status()  # Raise an exception for HTTP errors
+
+                log.debug("Keypad deleted.")
+
+            # Handle exceptions
+            except requests.exceptions.Timeout:
+                log.error(f"Connection timed out.")
+                return None
+
+            except requests.exceptions.TooManyRedirects:
+                log.error(f"Too many redirects.\nAborting...")
+                return None
+
+            except requests.exceptions.HTTPError:
+                log.error(
+                    f"Alarm keypad returned with a non-200 code: "
+                    f"{response.status_code}"
+                )
+                return None
+
+            except requests.exceptions.ConnectionError:
+                log.error(f"Error connecting to the server.")
+                return None
+
+            except requests.exceptions.RequestException as e:
+                log.error(f"Verkada API Error: {e}")
+                return None
+
+    def convert_to_dict(array, deviceType):
+        device_dict = []
+
+        for device in array:
+            device_dict_value = {
+                "deviceId": device,
+                "deviceType": deviceType
+            }
+            device_dict.append(device_dict_value)
+
+        return device_dict
+
+    # Request all alarm sensors
+    log.debug("Requesting alarm sensors.")
+    dcs, gbs, hub, ms, pb, ws, wr = gatherDevices.list_Alarms(
+        x_verkada_token, x_verkada_auth, usr, org_id)
+
+    # Check if it is empty, if so, skip. If not, turn it into a dictionary.
+    if dcs:
+        door_thread = threading.Thread(target=delete_sensor, args=(
+            convert_to_dict(dcs, "doorContactSensor")))
+        threads.append(door_thread)
+    if gbs:
+        glass_thread = threading.Thread(target=delete_sensor, args=(
+            convert_to_dict(gbs, "glassBreakSensor")))
+        threads.append(glass_thread)
+    if hub:
+        keypad_thread = threading.Thread(target=delete_keypads, args=(hub))
+        threads.append(keypad_thread)
+    if ms:
+        motion_thread = threading.Thread(target=delete_sensor, args=(
+            convert_to_dict(ms, "motionSensor")))
+        threads.append(motion_thread)
+    if pb:
+        panic_thread = threading.Thread(target=delete_sensor, args=(
+            convert_to_dict(pb, "panicButton")))
+        threads.append(panic_thread)
+    if ws:
+        water_thread = threading.Thread(target=delete_sensor, args=(
+            convert_to_dict(ws, "waterSensor")))
+        threads.append(water_thread)
+    if wr:
+        relay_thread = threading.Thread(target=delete_sensor, args=(
+            convert_to_dict(wr, "wirelessRelay")))
+        threads.append(relay_thread)
+
+    # Check if there are threads waiting to be ran.
+    if threads:
+        # Run the threads
+        for thread in threads:
+            thread.start()
+        # Wait for them to finish
+        for thread in threads:
+            thread.join()
+
+        log.debug("Alarm sensors deleted.")
+
+    else:
+        log.warning("No alarm sensors were received.")
 
 
-# TODO: Adjust accordingly.
+# TODO: Add to gatherDevices.py
 def deletePanels(x_verkada_token, x_verkada_auth, usr,
                  org_id=ORG_ID):
     headers = {
@@ -361,7 +408,7 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
 
     except requests.exceptions.HTTPError:
         log.error(
-            f"Desk stations returned with a non-200 code: "
+            f"Alarm panels returned with a non-200 code: "
             f"{response.status_code}"
         )
         return None
@@ -375,7 +422,6 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-# TODO: Adjust accordingly.
 def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
                         org_id=ORG_ID):
     body = {
@@ -390,23 +436,27 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
 
     try:
         # Request the JSON archive library
-        log.debug("Requesting cameras.")
-        cameras = gatherDevices.list_cameras(x_verkada_token, x_verkada_auth,
-                                             usr, org_id)
-        if cameras:
-            for camera in cameras:
+        log.debug("Requesting environmental sensors.")
+        sv_ids = gatherDevices.list_Sensors(x_verkada_token, x_verkada_auth,
+                                            usr, org_id)
+        if sv_ids:
+            for sensor in sv_ids:
                 params = {
-                    "deviceId": camera['deviceId']
+                    "deviceId": sensor
                 }
 
                 response = session.post(
-                    CAMERA_DECOM, json=body, headers=headers, params=params)
+                    ENVIRONMENTAL_DECOM,
+                    json=body,
+                    headers=headers,
+                    params=params
+                )
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
-            log.debug("Cameras deleted.")
+            log.debug("Environmental sensors deleted.")
 
         else:
-            log.warning("No cameras were received.")
+            log.warning("No environmental sensors were received.")
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -419,7 +469,7 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
 
     except requests.exceptions.HTTPError:
         log.error(
-            f"Desk stations returned with a non-200 code: "
+            f"Environmental sensors returned with a non-200 code: "
             f"{response.status_code}"
         )
         return None
@@ -433,7 +483,7 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-# TODO: Adjust accordingly.
+# TODO: Adjust accordingly and find endpoint that lists intercoms.
 def deleteIntercom(x_verkada_token, x_verkada_auth, usr,
                    org_id=ORG_ID):
     body = {
