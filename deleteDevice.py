@@ -1,12 +1,5 @@
-# Author: Ian Young
-# Purpose: Reset a Verkada Command organization for use at VCE. An API key and
-# valid user credentials are needed to run this script. Please use EXTREME
-# caution when running because this will delete all devices from an org
-# without any additional warnings.
-import colorama
-import gatherDevices
-import logging
 import requests
+import logging
 import threading
 import time
 from datetime import datetime
@@ -25,12 +18,12 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s"
 )
 
-# Set final, global credential variables
-API_KEY = getenv()
-USERNAME = getenv()
-PASSWORD = getenv()
-ORG_ID = getenv()
+load_dotenv()
 
+USERNAME = getenv("lab_username")
+PASSWORD = getenv("lab_password")
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
@@ -292,40 +285,31 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-##############################################################################
-                                #   Requests   #
-##############################################################################
-
-
-def deleteCameras(x_verkada_token, usr, org_id=ORG_ID):
+def deleteCameras(x_verkada_token, x_verkada_auth, usr):
     """
-    Deletes all cameras from a Verkada organization.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID of the authenticated user for a valid Verkada
-    Command session.
-    :type usr: str
     """
     headers = {
-        "x-verkada-organization-id": org_id,
-        "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
+        "X-CSRF-Token": x_verkada_token,
+        "X-Verkada-Auth": x_verkada_auth,
+        "User": usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting cameras.")
-        cameras = gatherDevices.list_Cameras(API_KEY, session)
+        cameras = gatherDevices.list_cameras(API_KEY, session)
+
         if cameras:
             for camera in cameras:
                 body = {
                     "cameraId": camera
+                body = {
+                    "cameraId": camera
                 }
+                print(camera)
                 response = session.post(
+                    CAMERA_DECOM, headers=headers, json=body)
                     CAMERA_DECOM, headers=headers, json=body)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
@@ -351,9 +335,8 @@ def deleteCameras(x_verkada_token, usr, org_id=ORG_ID):
 
     except requests.exceptions.HTTPError:
         log.error(
-            f"{Fore.RED}"
             f"Delete camera returned with a non-200 code: "
-            f"{response.status_code}{Style.RESET_ALL}"
+            f"{response.status_code}"
         )
 
     except requests.exceptions.ConnectionError:
@@ -646,76 +629,7 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
                 f"{Style.RESET_ALL}")
 
         else:
-            log.warning(
-                f"{Fore.MAGENTA}"
-                f"No Access control panels were received."
-                f"{Style.RESET_ALL}"
-            )
-
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
-
-    except requests.exceptions.TooManyRedirects:
-        log.error(
-            f"{Fore.RED}"
-            f"Too many redirects. Aborting..."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.HTTPError:
-        if response.status_code == 400:
-            log.debug(f"{Fore.MAGENTA}"
-                      f"Trying {panel} as intercom."
-                      f"{Style.RESET_ALL}"
-            )
-            deleteIntercom(x_verkada_token, usr, panel)
-        else:
-            log.error(
-                f"{Fore.RED}"
-                f"Access control panel returned with a non-200 code: "
-                f"{response.status_code}{Style.RESET_ALL}"
-            )
-
-    except requests.exceptions.ConnectionError:
-        log.error(
-            f"{Fore.RED}"
-            f"Error connecting to the server."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
-
-
-def deleteIntercom(x_verkada_token, usr, device_id, org_id=ORG_ID):
-    """
-    Deletes all Intercoms from a Verkada organization.
-
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
-    session.
-    :type x_verkada_auth: str
-    """
-    headers = {
-        "x-verkada-organization-id": org_id,
-        "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
-    }
-
-    try:
-        url = DESK_DECOM + device_id + SHARD
-
-        log.debug(f"Running for intercom: {device_id}")
-
-        response = session.delete(
-            url,
-            headers=headers
-        )
-        response.raise_for_status()  # Raise for HTTP errors
-
-        log.info(f"{Fore.GREEN}Intercom deleted.{Style.RESET_ALL}")
+            log.warning("No Alarm panels were received.")
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -730,10 +644,10 @@ def deleteIntercom(x_verkada_token, usr, device_id, org_id=ORG_ID):
 
     except requests.exceptions.HTTPError:
         log.error(
-            f"{Fore.RED}"
-            f"Intercom returned with a non-200 code: "
-            f"{response.status_code}{Style.RESET_ALL}"
+            f"Alarm panels returned with a non-200 code: "
+            f"{response.status_code}"
         )
+        return None
 
     except requests.exceptions.ConnectionError:
         log.error(
@@ -743,7 +657,8 @@ def deleteIntercom(x_verkada_token, usr, device_id, org_id=ORG_ID):
         )
 
     except requests.exceptions.RequestException as e:
-        log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
+        log.error(f"Verkada API Error: {e}")
+        return None
 
 
 def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
@@ -830,290 +745,12 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
         log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
 
 
-def deleteGuest(x_verkada_token, x_verkada_auth, usr,
-                org_id=ORG_ID):
-    """
-    Deletes all Guest devices from a Verkada organization.
-
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
-    session.
-    :type x_verkada_auth: str
-    """
-    params = {
-        "organizationId": org_id
-    }
-
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
-    }
-
-    try:
-        # Request the JSON library for Sites
-        log.debug("Initiating site request.")
-        sites = gatherDevices.get_Sites(
-            x_verkada_token, x_verkada_auth, usr, session, org_id)
-
-        # Request the JSON library for Guest
-        log.debug("Initiating Guest requests.")
-        ipad_ids, printer_ids = gatherDevices.list_Guest(
-            x_verkada_token, x_verkada_auth, usr, session, org_id, sites)
-
-        for site in sites:
-            ipad_present = True
-            printer_present = True
-            
-            if ipad_ids:
-                for ipad in ipad_ids:
-                    url = f"{GUEST_IPADS_DECOM}{site}?deviceId={ipad}"
-
-                    log.debug(f"Running for iPad: {ipad}")
-
-                    response = session.delete(
-                        url,
-                        headers=headers,
-                        params=params
-                    )
-                    response.raise_for_status()  # Raise for HTTP errors
-
-                log.info(
-                    f"{Fore.GREEN}"
-                    f"iPads deleted for site {site}"
-                    f"{Style.RESET_ALL}"
-                )
-
-            else:
-                ipad_present = False
-                log.debug("No iPads present.")
-
-            if printer_ids:
-                for printer in printer_ids:
-                    url = f"{GUEST_PRINTER_DECOM}{site}?printerId={printer}"
-
-                    log.debug(f"Running for printer: {printer}")
-
-                    response = session.delete(
-                        url,
-                        headers=headers,
-                        params=params
-                    )
-                    response.raise_for_status()  # Raise for HTTP errors
-
-                log.info(
-                    f"{Fore.GREEN}"
-                    f"Printers deleted for site {site}"
-                    f"{Style.RESET_ALL}"
-                )
-
-            else:
-                printer_present = False
-                log.debug("No printers present.")
-
-            if not ipad_present and not printer_present:
-                log.warning(
-                    f"{Fore.MAGENTA}"
-                    f"No Guest devices were received for site {site}."
-                    f"{Style.RESET_ALL}"
-                )
-
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
-
-    except requests.exceptions.TooManyRedirects:
-        log.error(
-            f"{Fore.RED}"
-            f"Too many redirects. Aborting..."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.HTTPError:
-        log.error(
-            f"{Fore.RED}"
-            f"Guest returned with a non-200 code: "
-            f"{response.status_code}{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.ConnectionError:
-        log.error(
-            f"{Fore.RED}"
-            f"Error connecting to the server."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
-
-
-def deleteACLs(x_verkada_token, usr, org_id=ORG_ID):
-    """
-    Deletes all access control levels from a Verkada organization.
-
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
-    session.
-    :type x_verkada_auth: str
-    """
-    def find_schedule_by_id(schedule_id, schedules):
-        for schedule in schedules:
-            if schedule["scheduleId"] == schedule_id:
-                return schedule
-        return None
-
-    headers = {
-        "x-verkada-organization-id": org_id,
-        "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
-    }
-
-    try:
-        # Request the JSON archive library
-        log.debug("Initiating request for access control levels.")
-        acls, acl_ids = gatherDevices.list_ACLs(x_verkada_token, usr, session,
-                                                org_id)
-        
-        if acls and acl_ids:
-            for acl in acl_ids:
-                schedule = find_schedule_by_id(acl, acls)
-                log.info(f"Running for access control level {acl}")
-                schedule['deleted'] = True
-                data = {
-                    'sitesEnabled': True,
-                    'schedules': [schedule]
-                }
-
-                response = session.put(
-                    ACCESS_LEVEL_DECOM,
-                    json=data,
-                    headers=headers
-                )
-                response.raise_for_status()  # Raise an exception for HTTP errors
-
-            log.info(
-                f"{Fore.GREEN}"
-                f"Access control levels deleted."
-                f"{Style.RESET_ALL}"
-            )
-
-        else:
-            log.warning(
-                f"{Fore.MAGENTA}"
-                f"No access control levels were received."
-                f"{Style.RESET_ALL}"
-            )
-
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
-
-    except requests.exceptions.TooManyRedirects:
-        log.error(
-            f"{Fore.RED}"
-            f"Too many redirects. Aborting..."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.HTTPError:
-        log.error(
-            f"{Fore.RED}"
-            f"Access control levels returned with a non-200 code: "
-            f"{response.status_code}{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.ConnectionError:
-        log.error(
-            f"{Fore.RED}"
-            f"Error connecting to the server."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
-
-
-def deleteDeskStation(x_verkada_token, usr, org_id=ORG_ID):
-    """
-    Deletes all Guest devices from a Verkada organization.
-
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
-    session.
-    :type x_verkada_auth: str
-    """
-    headers = {
-        "x-verkada-organization-id": org_id,
-        "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
-    }
-
-    try:
-        # Request the JSON library for Desk Station
-        log.debug("Initiating Desk Station requests.")
-        ds_ids = gatherDevices.list_Desk_Stations(
-            x_verkada_token, usr, session, org_id)
-
-        if ds_ids:
-            for desk_station in ds_ids:
-                url = DESK_DECOM + desk_station + SHARD
-
-                log.debug(
-                    f"{Fore.GREEN}"
-                    f"Running for Desk Station: {desk_station}"
-                    f"{Style.RESET_ALL}"
-                )
-
-                response = session.delete(
-                    url,
-                    headers=headers
-                )
-                response.raise_for_status()  # Raise for HTTP errors
-
-                log.info(
-                    f"{Fore.GREEN}"
-                    f"Desk Stations deleted."
-                    f"{Style.RESET_ALL}"
-                )
-
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
-
-    except requests.exceptions.TooManyRedirects:
-        log.error(
-            f"{Fore.RED}"
-            f"Too many redirects. Aborting..."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.HTTPError:
-        log.error(
-            f"{Fore.RED}"
-            f"Desk station returned with a non-200 code: "
-            f"{response.status_code}{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.ConnectionError:
-        log.error(
-            f"{Fore.RED}"
-            f"Error connecting to the server."
-            f"{Style.RESET_ALL}"
-        )
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
-
-
-##############################################################################
-                                #   Main   #
-##############################################################################
-
-
 if __name__ == '__main__':
+    start_run_time = time.time()  # Start timing the script
+    with requests.Session() as session:
+        try:
+            # Initialize the user session.
+            csrf_token, user_token, user_id = login_and_get_tokens()
     start_run_time = time.time()  # Start timing the script
     with requests.Session() as session:
         try:
@@ -1122,67 +759,30 @@ if __name__ == '__main__':
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
-                # Place each element in their own thread to speed up runtime
-                camera_thread = threading.Thread(
-                    target=deleteCameras, 
-                    args=(csrf_token, user_token,))
-
-                alarm_thread = threading.Thread(
-                    target=deleteSensors, 
-                    args=(csrf_token, user_token, user_id, session,))
-
-                ac_thread = threading.Thread(
-                    target=deletePanels, 
-                    args=(csrf_token, user_token, user_id,))
-
-                sv_thread = threading.Thread(
-                    target=deleteEnvironmental, 
-                    args=(csrf_token, user_token, user_id,))
-
-                guest_thread = threading.Thread(
-                    target=deleteGuest, 
-                    args=(csrf_token, user_token, user_id,))
-
-                acl_thread = threading.Thread(
-                    target=deleteACLs, 
-                    args=(csrf_token, user_id,))
-
-                desk_thread = threading.Thread(
-                    target=deleteDeskStation, 
-                    args=(csrf_token, user_token, user_id,))
-
-                # # List all the threads to be ran
-                threads = [camera_thread, alarm_thread, ac_thread, sv_thread,
-                           guest_thread, acl_thread, desk_thread]
-
-                # Start the clocked threads
-                run_thread_with_rate_limit(threads)
-
+                pass
             # Handles when the required credentials were not received
             else:
                 log.critical(
-                    f"{Fore.MAGENTA}"
                     f"No credentials were provided during "
                     f"the authentication process or audit log "
                     f"could not be retrieved."
-                    f"{Style.RESET_ALL}"
                 )
 
             # Calculate the time take to run and post it to the log
             elapsed_time = time.time() - start_run_time
             log.info("-------")
-            log.info(
-                f"Total time to complete "
-                f"{Fore.CYAN}{elapsed_time:.2f}s{Style.RESET_ALL}"
-            )
+            log.info(f"Total time to complete {elapsed_time:.2f}")
 
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
-            print(
-                f"{Fore.RED}\nKeyboard interrupt detected. "
-                f"Logging out & aborting...{Style.RESET_ALL}"
-            )
+            print(f"\nKeyboard interrupt detected. Logging out & aborting...")
 
+        finally:
+            if csrf_token and user_token:
+                log.debug("Logging out.")
+                logout(csrf_token, user_token)
+            session.close()
+            log.debug("Session closed.\nExiting...")
         finally:
             if csrf_token and user_token:
                 log.debug("Logging out.")

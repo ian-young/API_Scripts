@@ -214,19 +214,9 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-def list_Cameras(api_key, session):
-    """
-    Will list all cameras inside of a Verkada organization.
-    
-    :param api_key: The API key generated from the organization to target.
-    :type api_key: str
-    :param session: The request session to use to make the call with.
-    :type session: object
-    :return: Returns a list of all camera device IDs found inside of a Verkada
-    organization.
-    :rtype: list
-    """
+def list_cameras(api_key, session):
     headers = {
+        'x-api-key': api_key,
         'x-api-key': api_key,
         'Content-Type': 'application/json'
     }
