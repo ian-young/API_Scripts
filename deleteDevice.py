@@ -37,122 +37,14 @@ APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
 ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
 CAMERA_DECOM = "https://vprovision.command.verkada.com/camera/decommission"
 ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
-LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
-LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
-# * DELETE
-DESK_DECOM = f"{ROOT}/organization/{ORG_ID}/device/"
-GUEST_IPADS_DECOM = f"https://vdoorman.command.verkada.com/device/org/\
-{ORG_ID}/site/"
-GUEST_PRINTER_DECOM = f"https://vdoorman.command.verkada.com/printer/org/\
-{ORG_ID}/site/"
-# * PUT
-ACCESS_LEVEL_DECOM = f"https://vcerberus.command.verkada.com/organizations/\
-{ORG_ID}/schedules"
+# DELETE, not POST (works with desk station, too)
+# INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
+# DELETE, not POST
+# GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/{site_id}?deviceId={device_id}"
+# DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
 
 
 ##############################################################################
-                                #  Misc  #
-##############################################################################
-
-
-class RateLimiter:
-    def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
-        """
-        Initilization of the rate limiter.
-
-        :param rate_limit: The value of how many threads may be made each sec.
-        :type rate_limit: int
-        :param max_events_per_sec: Maximum events allowed per second.
-        :type: int, optional
-        :param pacing: Sets the interval of the clock in seconds.
-        :type pacing: int, optional
-        :return: None
-        :rtype: None
-        """
-        self.rate_limit = rate_limit
-        self.lock = threading.Lock()  # Local lock to prevent race conditions
-        self.max_events_per_sec = max_events_per_sec
-        self.pacing = pacing
-
-    def acquire(self):
-        """
-        States whether or not the program may create new threads or not.
-
-        :return: Boolean value stating whether new threads may be made or not.
-        :rtype: bool
-        """
-        with self.lock:
-            current_time = time.time()  # Define current time
-
-            if not hasattr(self, 'start_time'):
-                # Check if attribue 'start_time' exists, if not, make it.
-                self.start_time = current_time
-                self.event_count = self.pacing
-                return True
-
-            # How much time has passed since starting
-            elapsed_time = current_time - self.start_time
-
-            # Check if it's been less than 1sec and less than 10 events have
-            # been made.
-            if elapsed_time < self.pacing / self.rate_limit \
-                    and self.event_count < self.max_events_per_sec:
-                self.event_count += 1
-                return True
-
-            # Check if it is the first wave of events
-            elif elapsed_time >= self.pacing / self.rate_limit:
-                self.start_time = current_time
-                self.event_count = 2
-                return True
-
-            else:
-                # Calculate the time left before next wave
-                remaining_time = self.pacing - \
-                    (current_time - self.start_time)
-                time.sleep(remaining_time)  # Wait before next wave
-                return True
-
-
-def run_thread_with_rate_limit(threads, rate_limit=2):
-    """
-    Run a thread with rate limiting.
-
-    :param threads: A list of threads that need to be clocked.
-    :type threads: list
-    :param rate_limit: The value of how many threads may be made each sec.
-    :type rate_limit: int
-    :return: The thread that was created and ran.
-    :rtype: thread
-    """
-    limiter = RateLimiter(
-        rate_limit=rate_limit,
-        max_events_per_sec=rate_limit
-    )
-
-    def run_thread(thread):
-        with threading.Lock():
-            limiter.acquire()
-
-            log.debug(
-                f"{Fore.LIGHTBLACK_EX}"
-                f"Starting thread "
-                f"{Fore.LIGHTYELLOW_EX}{thread.name}{Style.RESET_ALL} "
-                f"{Fore.LIGHTBLACK_EX}"
-                f"at time {datetime.now().strftime('%H:%M:%S')}"
-                f"{Style.RESET_ALL}"
-            )
-            thread.start()
-
-    for thread in threads:
-        run_thread(thread)
-
-    for thread in threads:
-        thread.join()
-
-
-##############################################################################
-                            #   Authentication   #
 ##############################################################################
 
 
@@ -287,7 +179,16 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 def deleteCameras(x_verkada_token, x_verkada_auth, usr):
     """
+    Deletes all cameras from a Verkada organization.
 
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    :param usr: The user ID of the authenticated user for a valid Verkada
+    Command session.
+    :type usr: str
     """
     headers = {
         "X-CSRF-Token": x_verkada_token,
@@ -357,7 +258,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
     session.
     :type x_verkada_auth: str
     :param usr: The user ID of the authenticated user for a valid Verkada
@@ -374,6 +275,13 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
     }
 
     def delete_sensor(device_dict):
+        """
+        Deletes a generic wireless alarm sensor from Verkada Command.
+
+        :param device_dict: A dictionary of all wireless devices that includes
+        their ID and the device type.
+        :type device_dict: dictionary
+        """
         """
         Deletes a generic wireless alarm sensor from Verkada Command.
 
@@ -434,7 +342,6 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         their ID and the device type.
         :type device_dict: dict
         """
-        processed_ids = set()
         for device_id in device_ids:
             if device_id not in processed_ids:
                 data = {
@@ -501,6 +408,17 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                     log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
 
     def convert_to_dict(array, deviceType):
+        """
+        Converts an array to a dictionary that containes the attribute
+        device type.
+
+        :param array: The array to convert.
+        :type array: list
+        :param deviceType: The value to be used for the device type attribute.
+        :type deviceType: str
+        :return: Returns a dictionary containing the attribute device type.
+        :rtype: dict
+        """
         """
         Converts an array to a dictionary that containes the attribute
         device type.
@@ -582,7 +500,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
 def deletePanels(x_verkada_token, x_verkada_auth, usr,
                  org_id=ORG_ID):
     """
-    Deletes all acces control panels from a Verkada organization.
+    Deletes all alarm panels from a Verkada organization.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
@@ -590,15 +508,6 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
     session.
     :type x_verkada_auth: str
     """
-    exempt = [
-        '1e4c5613-d9f0-4030-94b1-9daef6d0f84e',
-        '3d3295e6-30da-44eb-bc05-bfa47249afbd',
-        '43fa1fcd-17f0-4b95-9c24-ac8ff38131ed',
-        '90c971bd-2a15-4305-bc8c-710374a3d089',
-        'a41766d1-4cd7-4331-a7ed-c4e874a31147',
-        'ff4731b6-ae7c-4194-934c-b6a3770d1f7b'
-    ]
-
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
@@ -672,7 +581,7 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
     session.
     :type x_verkada_auth: str
     """
-    params = {
+    body = {
         "organizationId": org_id
     }
 
