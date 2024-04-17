@@ -43,6 +43,10 @@ ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
 # DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
 
 
+##############################################################################
+##############################################################################
+
+
 def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
     """
     Initiates a Command session with the given user credentials and Verkada
@@ -162,7 +166,16 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 def deleteCameras(x_verkada_token, x_verkada_auth, usr):
     """
+    Deletes all cameras from a Verkada organization.
 
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    :param usr: The user ID of the authenticated user for a valid Verkada
+    Command session.
+    :type usr: str
     """
     headers = {
         "X-CSRF-Token": x_verkada_token,
@@ -217,6 +230,18 @@ def deleteCameras(x_verkada_token, x_verkada_auth, usr):
 
 def deleteSensors(x_verkada_token, x_verkada_auth, usr,
                   org_id=ORG_ID):
+    """
+    Deletes all alarm devices from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    :param usr: The user ID of the authenticated user for a valid Verkada
+    Command session.
+    :type usr: str
+    """
     threads = []
 
     headers = {
@@ -226,6 +251,13 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
     }
 
     def delete_sensor(device_dict):
+        """
+        Deletes a generic wireless alarm sensor from Verkada Command.
+
+        :param device_dict: A dictionary of all wireless devices that includes
+        their ID and the device type.
+        :type device_dict: dictionary
+        """
         for device in device_dict:
             params = {
                 "deviceId": device.get("deviceId"),
@@ -266,6 +298,13 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
                 return None
 
     def delete_keypads(device_ids):
+        """
+        Deletes a generic wireless alarm sensor from Verkada Command.
+
+        :param device_dict: A dictionary of all wireless devices that includes
+        their ID and the device type.
+        :type device_dict: dict
+        """
         for device_id in device_ids:
             params = {
                 "deviceId": device_id,
@@ -304,6 +343,17 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
                 return None
 
     def convert_to_dict(array, deviceType):
+        """
+        Converts an array to a dictionary that containes the attribute
+        device type.
+
+        :param array: The array to convert.
+        :type array: list
+        :param deviceType: The value to be used for the device type attribute.
+        :type deviceType: str
+        :return: Returns a dictionary containing the attribute device type.
+        :rtype: dict
+        """
         device_dict = []
 
         for device in array:
@@ -367,6 +417,15 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
 # TODO: Add to gatherDevices.py
 def deletePanels(x_verkada_token, x_verkada_auth, usr,
                  org_id=ORG_ID):
+    """
+    Deletes all alarm panels from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    """
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
@@ -421,6 +480,15 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
 
 def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
                         org_id=ORG_ID):
+    """
+    Deletes all environmental sensors from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    """
     body = {
         "organizationId": org_id
     }
