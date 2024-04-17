@@ -213,9 +213,9 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-def list_cameras():
+def list_cameras(api_key, session):
     headers = {
-        'x-api-key': getenv("slc_key"),
+        'x-api-key': api_key,
         'Content-Type': 'application/json'
     }
 

@@ -18,6 +18,7 @@ load_dotenv()
 USERNAME = getenv("lab_username")
 PASSWORD = getenv("lab_password")
 ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
@@ -159,33 +160,29 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-def deleteCameras(x_verkada_token, x_verkada_auth, usr,
-                  org_id=ORG_ID):
+def deleteCameras(x_verkada_token, x_verkada_auth, usr):
     """
-    
-    """
-    body = {
-        "organizationId": org_id
-    }
 
+    """
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting cameras.")
-        cameras = gatherDevices.list_cameras(x_verkada_token, x_verkada_auth,
-                                             usr, org_id)
+        cameras = gatherDevices.list_cameras(API_KEY, session)
+
         if cameras:
             for camera in cameras:
-                params = {
-                    "deviceId": camera
+                body = {
+                    "cameraId": camera
                 }
+                print(camera)
                 response = session.post(
-                    CAMERA_DECOM, json=body, headers=headers, params=params)
+                    CAMERA_DECOM, headers=headers, json=body)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
             log.debug("Cameras deleted.")
@@ -204,7 +201,7 @@ def deleteCameras(x_verkada_token, x_verkada_auth, usr,
 
     except requests.exceptions.HTTPError:
         log.error(
-            f"Desk stations returned with a non-200 code: "
+            f"Delete camera returned with a non-200 code: "
             f"{response.status_code}"
         )
         return None
@@ -483,96 +480,36 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-# TODO: Adjust accordingly and find endpoint that lists intercoms.
-def deleteIntercom(x_verkada_token, x_verkada_auth, usr,
-                   org_id=ORG_ID):
-    body = {
-        "organizationId": org_id
-    }
-
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
-    }
-
-    try:
-        # Request the JSON archive library
-        log.debug("Requesting cameras.")
-        cameras = gatherDevices.list_cameras(x_verkada_token, x_verkada_auth,
-                                             usr, org_id)
-        if cameras:
-            for camera in cameras:
-                params = {
-                    "deviceId": camera['deviceId']
-                }
-
-                # TODO: Change to DELETE instead of POST
-                response = session.post(
-                    CAMERA_DECOM, json=body, headers=headers, params=params)
-                response.raise_for_status()  # Raise an exception for HTTP errors
-
-            log.debug("Cameras deleted.")
-
-        else:
-            log.warning("No cameras were received.")
-
-    # Handle exceptions
-    except requests.exceptions.Timeout:
-        log.error(f"Connection timed out.")
-        return None
-
-    except requests.exceptions.TooManyRedirects:
-        log.error(f"Too many redirects.\nAborting...")
-        return None
-
-    except requests.exceptions.HTTPError:
-        log.error(
-            f"Desk stations returned with a non-200 code: "
-            f"{response.status_code}"
-        )
-        return None
-
-    except requests.exceptions.ConnectionError:
-        log.error(f"Error connecting to the server.")
-        return None
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"Verkada API Error: {e}")
-        return None
-
-
 if __name__ == '__main__':
-    with requests.Session as session:
-        start_run_time = time.time()  # Start timing the script
-        with requests.Session() as session:
-            try:
-                # Initialize the user session.
-                csrf_token, user_token, user_id = login_and_get_tokens()
+    start_run_time = time.time()  # Start timing the script
+    with requests.Session() as session:
+        try:
+            # Initialize the user session.
+            csrf_token, user_token, user_id = login_and_get_tokens()
 
-                # Continue if the required information has been received
-                if csrf_token and user_token and user_id:
-                    pass
-                # Handles when the required credentials were not received
-                else:
-                    log.critical(
-                        f"No credentials were provided during "
-                        f"the authentication process or audit log "
-                        f"could not be retrieved."
-                    )
+            # Continue if the required information has been received
+            if csrf_token and user_token and user_id:
+                pass
+            # Handles when the required credentials were not received
+            else:
+                log.critical(
+                    f"No credentials were provided during "
+                    f"the authentication process or audit log "
+                    f"could not be retrieved."
+                )
 
-                # Calculate the time take to run and post it to the log
-                elapsed_time = time.time() - start_run_time
-                log.info("-------")
-                log.info(f"Total time to complete {elapsed_time:.2f}")
+            # Calculate the time take to run and post it to the log
+            elapsed_time = time.time() - start_run_time
+            log.info("-------")
+            log.info(f"Total time to complete {elapsed_time:.2f}")
 
-            # Gracefully handle an interrupt
-            except KeyboardInterrupt:
-                print(f"\nKeyboard interrupt detected. Logging out & aborting...")
+        # Gracefully handle an interrupt
+        except KeyboardInterrupt:
+            print(f"\nKeyboard interrupt detected. Logging out & aborting...")
 
-            finally:
-                if csrf_token and user_token:
-                    log.debug("Logging out.")
-                    logout(csrf_token, user_token)
-                session.close()
-                log.debug("Session closed.\nExiting...")
+        finally:
+            if csrf_token and user_token:
+                log.debug("Logging out.")
+                logout(csrf_token, user_token)
+            session.close()
+            log.debug("Session closed.\nExiting...")
