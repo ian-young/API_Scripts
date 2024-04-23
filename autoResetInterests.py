@@ -514,7 +514,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
     }
 
     params = {
-        "org_id": org_id,
+        "org_id": org_id
     }
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
