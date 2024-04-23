@@ -264,7 +264,7 @@ def list_cameras(api_key, session):
 
 
 # TODO: Need to troubleshoot. Only giving parent sites.
-def get_sites(x_verkada_token, x_verkada_auth, usr,
+def get_sites(x_verkada_token, x_verkada_auth, usr, session,
               org_id=ORG_ID):
     """
     Lists all Verkada Guest sites.
@@ -334,7 +334,7 @@ def get_sites(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def list_AC(x_verkada_token, x_verkada_auth, usr,
+def list_AC(x_verkada_token, x_verkada_auth, usr, session,
             org_id=ORG_ID):
     """
     Lists all access control devices.
@@ -408,7 +408,7 @@ def list_AC(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def list_Alarms(x_verkada_token, x_verkada_auth, usr,
+def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
                 org_id=ORG_ID):
     """
     Lists all alarm devices.
@@ -520,7 +520,7 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr,
+def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr, session,
                           org_id=ORG_ID):
     """
     Lists all viewing stations.
@@ -591,7 +591,7 @@ def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def list_Gateways(x_verkada_token, x_verkada_auth, usr,
+def list_Gateways(x_verkada_token, x_verkada_auth, usr, session,
                   org_id=ORG_ID):
     """
     Lists all cellular gateways.
@@ -665,7 +665,7 @@ def list_Gateways(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def list_Sensors(x_verkada_token, x_verkada_auth, usr,
+def list_Sensors(x_verkada_token, x_verkada_auth, usr, session,
                  org_id=ORG_ID):
     """
     Lists all environmental sensors.
@@ -736,7 +736,7 @@ def list_Sensors(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def list_Horns(x_verkada_token, x_verkada_auth, usr,
+def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
                org_id=ORG_ID):
     """
     Lists all BZ horn speakers.
@@ -811,7 +811,7 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
-def list_DeskStaions(x_verkada_token, x_verkada_auth, usr,
+def list_DeskStaions(x_verkada_token, x_verkada_auth, usr, session,
                      org_id=ORG_ID):
     """
     Lists all intercom-related devices (TD and desk station).
