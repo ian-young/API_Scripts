@@ -342,6 +342,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         their ID and the device type.
         :type device_dict: dict
         """
+        processed_ids = set()
         for device_id in device_ids:
             if device_id not in processed_ids:
                 data = {
@@ -668,7 +669,7 @@ if __name__ == '__main__':
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
-                pass
+                deleteSensors(csrf_token, user_token, user_id, session)
             # Handles when the required credentials were not received
             else:
                 log.critical(
