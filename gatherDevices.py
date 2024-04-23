@@ -264,7 +264,8 @@ def list_cameras(api_key, session):
         return None
 
 
-def get_Sites(x_verkada_token, x_verkada_auth, usr, session,
+# TODO: Need to troubleshoot. Only giving parent sites.
+def get_sites(x_verkada_token, x_verkada_auth, usr, session,
               org_id=ORG_ID):
     """
     Lists all Verkada Guest sites.
@@ -332,6 +333,7 @@ def get_Sites(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
+def list_AC(x_verkada_token, x_verkada_auth, usr, session,
 def list_AC(x_verkada_token, x_verkada_auth, usr, session,
             org_id=ORG_ID):
     """
@@ -408,6 +410,7 @@ def list_AC(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
+def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
 def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
                 org_id=ORG_ID):
     """
@@ -529,6 +532,7 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
 
 
 def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr, session,
+def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr, session,
                           org_id=ORG_ID):
     """
     Lists all viewing stations.
@@ -600,6 +604,7 @@ def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
+def list_Gateways(x_verkada_token, x_verkada_auth, usr, session,
 def list_Gateways(x_verkada_token, x_verkada_auth, usr, session,
                   org_id=ORG_ID):
     """
@@ -675,6 +680,7 @@ def list_Gateways(x_verkada_token, x_verkada_auth, usr, session,
 
 
 def list_Sensors(x_verkada_token, x_verkada_auth, usr, session,
+def list_Sensors(x_verkada_token, x_verkada_auth, usr, session,
                  org_id=ORG_ID):
     """
     Lists all environmental sensors.
@@ -745,6 +751,7 @@ def list_Sensors(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
+def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
 def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
                org_id=ORG_ID):
     """
@@ -820,8 +827,8 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_Desk_Stations(x_verkada_token, usr, session,
-                    org_id=ORG_ID):
+def list_DeskStaions(x_verkada_token, x_verkada_auth, usr, session,
+                     org_id=ORG_ID):
     """
     Lists all desk stations.
 
