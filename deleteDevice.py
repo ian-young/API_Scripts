@@ -228,7 +228,7 @@ def deleteCameras(x_verkada_token, x_verkada_auth, usr):
         return None
 
 
-def deleteSensors(x_verkada_token, x_verkada_auth, usr,
+def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                   org_id=ORG_ID):
     """
     Deletes all alarm devices from a Verkada organization.
@@ -266,7 +266,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
             }
             try:
                 response = session.post(
-                    ASENSORS_DECOM, headers=headers, params=params)
+                   ASENSORS_DECOM, headers=headers, params=params)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
                 log.debug(f"Deleted wireless sensor: {
@@ -305,42 +305,45 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
         their ID and the device type.
         :type device_dict: dict
         """
+        processed_ids = set()
         for device_id in device_ids:
-            params = {
-                "deviceId": device_id,
-                "organizationId": org_id
-            }
+            if device_id not in processed_ids:
+                params = {
+                    "deviceId": device_id,
+                    "organizationId": org_id
+                }
 
-            try:
-                response = session.post(
-                    AKEYPADS_DECOM, headers=headers, params=params)
-                response.raise_for_status()  # Raise an exception for HTTP errors
+                try:
+                    response = session.post(
+                        AKEYPADS_DECOM, headers=headers, params=params)
+                    response.raise_for_status()  # Raise an exception for HTTP errors
+                    
+                    processed_ids.add(device_id)
+                    log.debug(f"Keypad deleted: {device_id}")
 
-                log.debug("Keypad deleted.")
+                # Handle exceptions
+                except requests.exceptions.Timeout:
+                    log.error(f"Connection timed out.")
+                    return None
 
-            # Handle exceptions
-            except requests.exceptions.Timeout:
-                log.error(f"Connection timed out.")
-                return None
+                except requests.exceptions.TooManyRedirects:
+                    log.error(f"Too many redirects.\nAborting...")
+                    return None
 
-            except requests.exceptions.TooManyRedirects:
-                log.error(f"Too many redirects.\nAborting...")
-                return None
+                except requests.exceptions.HTTPError:
+                    log.error(
+                        f"Alarm keypad returned with a non-200 code: "
+                        f"{response.status_code}"
+                    )
+                    return None
 
-            except requests.exceptions.HTTPError:
-                log.error(
-                    f"Alarm keypad returned with a non-200 code: "
-                    f"{response.status_code}"
-                )
-                return None
+                except requests.exceptions.ConnectionError:
+                    log.error(f"Error connecting to the server.")
+                    return None
 
-            except requests.exceptions.ConnectionError:
-                log.error(f"Error connecting to the server.")
-                return None
-
-            except requests.exceptions.RequestException as e:
-                log.error(f"Verkada API Error: {e}")
-                return None
+                except requests.exceptions.RequestException as e:
+                    log.error(f"Verkada API Error: {e}")
+                    return None
 
     def convert_to_dict(array, deviceType):
         """
@@ -356,6 +359,9 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
         """
         device_dict = []
 
+        if isinstance(array, str):
+            array = [array]  # Force the input to be an array
+
         for device in array:
             device_dict_value = {
                 "deviceId": device,
@@ -368,35 +374,35 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr,
     # Request all alarm sensors
     log.debug("Requesting alarm sensors.")
     dcs, gbs, hub, ms, pb, ws, wr = gatherDevices.list_Alarms(
-        x_verkada_token, x_verkada_auth, usr, org_id)
+        x_verkada_token, x_verkada_auth, usr, session, org_id)
 
     # Check if it is empty, if so, skip. If not, turn it into a dictionary.
     if dcs:
         door_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(dcs, "doorContactSensor")))
+            convert_to_dict(dcs, "doorContactSensor"),))
         threads.append(door_thread)
     if gbs:
         glass_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(gbs, "glassBreakSensor")))
+            convert_to_dict(gbs, "glassBreakSensor"),))
         threads.append(glass_thread)
     if hub:
-        keypad_thread = threading.Thread(target=delete_keypads, args=(hub))
+        keypad_thread = threading.Thread(target=delete_keypads, args=(hub,))
         threads.append(keypad_thread)
     if ms:
         motion_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(ms, "motionSensor")))
+            convert_to_dict(ms, "motionSensor"),))
         threads.append(motion_thread)
     if pb:
         panic_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(pb, "panicButton")))
+            convert_to_dict(pb, "panicButton"),))
         threads.append(panic_thread)
     if ws:
         water_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(ws, "waterSensor")))
+            convert_to_dict(ws, "waterSensor"),))
         threads.append(water_thread)
     if wr:
         relay_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(wr, "wirelessRelay")))
+            convert_to_dict(wr, "wirelessRelay"),))
         threads.append(relay_thread)
 
     # Check if there are threads waiting to be ran.
@@ -557,7 +563,7 @@ if __name__ == '__main__':
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
-                pass
+                deleteSensors(csrf_token, user_token, user_id, session)
             # Handles when the required credentials were not received
             else:
                 log.critical(
