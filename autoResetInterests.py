@@ -17,7 +17,7 @@ BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s: %(message)s"
@@ -473,9 +473,8 @@ def runPeople():
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
 
-        if PERSISTENT_PID:
-            for person in PERSISTENT_PID:
-                safe_person_ids.append(person)
+        for person in PERSISTENT_PID:
+            safe_person_ids.append(person)
         log.info("Safe persons found.")
 
         # New list that filters persons that are safe
@@ -523,7 +522,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
     }
 
     params = {
-        "org_id": org_id,
+        "org_id": org_id
     }
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
