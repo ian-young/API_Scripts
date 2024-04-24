@@ -20,10 +20,10 @@ logging.basicConfig(
 
 load_dotenv()
 
-USERNAME = getenv("lab_username")
-PASSWORD = getenv("lab_password")
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+USERNAME = getenv("slc_username")
+PASSWORD = getenv("slc_password")
+ORG_ID = getenv("slc_id")
+API_KEY = getenv("slc_key")
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
@@ -304,7 +304,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
             print(data)
             try:
                 response = session.post(
-                   ASENSORS_DECOM, headers=headers, json=data)
+                    ASENSORS_DECOM, headers=headers, json=data)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
                 log.debug(
@@ -505,10 +505,11 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         )
 
 
+# TODO: Build out for access control
 def deletePanels(x_verkada_token, x_verkada_auth, usr,
                  org_id=ORG_ID):
     """
-    Deletes all alarm panels from a Verkada organization.
+    Deletes all acces control panels from a Verkada organization.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
@@ -524,9 +525,11 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
 
     try:
         # Request the JSON archive library
-        log.debug("Requesting Access control panels.")
+        log.debug("Requesting Alarm panels.")
         panels = gatherDevices.list_AC(x_verkada_token, x_verkada_auth,
-                                       usr, session, org_id)
+                                       session, usr, org_id)
+        
+        #? Do doors need to be deleted before the panels ?#
         if panels:
             for panel in panels:
                 if panel not in exempt:
@@ -589,7 +592,7 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
     session.
     :type x_verkada_auth: str
     """
-    body = {
+    params = {
         "organizationId": org_id
     }
 
@@ -676,7 +679,7 @@ if __name__ == '__main__':
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
-                deleteSensors(csrf_token, user_token, user_id, session)
+                deleteEnvironmental(csrf_token, user_token, user_id)
             # Handles when the required credentials were not received
             else:
                 log.critical(
