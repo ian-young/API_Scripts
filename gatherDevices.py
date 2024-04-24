@@ -452,46 +452,29 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
 
         alarm_devices = response.json()
 
-        # print("-------")
-        # print("Door contacts:")
         for dcs in alarm_devices['doorContactSensor']:
             dcs_ids.append(dcs['deviceId'])
-            # print(dcs['deviceId'])
-        # print("-------")
-        # print("Glass break:")
+
         for gbs in alarm_devices['glassBreakSensor']:
             gbs_ids.append(gbs['deviceId'])
-            # print(gbs['deviceId'])
-        # print("-------")
-        # print("Hub devices:")
+
         for hub in alarm_devices['hubDevice']:
             hub_ids.append(hub['deviceId'])
-            # print(hub['deviceId'])
-        # print("-------")
-        # print("Keypads:")
+
         for keypad in alarm_devices['keypadHub']:
             hub_ids.append(keypad['deviceId'])
-            # print(keypad['deviceId'])
-        # print("-------")
-        # print("Motion sensors:")
+
         for ms in alarm_devices['motionSensor']:
             ms_ids.append(ms['deviceId'])
-            # print(ms['deviceId'])
-        # print("-------")
-        # print("Panic buttons:")
+
         for pb in alarm_devices['panicButton']:
             pb_ids.append(pb['deviceId'])
-            # print(pb['deviceId'])
-        # print("-------")
-        # print("Water sensors:")
+
         for ws in alarm_devices['waterSensor']:
             ws_ids.append(ws['deviceId'])
-            # print(ws['deviceId'])
-        # print("-------")
-        # print("Wireless Relays:")
+
         for wr in alarm_devices['wirelessRelay']:
             wr_ids.append(wr['deviceId'])
-            # print(wr['deviceId'])
 
         return dcs_ids, gbs_ids, hub_ids, ms_ids, pb_ids, ws_ids, wr_ids
 
