@@ -140,11 +140,18 @@ c58609d4feca744209047e57&ipo=images'
         thread_poi.start()
         threads.append(thread_poi)
 
+<<<<<<< HEAD
         thread_lpoi = threading.Thread(
             target=createPlate, args=(plate_name, plate)
         )
         thread_lpoi.start()
         threads.append(thread_lpoi)
+=======
+        # thread_lpoi = threading.Thread(
+        #    target=createPlate, args=(plate_name, plate)
+        #)
+        #threads.append(thread_lpoi)
+>>>>>>> e8a6a9d (Device Deletion Addition (#16))
 
     for thread in threads:
         thread.join()
