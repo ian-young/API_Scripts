@@ -7,11 +7,27 @@ from PIL import Image
 import subprocess
 import datetime
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
 STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
-API_KEY = "vkd_api_70d7270bf6ea486d808a85cefb6a909e"
-ORG_ID = "cbe2df58-36fd-46f3-9148-e300bbee8489"
+
+API_KEY = os.getenv("slc_stream_key")
+ORG_ID = os.getenv("slc_id")
+CAMERA = ""  # Can be a list or single String
+
+log = logging.getLogger()
+log.setLevel(logging.WARNING)
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(levelname)s: %(message)s"
+)
+
+# Mute non-essential logging from requests library
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 def getToken(org_id=ORG_ID, api_key=API_KEY):
