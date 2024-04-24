@@ -272,6 +272,8 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         "X-Verkada-Auth": x_verkada_auth,
         "User": usr,
         "Content-Type": "application/json"
+        "User": usr,
+        "Content-Type": "application/json"
     }
 
     def delete_sensor(device_dict):
@@ -291,14 +293,18 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         """
         for device in device_dict:
             data = {
+            data = {
                 "deviceId": device.get("deviceId"),
+                "deviceType": device.get("deviceType"),
+                "organizationId": org_id
                 "deviceType": device.get("deviceType"),
                 "organizationId": org_id
             }
 
+            print(data)
             try:
                 response = session.post(
-                    ASENSORS_DECOM, headers=headers, json=data)
+                   ASENSORS_DECOM, headers=headers, json=data)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
                 log.debug(
@@ -346,6 +352,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         for device_id in device_ids:
             if device_id not in processed_ids:
                 data = {
+                data = {
                     "deviceId": device_id,
                     "organizationId": org_id
                 }
@@ -353,7 +360,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                 try:
                     log.debug(f"Running for {device_id}")
                     response = session.post(
-                        APANEL_DECOM, headers=headers, json=data)
+                        AKEYPADS_DECOM, headers=headers, json=data)
                     response.raise_for_status()  # Raise an exception for HTTP errors
 
                     processed_ids.add(device_id)
