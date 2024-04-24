@@ -14,8 +14,8 @@ load_dotenv()
 
 TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
 STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
-API_KEY = getenv("lab_key")
-ORG_ID = getenv("lab_id")
+API_KEY = getenv("")
+ORG_ID = getenv("")
 CAMERA = ""  # Can be a list or single String
 
 log = logging.getLogger()
