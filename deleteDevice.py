@@ -247,7 +247,8 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
+        "Content-Type": "application/json"
     }
 
     def delete_sensor(device_dict):
@@ -259,14 +260,16 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         :type device_dict: dictionary
         """
         for device in device_dict:
-            params = {
+            data = {
                 "deviceId": device.get("deviceId"),
-                "organizationId": org_id,
-                "deviceType": device.get("deviceType")
+                "deviceType": device.get("deviceType"),
+                "organizationId": org_id
             }
+
+            print(data)
             try:
                 response = session.post(
-                   ASENSORS_DECOM, headers=headers, params=params)
+                   ASENSORS_DECOM, headers=headers, json=data)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
                 log.debug(f"Deleted wireless sensor: {
@@ -308,14 +311,14 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         processed_ids = set()
         for device_id in device_ids:
             if device_id not in processed_ids:
-                params = {
+                data = {
                     "deviceId": device_id,
                     "organizationId": org_id
                 }
 
                 try:
                     response = session.post(
-                        AKEYPADS_DECOM, headers=headers, params=params)
+                        AKEYPADS_DECOM, headers=headers, json=data)
                     response.raise_for_status()  # Raise an exception for HTTP errors
                     
                     processed_ids.add(device_id)
