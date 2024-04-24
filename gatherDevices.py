@@ -456,49 +456,41 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
         alarm_devices = response.json()
         print(alarm_devices)
 
-        log.debug("-------")
         for dcs in alarm_devices['doorContactSensor']:
             log.debug(f"Retrieved door contact sensor {dcs['name']}: \
 {dcs['deviceId']}")
             dcs_ids.append(dcs['deviceId'])
 
-        log.debug("-------")
         for gbs in alarm_devices['glassBreakSensor']:
             log.debug(f"Retrieved glass break sensor {gbs['name']}: \
 {gbs['deviceId']}")
             gbs_ids.append(gbs['deviceId'])
 
-        log.debug("-------")
         for hub in alarm_devices['hubDevice']:
             log.debug(f"Retrieved hub device {hub['name']}: \
 {hub['deviceId']}")
             hub_ids.append(hub['deviceId'])
 
-        log.debug("-------")
         for keypad in alarm_devices['keypadHub']:
             log.debug(f"Retrieved keypad device {keypad['name']}: \
 {keypad['deviceId']}")
             hub_ids.append(keypad['deviceId'])
 
-        log.debug("-------")
         for ms in alarm_devices['motionSensor']:
             log.debug(f"Retrieved motion sensor {ms['name']}: \
 {ms['deviceId']}")
             ms_ids.append(ms['deviceId'])
 
-        log.debug("-------")
         for pb in alarm_devices['panicButton']:
             log.debug(f"Retrieved panic button {pb['name']}: \
 {pb['deviceId']}")
             pb_ids.append(pb['deviceId'])
 
-        log.debug("-------")
         for ws in alarm_devices['waterSensor']:
             log.debug(f"Retrieved water leak sensor {ws['name']}: \
 {ws['deviceId']}")
             ws_ids.append(ws['deviceId'])
 
-        log.debug("-------")
         for wr in alarm_devices['wirelessRelay']:
             log.debug(f"Retrieved wireless relay {wr['name']}: \
 {wr['deviceId']}")
