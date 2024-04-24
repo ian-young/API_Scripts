@@ -9,20 +9,16 @@ import base64
 import colorama
 from colorama import Fore, Style
 import threading
-import shutil
-import time
 import logging
 import re
+import shutil
+import time
 from datetime import datetime, timedelta
 from os import getenv
 from dotenv import load_dotenv
 
 # Set log file path
-log_file_path = "/Users/ian.young/Documents/.scripts/Python/API_Scripts/endpoint_data.log"
-import re
-
-# Set log file path
-log_file_path = "/Users/ian.young/Documents/.scripts/Python/API_Scripts/endpoint_data.log"
+log_file_path = "endpoint_data.log"
 
 # Set logger
 log = logging.getLogger()
@@ -1029,11 +1025,11 @@ def getAudit():
     }
 
     for _ in range(MAX_RETRIES):
-        response = requests.get(URL_AUDIT, headers=GENERAL_HEADER,
-                                params=params)
+        response = requests.get(
+            URL_AUDIT, headers=GENERAL_HEADER, params=params)
 
         if response.status_code == 429:
-            log.info(f"getAuditLogs retrying in {RETRY_DELAY}s.\
+            log.info(f"getAudit retrying in {RETRY_DELAY}s.\
  Response: 429")
 
             with RETRY_COUNT_LOCK:
@@ -1044,7 +1040,7 @@ def getAudit():
         else:
             break
 
-    log.info(f"getAuditLogs response received: {response.status_code}")
+        log.info(f"getAuditLogs response received: {response.status_code}")
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -1475,5 +1471,6 @@ if __name__ == '__main__':
     passed = 24 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
         FAILED_ENDPOINTS), FAILED_ENDPOINTS)
+
     if GPIO:
         GPIO.cleanup()

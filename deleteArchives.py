@@ -5,14 +5,14 @@
 # once made.
 
 # Import essential libraries
-from re import search
 import requests
 import logging
 import threading
 import time
-import creds  # File with credentials
 import pytz
 import colorama
+import creds  # File with credentials
+import avlTree  # File to work with trees
 from datetime import datetime, timedelta
 from tzlocal import get_localzone
 from colorama import Fore, Style
