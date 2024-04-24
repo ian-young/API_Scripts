@@ -20,23 +20,25 @@ logging.basicConfig(
 
 load_dotenv()
 
-USERNAME = getenv("slc_username")
-PASSWORD = getenv("slc_password")
-ORG_ID = getenv("slc_id")
-API_KEY = getenv("slc_key")
+USERNAME = getenv()
+PASSWORD = getenv()
+ORG_ID = getenv()
+API_KEY = getenv()
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
 SHARD = "?sharding=true"
 
+
 # Set final, global URLs
-# * POST
-ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
-AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/decommission"
-APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
-ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
+LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
+LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 CAMERA_DECOM = "https://vprovision.command.verkada.com/camera/decommission"
+AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/decommission"
+ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
+APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
 ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
+ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
 # DELETE, not POST (works with desk station, too)
 # INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
 # DELETE, not POST
@@ -45,6 +47,7 @@ ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
 
 
 ##############################################################################
+                            #   Authentication   #
 ##############################################################################
 
 
@@ -174,6 +177,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 ##############################################################################
+                            #   Requests   #
 ##############################################################################
 
 
@@ -498,14 +502,9 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         log.info(f"{Fore.GREEN}Alarm sensors deleted.{Style.RESET_ALL}")
 
     else:
-        log.warning(
-            f"{Fore.MAGENTA}"
-            f"No alarm sensors were received."
-            f"{Style.RESET_ALL}"
-        )
+        log.warning("No alarm sensors were received.")
 
 
-# TODO: Build out for access control
 def deletePanels(x_verkada_token, x_verkada_auth, usr,
                  org_id=ORG_ID):
     """
@@ -517,6 +516,14 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
     session.
     :type x_verkada_auth: str
     """
+    exempt = [
+        '1e4c5613-d9f0-4030-94b1-9daef6d0f84e',
+        '3d3295e6-30da-44eb-bc05-bfa47249afbd',
+        '43fa1fcd-17f0-4b95-9c24-ac8ff38131ed',
+        '90c971bd-2a15-4305-bc8c-710374a3d089',
+        'a41766d1-4cd7-4331-a7ed-c4e874a31147',
+        'ff4731b6-ae7c-4194-934c-b6a3770d1f7b'
+    ]
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
@@ -525,13 +532,17 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
 
     try:
         # Request the JSON archive library
-        log.debug("Requesting Alarm panels.")
+        log.debug("Requesting Access control panels.")
         panels = gatherDevices.list_AC(x_verkada_token, x_verkada_auth,
-                                       session, usr, org_id)
-        
-        #? Do doors need to be deleted before the panels ?#
+                                       usr, session, org_id)
         if panels:
             for panel in panels:
+                if panel not in exempt:
+                    log.debug(f"Running for access control panel: {panel}")
+
+                    data = {
+                        "deviceId": panel
+                    }
                 if panel not in exempt:
                     log.debug(f"Running for access control panel: {panel}")
 
@@ -542,14 +553,14 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
                     response = session.post(
                         ACCESS_DECOM, headers=headers, json=data)
                     response.raise_for_status()  # Raise an exception for HTTP errors
+                    response = session.post(
+                        ACCESS_DECOM, headers=headers, json=data)
+                    response.raise_for_status()  # Raise an exception for HTTP errors
 
-            log.info(
-                f"{Fore.GREEN}"
-                f"Access control panels deleted."
-                f"{Style.RESET_ALL}")
+            log.debug("Access control panels deleted.")
 
         else:
-            log.warning("No Alarm panels were received.")
+            log.warning("No Access control panels were received.")
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -564,7 +575,7 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
 
     except requests.exceptions.HTTPError:
         log.error(
-            f"Alarm panels returned with a non-200 code: "
+            f"Access control panels returned with a non-200 code: "
             f"{response.status_code}"
         )
         return None
@@ -679,7 +690,33 @@ if __name__ == '__main__':
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
-                deleteEnvironmental(csrf_token, user_token, user_id)
+                # Place each element in their own thread to speed up runtime
+                camera_thread = threading.Thread(
+                    target=deleteCameras, args=(
+                        csrf_token, user_token, user_id,))
+
+                alarm_thread = threading.Thread(target=deleteSensors, args=(
+                    csrf_token, user_token, user_id, session,))
+
+                ac_thread = threading.Thread(
+                    target=deletePanels, args=(
+                        csrf_token, user_token, user_id,))
+
+                sv_thread = threading.Thread(
+                    target=deleteEnvironmental, args=(
+                        csrf_token, user_token, user_id,))
+
+                # List all the threads to be ran
+                threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
+
+                # Start the threads
+                for thread in threads:
+                    thread.start()
+
+                # Join the threads as they finish
+                for thread in threads:
+                    thread.join()
+
             # Handles when the required credentials were not received
             else:
                 log.critical(
