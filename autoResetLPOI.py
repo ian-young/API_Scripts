@@ -3,14 +3,10 @@
 # These names will be "persistent plates" which are to remain in Command.
 # Any plate not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+import creds, logging, requests, threading, time
 
-load_dotenv()
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -31,29 +27,13 @@ analytics/lpr/license_plate_of_interest"
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted plates in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of license plates in an organization.
-    :rtype: list
-    """
+    """Returns JSON-formatted plates in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -79,16 +59,7 @@ Status code {response.status_code}")
 
 
 def getIds(plates=None):
-    """
-    Returns an array of all LPoI labels in an organization.
-    
-    :param plates: A list of dictionaries representing LPoIs in an
-organization. Each dictionary should have 'license_plate' key. 
-Defaults to None.
-    :type plates: list, optional
-    :return: A list of IDs of the LPoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     plate_id = []
 
     for plate in plates:
@@ -102,17 +73,7 @@ Defaults to None.
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-    """
-    Returns the Verkada ID for a given LPoI.
-    
-    :param plate: The label of a LPoI whose ID is being searched for.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-Each dictionary should have the 'license_plate' key. Defaults to None.
-    :type plates: list, optional
-    :return: The plate ID of the given LPoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given PoI"""
     plate_id = None  # Pre-define
 
     for name in plates:
@@ -128,20 +89,7 @@ Each dictionary should have the 'license_plate' key. Defaults to None.
 
 
 def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given plate from the organization.
-
-    :param plate: The plate to be deleted.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    """Deletes the given person"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -163,20 +111,7 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
 
 
 def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all LPoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of LPoIs to be deleted from the organization.
-    :type delete: list
-    :param plates: A list of LPoIs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
+    """Purges all PoIs that aren't marked as safe/persistent"""
     global CALL_COUNT
     
     if not delete:
@@ -212,18 +147,7 @@ def purge(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
 
 def printName(to_delete, plates):
-    """
-    Returns the description of a LPoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     plate_name = None  # Pre-define
 
     for plate in plates:
@@ -240,12 +164,7 @@ plate {to_delete} was not found in the database...")
 
 
 def run():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     log.info("Retrieving plates")
     plates = getPlates()
     log.info("plates retrieved.\n")

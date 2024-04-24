@@ -11,21 +11,18 @@ import threading
 import time
 import pytz
 import colorama
+import creds  # File with credentials
 import avlTree  # File to work with trees
 from datetime import datetime, timedelta
-from os import getenv
 from tzlocal import get_localzone
 from colorama import Fore, Style
-from dotenv import load_dotenv
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
-load_dotenv()
-
 # Set final, global credential variables
-USERNAME = getenv("lab_username")
-PASSWORD = getenv("lab_password")
-ORG_ID = getenv("lab_id")
+USERNAME = creds.lab_username
+PASSWORD = creds.lab_password
+ORG_ID = creds.lab_id
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -36,8 +33,9 @@ LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 # Set up the logger
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
+log.setLevel(logging.DEBUG)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
     format="%(levelname)s: %(message)s"
 )
 
@@ -96,6 +94,7 @@ def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
 
     try:
         # Request the user session
+        # Request the user session
         log.debug("Requesting session.")
         response = session.post(LOGIN_URL, json=login_data)
         response.raise_for_status()
@@ -114,9 +113,14 @@ def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
     # Handle exceptions
     except requests.exceptions.Timeout:
         log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
+        log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
         return None, None, None
 
     except requests.exceptions.TooManyRedirects:
+        log.error(
+            f"{Fore.RED}Too many redirects. "
+            f"Aborting...{Style.RESET_ALL}"
+        )
         log.error(
             f"{Fore.RED}Too many redirects. "
             f"Aborting...{Style.RESET_ALL}"
@@ -128,6 +132,10 @@ def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
             f"{Fore.RED}Returned with a non-200 code: {Style.RESET_ALL}"
             f"{response.status_code}"
         )
+        log.error(
+            f"{Fore.RED}Returned with a non-200 code: {Style.RESET_ALL}"
+            f"{response.status_code}"
+        )
         return None, None, None
 
     except requests.exceptions.ConnectionError:
@@ -135,9 +143,14 @@ def login_and_get_tokens(username=USERNAME, password=PASSWORD, org_id=ORG_ID):
             f"{Fore.RED}Error connecting to the server."
             f"{Style.RESET_ALL}"
         )
+        log.error(
+            f"{Fore.RED}Error connecting to the server."
+            f"{Style.RESET_ALL}"
+        )
         return None, None, None
 
     except requests.exceptions.RequestException as e:
+        log.error(f"{Fore.RED}Verkada API Error: {e}{Style.RESET_ALL}")
         log.error(f"{Fore.RED}Verkada API Error: {e}{Style.RESET_ALL}")
         return None, None, None
 
@@ -212,6 +225,7 @@ def read_verkada_camera_archives(x_verkada_token, x_verkada_auth, usr,
 
     try:
         # Request the JSON archive library
+        # Request the JSON archive library
         log.debug("Requesting archives.")
         response = session.post(ARCHIVE_URL, json=body, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
@@ -222,14 +236,21 @@ def read_verkada_camera_archives(x_verkada_token, x_verkada_auth, usr,
     # Handle exceptions
     except requests.exceptions.Timeout:
         log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
+        log.error(f"{Fore.RED}Connection timed out.{Style.RESET_ALL}")
         return None
 
     except requests.exceptions.TooManyRedirects:
         log.error(f"{Fore.RED}Too many redirects.\n"
                   f"Aborting...{Style.RESET_ALL}")
+        log.error(f"{Fore.RED}Too many redirects.\n"
+                  f"Aborting...{Style.RESET_ALL}")
         return None
 
     except requests.exceptions.HTTPError:
+        log.error(
+            f"{Fore.RED}Returned with a non-200 code: "
+            f"{Style.RESET_ALL}{response.status_code}"
+        )
         log.error(
             f"{Fore.RED}Returned with a non-200 code: "
             f"{Style.RESET_ALL}{response.status_code}"
@@ -241,9 +262,14 @@ def read_verkada_camera_archives(x_verkada_token, x_verkada_auth, usr,
             f"{Fore.RED}Error connecting to the server."
             f"{Style.RESET_ALL}"
         )
+        log.error(
+            f"{Fore.RED}Error connecting to the server."
+            f"{Style.RESET_ALL}"
+        )
         return None
 
     except requests.exceptions.RequestException as e:
+        log.error(f"{Fore.RED}Verkada API Error: {e}{Style.RESET_ALL}")
         log.error(f"{Fore.RED}Verkada API Error: {e}{Style.RESET_ALL}")
         return None
 
@@ -373,6 +399,7 @@ def check_archive_timestamp(archive_library, x_verkada_token, x_verkada_auth,
 
 def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
                                    usr, archive_library, age_limit=AGE_LIMIT):
+                                   usr, archive_library, age_limit=AGE_LIMIT):
     """
     Will iterate through all Verkada archives visible to a given user and
     delete them permanently.
@@ -384,6 +411,12 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
     :type x_verkada_auth: str
     :param usr: The user ID for a valid user in the Verkad organization.
     :type usr: str
+    :param archive_library: The JSON formatted list of all visible archives in
+    a Verkada organization.
+    :type archive_library: list
+    :param age_limit: The age limit set in days for the oldest archive to be
+    kept if it is not found in the persistent list.
+    :type age_limit: int
     :param archive_library: The JSON formatted list of all visible archives in
     a Verkada organization.
     :type archive_library: list
@@ -405,6 +438,10 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
         log.debug("Testing if archive library variable is iterable.")
         iter(archive_library)
     except (TypeError, AttributeError):
+        log.error(
+            f"{Fore.RED}Error: Archives is not iterable or is None."
+            f"{Style.RESET_ALL}"
+        )
         log.error(
             f"{Fore.RED}Error: Archives is not iterable or is None."
             f"{Style.RESET_ALL}"
@@ -467,6 +504,20 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
                     f"back to main."
                 )
                 thread.join()
+
+        except threading.ThreadError as te:
+            log.error(
+                f"{Fore.RED}A thread error occured. {te}{Style.RESET_ALL}")
+        except RuntimeWarning as re:
+            log.error(
+                f"{Fore.RED}An error occured during the runtime. {re}"
+                f"{Style.RESET_ALL}"
+            )
+        except Exception as e:
+            log.error(
+                f"{Fore.RED}An unexpected error occured. {e}"
+                f"{Style.RESET_ALL}"
+            )
 
         except threading.ThreadError as te:
             log.error(
@@ -565,14 +616,24 @@ def remove_verkada_camera_archive(video_export_id, x_verkada_token,
 
 # Check if the script is being imported or ran directly
 if __name__ == "__main__":
-    with requests.Session() as session:
+    try:
         start_time = time.time()  # Start timing the script
-        try:
-            # Initialize the user session.
+
+        # Initialize the user session.
+        with requests.Session() as session:
             csrf_token, user_token, user_id = login_and_get_tokens()
 
             # Continue if the required information has been received
+            # Continue if the required information has been received
             if csrf_token and user_token and user_id:
+                log.debug("Retrieving archive library.")
+                archives = read_verkada_camera_archives(
+                    csrf_token, user_token, user_id, ORG_ID)
+                log.debug(
+                    f"{Fore.GREEN}Archive library retrieved."
+                    f"{Style.RESET_ALL}"
+                )
+
                 log.debug("Retrieving archive library.")
                 archives = read_verkada_camera_archives(
                     csrf_token, user_token, user_id, ORG_ID)
@@ -596,15 +657,13 @@ if __name__ == "__main__":
                     f"the authentication process.{Style.RESET_ALL}"
                 )
 
-            # Calculate the time take to run and post it to the log
-            elapsed_time = time.time() - start_time
-            log.info(f"Total time to complete {elapsed_time:.2f}")
+        # Calculate the time take to run and post it to the log
+        elapsed_time = time.time() - start_time
+        log.info(f"Total time to complete {elapsed_time:.2f}")
 
-            session.close()
-
-        # Gracefully handle an interrupt
-        except KeyboardInterrupt:
-            print(f"\nKeyboard interrupt detected. Aborting...")
+    # Gracefully handle an interrupt
+    except KeyboardInterrupt:
+        print(f"\nKeyboard interrupt detected. Aborting...")
 
         finally:
             session.close()

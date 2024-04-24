@@ -1,21 +1,21 @@
 # Author: Ian Young
-# Purpose: Print two thumbnails from given camera(s) in the terminal. The
-# thumbnails are pulled from the live footage and from a targeted time.
+# Comment out the constant API Key and Org ID and uncomment the inputs in the main method
+# to allow for manual input. You will need to install timg in order to print in terminal.
 
 import requests
 from PIL import Image
 import subprocess
 import datetime
-import logging
-from os import getenv
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
 STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
-API_KEY = getenv("slc_stream_key")
-ORG_ID = getenv("slc_id")
+
+API_KEY = os.getenv("slc_stream_key")
+ORG_ID = os.getenv("slc_id")
 CAMERA = ""  # Can be a list or single String
 
 log = logging.getLogger()
@@ -33,7 +33,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 def getToken(org_id=ORG_ID, api_key=API_KEY):
     """
     Generates a JWT token for the streaming API. This token will be integrated
-    inside of a link to grant access to footage.
+inside of a link to grant access to footage.
 
     :param org_id: Organization ID. Defaults to ORG_ID.
     :type org_id: str, optional
@@ -71,20 +71,7 @@ def getToken(org_id=ORG_ID, api_key=API_KEY):
 
 
 def loadStream(jwt, camera_id, start_time, org_id=ORG_ID):
-    """
-    Loads the HLS video and saves a snapshot of the first frame of the clip.
-
-    :param jwt: The token that grants the API access to the footage.
-    :type jwt: str
-    :param camera_id: The camera ID of the device to pull footage from.
-    :type camera_id: str
-    :param start_time: The start time for the footage to pull from the camera.
-    :type start_time: str
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :return: None
-    :rtype: None
-    """
+    """Loads the HLS video and saves a snapshot of the first frame"""
 
     # Bring the end time to one second ahead of the start time
     end_time = start_time + 1
@@ -117,14 +104,7 @@ def loadStream(jwt, camera_id, start_time, org_id=ORG_ID):
 
 
 def printImage(file_name):
-    """
-    Will print a given image into the terminal in very low resolution.
-
-    :param file_name: The name of the image file to print into the terminal.
-    :type file_name: str
-    :return: None
-    :rtype: None
-    """
+    """Will print a given image into the terminal"""
 
     try:
         subprocess.run(['timg', file_name])
@@ -133,7 +113,6 @@ def printImage(file_name):
 
     # --------------------------
     # If using Pillow and you want a higher-res image displayed
-    # NOTE: This won't be displayed in the terminal
     # Load the image
     # image = Image.open(file_name)
 
@@ -142,22 +121,7 @@ def printImage(file_name):
 
 
 def epoch(year, month, day, hour, minute):
-    """
-    Converts a given time to an epoch timestamp and returns the integer value.
-
-    :param year: The target year to return in the epoch timestamp.
-    :type year: int
-    :param month: The target month to return in the epoch timestamp.
-    :type month: int
-    :param day: The target day to return in the epoch timestamp.
-    :type day: int
-    :param hour: The target hour to return in the epoch timestamp.
-    :type hour: int
-    :param minute: The target minute to return in the epoch timestamp.
-    :type minute: int
-    :return: Returns the epoch timestamp.
-    :rtype: int
-    """
+    """Converts a given time to an epoch timestamp and returns the integer value"""
 
     # Define the date and time in Python terms
     py_time = datetime.datetime(year, month, day, hour, minute)
@@ -165,12 +129,13 @@ def epoch(year, month, day, hour, minute):
     # Convert to epoch timestamp (seconds since Jan 1, 1970)
     epoch_timestamp = int(py_time.timestamp())
 
-    return epoch_timestamp
+    return int(epoch_timestamp)
 
 
 # Check if being ran directly or is imported by another program
 if __name__ == "__main__":
-
+    # org = str(input("Org ID: "))
+    # key = str(input("API key: "))
     cid = str(input("ID of the camera to pull from: "))
     year = int(input("Year of search: "))
     month = int(input("Month of search (integer): "))
@@ -184,21 +149,6 @@ if __name__ == "__main__":
 
     # Check if the token is null
     if token:
-        if isinstance(CAMERA, list):
-            log.debug("List provided -> Checking if list is iterable.")
-
-            if hasattr(CAMERA, "__iter__"):
-                log.debug(
-                    "List provided -> list is iterable -> attempting triggers.")
-
-                for target in CAMERA:
-                    loadStream(token, target, start_time)
-
-            else:
-                log.critical("List is not iterable.")
-
-        # Run for a single lockdown
-        else:
-            loadStream(token, CAMERA, start_time)
+        loadStream(token, "c94be2a0-ca3f-4f3a-b208-8db8945bf40b", start_time)
     else:
         print("Failed to get token, terminating application.")

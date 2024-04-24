@@ -6,20 +6,20 @@
 
 import requests
 import base64
+import creds
 import colorama
 from colorama import Fore, Style
 import threading
-import shutil
-import time
 import logging
 import re
+import shutil
+import time
 from datetime import datetime, timedelta
 from os import getenv
 from dotenv import load_dotenv
 
 # Set log file path
 log_file_path = "endpoint_data.log"
-import re
 
 # Set logger
 log = logging.getLogger()
@@ -39,7 +39,6 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
-
 
     retry_pin = 11
     fail_pin = 13
@@ -80,19 +79,16 @@ URL_AC_USERS = "https://api.verkada.com/access/v1/access_users"
 URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
-URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
-
-load_dotenv()
 
 # Set general testing variables
-ORG_ID = getenv("slc_id")  # Org ID
-API_KEY = getenv("slc_key")  # API key
-STREAM_API_KEY = getenv("slc_stream_key")  # API key with streaming permissions
-CAMERA_ID = getenv("slc_camera_id")  # Device ID of camera
-TEST_USER = getenv("slc_test_user")  # Command User ID
-TEST_USER_CRED = getenv("slc_test_user_cred")  # Command user to test AC changes
-CARD_ID = getenv("slc_card_id")  # Card ID to manipulate
-PLATE = getenv("slc_plate")  # AC plate cred to manipulate
+ORG_ID = creds.slc_id  # Org ID
+API_KEY = creds.slc_key  # API key
+STREAM_API_KEY = creds.slc_stream_key  # API key with streaming permissions
+CAMERA_ID = creds.slc_camera_id  # Device ID of camera
+TEST_USER = creds.slc_test_user  # Command User ID
+TEST_USER_CRED = creds.slc_test_user_cred  # Command user to test AC changes
+CARD_ID = creds.slc_card_id  # Card ID to manipulate
+PLATE = creds.slc_plate  # AC plate cred to manipulate
 
 GENERAL_HEADER = {
     'accept': 'application/json',
@@ -145,7 +141,6 @@ class RateLimiter:
                 self.event_count = self.pacing
                 return True
 
-
             # How much time has passed since starting
             elapsed_time = current_time - self.start_time
 
@@ -156,13 +151,11 @@ class RateLimiter:
                 self.event_count += 1
                 return True
 
-
             # Check if it is the first wave of events
             elif elapsed_time >= self.pacing / self.rate_limit:
                 self.start_time = current_time
                 self.event_count = 2
                 return True
-
 
             else:
                 # Calculate the time left before next wave
@@ -172,11 +165,9 @@ class RateLimiter:
                 return True
 
 
-
 def run_thread_with_rate_limit(threads, rate_limit=10):
     """
     Run a thread with rate limiting.
-
 
     :param target: The target function to be executed in the thread:
     :type targe: function:
@@ -239,13 +230,15 @@ passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries{Fore.RED} in \
 {RETRY_COUNT} retries{Fore.GREEN} in {short_time}s "
 
     # Print the padded and colored text with "=" characters on both sides
-    # An extra line that can be printed if running in live terminal
-    # print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
+    print(f"{Fore.CYAN}{text1:=^{terminal_width+5}}")
+
+    # Print the retry count if > 0
+    if RETRY_COUNT > 0:
+        print(f"{Fore.YELLOW}RETRIES {Style.RESET_ALL}{RETRY_COUNT}")
 
     if failed > 0:
         for module in failed_modules:
             print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
-
 
         if RETRY_COUNT > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
@@ -295,7 +288,6 @@ def flashLED(pin, count, speed):
         time.sleep(speed)
         GPIO.output(pin, False)
         time.sleep(speed)
-
 
 
 def workLED(pin, local_stop_event, speed):
@@ -379,65 +371,6 @@ def filter_entries(entries):
     return filtered_entries
 
 
-def log_execution():
-    """
-    Writes the final output from running the program into a file to ingest
-    later to plot the results.
-    """
-    # Save all current entries in the file before changing
-    with open(log_file_path, 'r') as log_file:
-        entries = log_file.readlines()
-
-    # Filter out anything older than 24-hours
-    filtered_entries = filter_entries(entries)
-
-    # Overwrite the original file with the filtered entries
-    with open("endpoint_data.log", "w") as file:
-        file.writelines(filtered_entries)
-
-    # Append the new data to the file
-    with open(log_file_path, 'a') as log_file:
-        log_file.write(
-            f"Time of execution: "
-            f"{datetime.now().strftime('%m/%d %H:%M:%S')}\n")
-        log_file.write(f"Failed endpoints: {len(FAILED_ENDPOINTS)}\n")
-        log_file.write(f"Retries: {RETRY_COUNT}\n")
-
-
-def parse_entry(entry):
-    # Use regular expression to extract the time string in the entry
-    time_match = re.search(r"(\d{2}/\d{2} \d{2}:\d{2}:\d{2})", entry)
-    if time_match:
-        time_str = time_match.group(1)
-        # Set the year to the current year
-        current_year = datetime.now().year
-        return datetime.strptime(f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S")
-
-
-def filter_entries(entries):
-    filtered_entries = []
-    current_time = datetime.now()
-
-    include_entry = False
-
-    for entry in entries:
-        execution_time = parse_entry(entry)
-        if execution_time:
-            time_difference = current_time - execution_time
-
-            # Check if the entry is within the last 24 hours
-            if time_difference < timedelta(days=1):
-                include_entry = True
-                filtered_entries.append(entry)
-            else:
-                include_entry = False
-
-        elif include_entry:
-            filtered_entries.append(entry)
-
-    return filtered_entries
-
-
 ##############################################################################
                             #  Test PoI  #
 ##############################################################################
@@ -454,7 +387,6 @@ def getPersonID():
     """
     Accepts a string as a search value and returns the person id
  associated with it
-
 
     :return: The person id for the search value hard-coded into label.
     :rtype: str
@@ -572,12 +504,9 @@ def getPOI():
     for _ in range(MAX_RETRIES):
         response = requests.get(
             URL_PEOPLE, headers=GENERAL_HEADER, params=params)
-        response = requests.get(
-            URL_PEOPLE, headers=GENERAL_HEADER, params=params)
 
         if response.status_code == 429:
             log.info(f"getPoI retrying in {RETRY_DELAY}s. Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
@@ -587,9 +516,7 @@ def getPOI():
         else:
             break
 
-
     log.info(f"getPoI response received: {response.status_code}")
-
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
@@ -625,16 +552,13 @@ def updatePOI():
         response = requests.patch(
             URL_PEOPLE, json=payload, headers=headers, params=params)
 
-
         if response.status_code == 429:
             log.info(f"updatePoI retrying in {RETRY_DELAY}s. Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -735,7 +659,6 @@ def createPlate():
     for _ in range(MAX_RETRIES):
         response = requests.post(
             URL_PLATE, json=payload, headers=headers, params=params)
-
 
         if response.status_code == 429:
             log.info(f"createPlate retrying in {RETRY_DELAY}s. Response: 429")
@@ -909,9 +832,6 @@ def getCloudSettings():
         response = requests.get(
             URL_CLOUD, headers=GENERAL_HEADER, params=params)
 
-        response = requests.get(
-            URL_CLOUD, headers=GENERAL_HEADER, params=params)
-
         if response.status_code == 429:
             log.info(f"getCloudSettings retrying in {RETRY_DELAY}s.\
  Response: 429")
@@ -1071,7 +991,6 @@ def getThumbed():
         response = requests.get(
             URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
 
-
         if response.status_code == 429:
             log.info(f"getThumbnail retrying in {RETRY_DELAY}s.\
  Response: 429")
@@ -1116,7 +1035,6 @@ def getAudit():
     for _ in range(MAX_RETRIES):
         response = requests.get(
             URL_AUDIT, headers=GENERAL_HEADER, params=params)
-
 
         if response.status_code == 429:
             log.info(f"getAudit retrying in {RETRY_DELAY}s.\
@@ -1251,7 +1169,6 @@ inside of a link to grant access to footage.
         'expiration': 60
     }
 
-
     for _ in range(MAX_RETRIES):
 
         # Send GET request to get the JWT
@@ -1263,9 +1180,7 @@ inside of a link to grant access to footage.
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
-
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -1286,7 +1201,6 @@ def getGroups():
     """
     Tests the ability to get AC Groups
 
-
     :return: None
     :rtype: None
     """
@@ -1303,16 +1217,13 @@ def getGroups():
         response = requests.get(
             URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
 
-
         if response.status_code == 429:
             log.info(f"getGroups retrying in {RETRY_DELAY}s. Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -1327,7 +1238,6 @@ def getGroups():
 def getACUsers():
     """
     Tests the ability to get AC users
-
 
     :return: None
     :rtype: None
@@ -1345,17 +1255,14 @@ def getACUsers():
         response = requests.get(
             URL_AC_USERS, headers=GENERAL_HEADER, params=params)
 
-
         if response.status_code == 429:
             log.info(f"getAccessUsers retrying in {RETRY_DELAY}s.\
  Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -1370,7 +1277,6 @@ def getACUsers():
 def changeCards():
     """
     Tests the ability to change credentials
-
 
     :return: None
     :rtype: None
@@ -1394,17 +1300,14 @@ def changeCards():
         active_response = requests.put(
             activate_url, headers=GENERAL_HEADER, params=params)
 
-
         if active_response.status_code == 429:
             log.info(f"activateCard retrying in {RETRY_DELAY}s.\
  Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -1415,17 +1318,14 @@ def changeCards():
         deactive_response = requests.put(
             deactivate_url, headers=GENERAL_HEADER, params=params)
 
-
         if deactive_response.status_code == 429:
             log.info(f"deactivateCard retrying in {RETRY_DELAY}s.\
  Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -1447,7 +1347,6 @@ def changeCards():
 def changePlates():
     """
     Tests the ability to change access plates
-
 
     :return: None
     :rtype: None
@@ -1471,17 +1370,14 @@ def changePlates():
         active_response = requests.put(
             activate_url, headers=GENERAL_HEADER, params=params)
 
-
         if active_response.status_code == 429:
             log.info(f"activatePlate retrying in {RETRY_DELAY}s.\
  Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -1493,17 +1389,14 @@ def changePlates():
         deactive_response = requests.put(
             deactivate_url, headers=GENERAL_HEADER, params=params)
 
-
         if deactive_response.status_code == 429:
             log.info(f"deactivatePlate retrying in {RETRY_DELAY}s.\
  Response: 429")
-
 
             with RETRY_COUNT_LOCK:
                 RETRY_COUNT += 1
 
             time.sleep(RETRY_DELAY)  # Wait for throttle refresh
-
 
         else:
             break
@@ -1544,7 +1437,6 @@ if __name__ == '__main__':
     t_getACUsers = threading.Thread(target=getACUsers)
     t_changeCards = threading.Thread(target=changeCards)
     t_changePlates = threading.Thread(target=changePlates)
-    t_jwt = threading.Thread(target=getJWT)
 
     threads = [t_getCloudSettings, t_getCounts, t_getTrends,
                t_getCameraData, t_getThumbed, t_getAudit, t_updateUser,
@@ -1579,14 +1471,14 @@ if __name__ == '__main__':
 
     log_execution()
 
-
-    log_execution()
-
     if GPIO:
-        GPIO.output(run_pin, False)
+        # GPIO.output(run_pin, False)  # Solid light while running
+        local_stop_event.set()
+        flash_thread.join()
 
-    passed = 24 - len(FAILED_ENDPOINTS)
+    passed = 23 - len(FAILED_ENDPOINTS)
     print_colored_centered(elapsed, passed, len(
         FAILED_ENDPOINTS), FAILED_ENDPOINTS)
+
     if GPIO:
         GPIO.cleanup()

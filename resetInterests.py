@@ -1,62 +1,40 @@
-import logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+# Author: Ian Young
+# Purpose: Compare plates to a pre-defined array of names.
+# These names will be "persistent plates/persons" which are to remain in
+# Command. Any person or plate not marked thusly will be deleted from the org.
 
-load_dotenv()
+import creds, logging,  requests, threading, time
 
-# API credentials
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
+
+# This will help prevent exceeding the call limit
+CALL_COUNT = 0
+CALL_COUNT_LOCK = threading.Lock()
 
 # Set logger
 log = logging.getLogger()
 logging.basicConfig(
     level = logging.INFO,
     format = "%(levelname)s: %(message)s"
-)
+    )
 
-# This will help prevent exceeding the call limit
-CALL_COUNT = 0
-CALL_COUNT_LOCK = threading.Lock()
-
-# Set the full name for which plates & PoIs are to be persistent
-PERSISTENT_PLATES = ["Random"]
-PERSISTENT_PERSONS = ["PoI"]
-PERSISTENT_USERS = ["Ian Young", "Bruce Banner",
-                    "Jane Doe", "Tony Stark",
-                    "Ray Raymond", "John Doe"] # Must use full name
+# Set the full name for which plates are to be persistent
+PERSISTENT_PLATES = []
+PERSISTENT_PERSONS = []
 
 # Set API endpoint URLs
-PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
+PLATE_URL = "https://api.verkada.com/cameras/v1/\
+analytics/lpr/license_plate_of_interest"
 PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-USER_INFO_URL = "https://api.verkada.com/access/v1/access_users"
-USER_CONTROL_URL = "https://api.verkada.com/core/v1/user"
-
 
 ##############################################################################
                                 #  Misc  #
 ##############################################################################
 
 
-class APIThrottleException(Exception):
-    """
-    Exception raised when the API request rate limit is exceeded.
-
-    :param message: A human-readable description of the exception.
-    :type message: str
-    """
-    def __init__(self, message="API throttle limit exceeded."):
-        self.message = message
-        super.__init__(self.message)
-
-
 def warn():
-    """
-    Prints a warning message before continuing
-    
-    :return: None
-    :rtype: None
-    """
+    """Prints a warning message before continuing"""
     print("-------------------------------")
     print("WARNING!!!")
     print("Please make sure you have changed the persistent plates variable.")
@@ -66,18 +44,11 @@ def warn():
     cont = None
 
     while cont not in ["", " "]:
-        cont = str(input("Press enter to continue")).strip()
+        cont = str(input("Press enter to continue\n")).strip()
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
 
@@ -88,18 +59,7 @@ def cleanList(list):
 
 
 def checkPeople(safe, to_delete, persons):
-    """
-    Checks with the user before continuing with the purge.
-    
-    :param safe: List of PoIs that are marked as "safe."
-    :type safe: list
-    :param to_delete: List of PoIs that are marked for deletion.
-    :type to_delete: list
-    :param persons: List of of PoIs retrieved from the organization.
-    :type persons: list
-    :return: None
-    :rtype: None
-    """
+    """Checks with the user before continuing with the purge"""
     trust_level = None  # Pre-define
     ok = None  # Pre-define
 
@@ -162,25 +122,14 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePeople(to_delete)
+            purgePeople(to_delete, persons)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted persons in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of people in an organization.
-    :rtype: list
-    """
-    global CALL_COUNT
-
+    """Returns JSON-formatted persons in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -191,9 +140,6 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
     }
 
     response = requests.get(PERSON_URL, headers=headers, params=params)
-    
-    with CALL_COUNT_LOCK:
-        CALL_COUNT += 1
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
@@ -209,16 +155,7 @@ Status code {response.status_code}")
 
 
 def getPeopleIds(persons=None):
-    """
-    Returns an array of all PoI labels in an organization.
-    
-    :param persons: A list of dictionaries representing PoIs in an
-organization. Each dictionary should have 'person_id' key.
-Defaults to None.
-    :type persons: list, optional
-    :return: A list of IDs of the PoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     person_id = []
 
     for person in persons:
@@ -231,18 +168,8 @@ Defaults to None.
     return person_id
 
 
-def getPersonId(person, persons=None):
-    """
-    Returns the Verkada ID for a given PoI.
-    
-    :param person: The label of a PoI whose ID is being searched for.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-Each dictionary should have the 'person_id' key. Defaults to None.
-    :type persons: list, optional
-    :return: The person ID of the given PoI.
-    :rtype: str
-    """
+def getPersonId(person=PERSISTENT_PERSONS, persons=None):
+    """Returns the Verkada ID for a given PoI"""
     person_id = None  # Pre-define
 
     for name in persons:
@@ -253,24 +180,12 @@ Each dictionary should have the 'person_id' key. Defaults to None.
     if person_id:
         return person_id
     else:
-        return "No name provided"
+        log.warning(f"person {person} was not found in the database...")
+        return None
 
 
 def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given person from the organization.
-
-    :param person: The person to be deleted.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    """Deletes the given person"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -283,66 +198,29 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         'person_id': person
     }
 
-    try:
-        # Stop running if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        response = requests.delete(PERSON_URL, headers=headers, params=params)
-    
-        if response.status_code == 429:
-            raise APIThrottleException("API throttled")
-        
-        elif response.status_code == 504:
-            log.warning(f"Plate - Timed out.")
-        
-        elif response.status_code != 200:
-            log.error(f"\
-Person - An error has occured. Status code {response.status_code}")
-        
-    except APIThrottleException:
-                    log.critical("Person - Hit API request rate limit of 500 requests per minute.")
+    response = requests.delete(PERSON_URL, headers=headers, params=params)
+
+    if response.status_code != 200:
+        log.error(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
 
 
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all PoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of PoIs to be deleted from the organization.
-    :type delete: list
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
-    global CALL_COUNT
-
+    """Purges all PoIs that aren't marked as safe/persistent"""
     if not delete:
-        log.warning("Person - There's nothing here")
+        log.warning("There's nothing here")
         return
 
-    log.info("Person - Purging...")
+    log.info("Purging...")
 
     start_time = time.time()
     threads = []
     for person in delete:
-        # Stop making threads if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        
-        # Toss delete function into a new thread
         thread = threading.Thread(
             target=delete_person, args=(person, persons, org_id, api_key)
         )
         thread.start()
-        threads.append(thread)  # Add the thread to the pile
-
-        # Make sure the other threads aren't writing
-        with CALL_COUNT_LOCK:
-            CALL_COUNT += 1  # Log that the thread was made
+        threads.append(thread)
 
     for thread in threads:
         thread.join()  # Join back to main thread
@@ -350,44 +228,29 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    log.info("Person - Purge complete.")
-    log.info(f"Person - Time to complete: {elapsed_time}")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
 def printPersonName(to_delete, persons):
-    """
-    Returns the label of a PoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     person_name = None  # Pre-define
 
     for person in persons:
         if person.get('person_id') == to_delete:
             person_name = person.get('label')
-            return  # No need to continue running once found
+            break  # No need to continue running once found
 
     if person_name:
         return person_name
     else:
-        return "No name provided"
+        log.warning(f"person {to_delete} was not found in the database...")
+        return "Error finding name"
 
 
 def runPeople():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     # Uncomment the lines below if you want to manually set these values
     # each time the program is ran
 
@@ -396,14 +259,14 @@ def runPeople():
 
     log.info("Retrieving persons")
     persons = getPeople()
-    log.info("persons retrieved.")
+    log.info("persons retrieved.\n")
 
     # Run if persons were found
     if persons:
         log.info("Gather IDs")
         all_person_ids = getPeopleIds(persons)
         all_person_ids = cleanList(all_person_ids)
-        log.info("IDs aquired.")
+        log.info("IDs aquired.\n")
 
         safe_person_ids = []
 
@@ -412,24 +275,28 @@ def runPeople():
         for person in PERSISTENT_PERSONS:
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
-        log.info("Safe persons found.")
+        log.info("Safe persons found.\n")
 
         # New list that filters persons that are safe
         persons_to_delete = [
-            person for person in all_person_ids if person not in safe_person_ids]
+            person for person in all_person_ids 
+            if person not in safe_person_ids]
 
         if persons_to_delete:
             checkPeople(safe_person_ids, persons_to_delete, persons)
             return 1  # Completed
 
         else:
-            log.warning(
+            log.info("-------------------------------")
+            log.info(
                 "The organization has already been purged.\
 There are no more persons to delete.")
+            log.info("-------------------------------")
+
             return 1  # Completed
-        
     else:
         log.warning("No persons were found.")
+
         return 1  # Copmleted
 
 
@@ -439,18 +306,7 @@ There are no more persons to delete.")
 
 
 def checkPlates(safe, to_delete, plates):
-    """
-    Checks with the user before continuing with the purge.
-    
-    :param safe: List of plates that are marked as "safe."
-    :type safe: list
-    :param to_delete: List of plates that are marked for deletion.
-    :type to_delete: list
-    :param plates: List of of LPoIs retrieved from the organization.
-    :type plates: list
-    :return: None
-    :rtype: None
-    """
+    """Checks with the user before continuing with the purge"""
     trust_level = None  # Pre-define
     ok = None  # Pre-define
 
@@ -512,25 +368,14 @@ application found.")
 
         elif trust_level == '3':
             print("Good luck!")
-            purgePlates(to_delete)
+            purgePlates(to_delete, plates)
 
         else:
             print("Invalid input. Please enter '1', '2', or '3'.")
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted plates in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of license plates in an organization.
-    :rtype: list
-    """
-    global CALL_COUNT
-
+    """Returns JSON-formatted plates in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -542,17 +387,12 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
 
     response = requests.get(PLATE_URL, headers=headers, params=params)
 
-    # Make sure the other threads aren't writing
-    with CALL_COUNT_LOCK:
-        CALL_COUNT += 1  # Log that a thread was made
-
     if response.status_code == 200:
         data = response.json()  # Parse the response
 
         # Extract as a list
         plates = data.get('license_plate_of_interest')
         return plates
-    
     else:
         log.critical(
             f"Error with retrieving plates.\
@@ -561,16 +401,7 @@ Status code {response.status_code}")
 
 
 def getPlateIds(plates=None):
-    """
-    Returns an array of all LPoI labels in an organization.
-    
-    :param plates: A list of dictionaries representing LPoIs in an
-organization. Each dictionary should have 'license_plate' key. 
-Defaults to None.
-    :type plates: list, optional
-    :return: A list of IDs of the LPoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     plate_id = []
 
     for plate in plates:
@@ -584,17 +415,7 @@ Defaults to None.
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-    """
-    Returns the Verkada ID for a given LPoI.
-    
-    :param plate: The label of a LPoI whose ID is being searched for.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-Each dictionary should have the 'license_plate' key. Defaults to None.
-    :type plates: list, optional
-    :return: The plate ID of the given LPoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given PoI"""
     plate_id = None  # Pre-define
 
     for name in plates:
@@ -605,24 +426,12 @@ Each dictionary should have the 'license_plate' key. Defaults to None.
     if plate_id:
         return plate_id
     else:
-        return "No name provided"
+        log.error(f"plate {plate} was not found in the database...")
+        return None
 
 
 def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given plate from the organization.
-
-    :param plate: The plate to be deleted.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    """Deletes the given person"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -635,66 +444,37 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         'license_plate': plate
     }
 
-    try:
-        # Stop running if already at the limit
-        if CALL_COUNT >= 500:
-            return
-        response = requests.delete(PLATE_URL, headers=headers, params=params)
-    
-        if response.status_code == 429:
-            raise APIThrottleException("API throttled")
-        
-        elif response.status_code == 504:
-            log.warning(f"Plate - Timed out.")
+    response = requests.delete(PLATE_URL, headers=headers, params=params)
 
-        elif response.status_code != 200:
-            log.error(f"\
-Plate - An error has occured. Status code {response.status_code}")
-        
-    except APIThrottleException:
-                    log.critical("Plate - Hit API request rate limit of 500 requests per minute.")
+    if response.status_code != 200:
+        log.error(f"An error has occured. Status code {response.status_code}")
+        return 2  # Completed unsuccesfully
 
 
 def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all LPoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of LPoIs to be deleted from the organization.
-    :type delete: list
-    :param plates: A list of LPoIs found inside of an organization.
-    :type plates: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
+    """Purges all PoIs that aren't marked as safe/persistent"""
     global CALL_COUNT
-    
+
     if not delete:
-        log.warning("Plate - There's nothing here")
+        log.warning("There's nothing here")
         return
 
-    log.info("Plate - Purging...")
+    log.info("Purging...")
 
     start_time = time.time()
     threads = []
-    for plate in delete:
-        # Stop making threads if already at the limit
+    for person in delete:
         if CALL_COUNT >= 500:
             return
         
-        # Toss delete function into a new thread
         thread = threading.Thread(
-            target=delete_plate, args=(plate, plates, org_id, api_key)
+            target=delete_plate, args=(person, plates, org_id, api_key)
         )
         thread.start()
-        threads.append(thread)  # Add the thread to the pile
+        threads.append(thread)
 
-        # Make sure the other thread isn't writing
         with CALL_COUNT_LOCK:
-            CALL_COUNT += 1  # Log that the thread was made
+            CALL_COUNT += 1
 
     for thread in threads:
         thread.join()  # Join back to main thread
@@ -702,24 +482,13 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     end_time = time.time()
     elapsed_time = str(end_time - start_time)
 
-    log.info("Plate - Purge complete.")
-    log.info(f"Plate - Time to complete: {elapsed_time}")
+    log.info("Purge complete.")
+    log.info(f"Time to complete: {elapsed_time}")
     return 1  # Completed
 
 
 def printPlateName(to_delete, plates):
-    """
-    Returns the description of a LPoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     plate_name = None  # Pre-define
 
     for plate in plates:
@@ -730,16 +499,12 @@ was no name found, as well.
     if plate_name:
         return plate_name
     else:
-        return "No name provided."
+        log.warning(f"plate {to_delete} was not found in the database...")
+        return "Error finding name"
 
 
 def runPlates():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     # Uncomment the lines below if you want to manually set these values
     # each time the program is ran
 
@@ -748,14 +513,14 @@ def runPlates():
 
     log.info("Retrieving plates")
     plates = getPlates()
-    log.info("plates retrieved.")
+    log.info("plates retrieved.\n")
 
     # Run if plates were found
     if plates:
         log.info("Gather IDs")
         all_plate_ids = getPlateIds(plates)
         all_plate_ids = cleanList(all_plate_ids)
-        log.info("IDs aquired.")
+        log.info("IDs aquired.\n")
 
         safe_plate_ids = []
 
@@ -764,7 +529,7 @@ def runPlates():
         for plate in PERSISTENT_PLATES:
             safe_plate_ids.append(getPlateId(plate, plates))
         safe_plate_ids = cleanList(safe_plate_ids)
-        log.info("Safe plates found.")
+        log.info("Safe plates found.\n")
 
         # New list that filters plates that are safe
         plates_to_delete = [
@@ -775,9 +540,11 @@ def runPlates():
             return 1  # Completed
 
         else:
-            log.warning(
+            log.info("-------------------------------")
+            log.info(
                 "The organization has already been purged.\
 There are no more plates to delete.")
+            log.info("-------------------------------")
 
             return 1  # Completed
     else:
@@ -795,46 +562,37 @@ There are no more plates to delete.")
 if __name__ == "__main__":
     warn()
 
-    # Pre-define responses
-    run_poi = False
-    run_lpoi = False
     answer = None
-
-    # Define threads
-    poi_thread = threading.Thread(target=runPeople)
-    lpoi_thread = threading.Thread(target=runPlates)
-    
     while answer not in ['y', 'n']:
-        answer = str(input("Would you like to run for PoI?(y/n) "))\
+        answer = str(input("Would you like to run for PoI?\n(y/n) "))\
             .strip().lower()
         
         if answer == 'y':
-            run_poi = True
-    
-    answer = None  # Reset response
-    while answer not in ['y', 'n']:
-            answer = str(input("Would you like to run for LPoI?(y/n) "))\
-                .strip().lower()
+            runPeople()
+            
+            answer = None
+
+            while answer not in ['y', 'n']:
+                answer = str(input("Would you like to run for LPoI?\n(y/n) "))\
+                    .strip().lower()
                 
-            if answer == 'y':
-                run_lpoi = True
+                if answer == 'y':
+                    runPlates()
+                    
+                elif answer == 'n':
+                    print("Exiting...")
 
-    # Time the runtime
-    start_time = time.time()
+        elif answer == 'n':
+            answer = None
 
-    # Start threads
-    if run_poi:
-        poi_thread.start()
-    if run_lpoi:
-        lpoi_thread.start()
+            while answer not in ['y', 'n']:
+                answer = str(input("Would you like to run for LPoI?\n(y/n) "))\
+                    .strip().lower()
+                
+                if answer == 'y':
+                    runPlates()
 
-    # Join back to main thread
-    if run_poi:
-        poi_thread.join()
-    if run_lpoi:
-        lpoi_thread.join()
-
-    # Wrap up in a bow and complete
-    log.info(f"Time to complete: {time.time() - start_time}")
-    print("Exiting...")
+                elif answer == 'n':
+                    print("Why did you run this?")
+                    print("Exiting...")
                 

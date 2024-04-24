@@ -3,13 +3,10 @@
 # These names will be "persistent persons" which are to remain in Command.
 # Any person not marked thusly will be deleted from the org.
 
-import requests, logging, threading, time
-from dotenv import load_dotenv
-from os import getenv
-load_dotenv()
+import creds, requests, logging, threading, time
 
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -29,29 +26,13 @@ URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted persons in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of people in an organization.
-    :rtype: list
-    """
+    """Returns JSON-formatted persons in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -77,16 +58,7 @@ Status code {response.status_code}")
 
 
 def getIds(persons=None):
-    """
-    Returns an array of all PoI labels in an organization.
-    
-    :param persons: A list of dictionaries representing PoIs in an
-organization. Each dictionary should have 'person_id' key.
-Defaults to None.
-    :type persons: list, optional
-    :return: A list of IDs of the PoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     person_id = []
 
     for person in persons:
@@ -100,17 +72,7 @@ Defaults to None.
 
 
 def getPersonId(person=PERSISTENT_PERSONS, persons=None):
-    """
-    Returns the Verkada ID for a given PoI.
-    
-    :param person: The label of a PoI whose ID is being searched for.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-Each dictionary should have the 'person_id' key. Defaults to None.
-    :type persons: list, optional
-    :return: The person ID of the given PoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given PoI"""
     person_id = None  # Pre-define
 
     for name in persons:
@@ -126,20 +88,7 @@ Each dictionary should have the 'person_id' key. Defaults to None.
 
 
 def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given person from the organization.
-
-    :param person: The person to be deleted.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    """Deletes the given person"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -160,20 +109,7 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
 
 
 def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all PoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of PoIs to be deleted from the organization.
-    :type delete: list
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
+    """Purges all PoIs that aren't marked as safe/persistent"""
     global CALL_COUNT
 
     if not delete:
@@ -209,18 +145,7 @@ def purge(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
 
 def printName(to_delete, persons):
-    """
-    Returns the label of a PoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     person_name = None  # Pre-define
 
     for person in persons:
@@ -236,12 +161,7 @@ was no name found, as well.
 
 
 def run():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     log.info("Retrieving persons")
     persons = getPeople()
     log.info("persons retrieved.\n")

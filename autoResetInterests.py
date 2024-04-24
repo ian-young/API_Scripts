@@ -3,19 +3,13 @@
 # These names will be "persistent plates/persons" which are to remain in 
 # Command. Any person or plate not marked thusly will be deleted from the org.
 
-import datetime, logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+import creds, datetime, logging, requests, threading, time
 
-load_dotenv()
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # Set timeout for a 429
-MAX_RETRIES = 10
+MAX_RETRIES = 5
 DEFAULT_RETRY_DELAY = 0.25
 BACKOFF = 0.25
 
@@ -26,33 +20,13 @@ logging.basicConfig(
     level = logging.DEBUG,
     format = "%(levelname)s: %(message)s"
     )
-
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-try:
-    import RPi.GPIO as GPIO  # type: ignore
-
-    work_pin = 7
-    lpoi_pin = 13
-    poi_pin = 11
-
-    try:
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(work_pin, GPIO.OUT)
-    except RuntimeError:
-        GPIO = None
-        log.debug("Runtime error while initializing GPIO boad.")
-except ImportError:
-    GPIO = None
-    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
-
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([])  # Label of plate !Not plate number!
-PERSISTENT_PERSONS = sorted(['P. Parker'])  # PoI label
-PERSISTENT_PID = sorted(['0be9660d-60ba-49ba-9989-d6bd41a3f5bd'])  # PoI ID
+PERSISTENT_PLATES = sorted([''])  # Label of plate !Not plate number!
+PERSISTENT_PERSONS = sorted([''])  # PoI label
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -73,9 +47,7 @@ class RateLimiter:
         :param rate_limit: The value of how many threads may be made each sec.
         :type rate_limit: int
         :param max_events_per_sec: Maximum events allowed per second.
-        :type: int, optional
-        :param pacing: Sets the interval of the clock in seconds.
-        :type pacing: int, optional
+        :type: int
         :return: None
         :rtype: None
         """
@@ -163,38 +135,9 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     cleaned_list = [value for value in list if value is not None]
     return cleaned_list
-
-
-def flashLED(pin, local_stop_event, speed):
-    """
-    Flashes an LED that is wired into the GPIO board of a raspberry pi for
-    the duration of work.
-
-    :param pin: target GPIO pin on the board.
-    :type pin: int
-    :param local_stop_event: Thread-local event to indicate when the program's
-    work is done and the LED can stop flashing.
-    :type local_stop_event: Bool 
-    :param speed: How long each flash should last in seconds.
-    :type failed: int
-    :return: None
-    :rtype: None
-    """
-    while not local_stop_event.is_set():
-        GPIO.output(pin, True)
-        time.sleep(speed)
-        GPIO.output(pin, False)
-        time.sleep(speed * 2)
 
 
 ##############################################################################
@@ -203,16 +146,7 @@ def flashLED(pin, local_stop_event, speed):
 
 
 def getPeople(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted persons in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of people in an organization.
-    :rtype: list
-    """
+    """Returns JSON-formatted persons in a Command org"""
     global CALL_COUNT
 
     headers = {
@@ -238,6 +172,17 @@ def getPeople(org_id=ORG_ID, api_key=API_KEY):
             log.error("People are not iterable.")
             return
 
+
+        try:
+            iter(persons)
+        except (TypeError, AttributeError):
+            log.error(
+                f"Cannot convert plates into a tree."
+                f"Plates are not iterable."
+                )
+            
+            return
+
         return persons
     else:
         log.critical(
@@ -247,16 +192,7 @@ Status code {response.status_code}")
 
 
 def getPeopleIds(persons=None):
-    """
-    Returns an array of all PoI labels in an organization.
-    
-    :param persons: A list of dictionaries representing PoIs in an
-organization. Each dictionary should have 'person_id' key.
-Defaults to None.
-    :type persons: list, optional
-    :return: A list of IDs of the PoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all PoI labels in an organization"""
     person_id = []
 
     for person in persons:
@@ -269,17 +205,7 @@ Defaults to None.
 
 
 def getPersonId(person=PERSISTENT_PERSONS, persons=None):
-    """
-    Returns the Verkada ID for a given PoI.
-    
-    :param person: The label of a PoI whose ID is being searched for.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
-Each dictionary should have the 'person_id' key. Defaults to None.
-    :type persons: list, optional
-    :return: The person ID of the given PoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given PoI"""
     person_id = None  # Pre-define
 
     for name in persons:
@@ -358,31 +284,12 @@ Person - An error has occured. Status code {response.status_code}")
 
 
 def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all PoIs that aren't marked as safe/persistent.
-    
-    :param delete: A list of PoIs to be deleted from the organization.
-    :type delete: list
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
+    """Purges all PoIs that aren't marked as safe/persistent"""
     global CALL_COUNT
 
     if not delete:
         log.warning("Person - There's nothing here")
         return
-    
-    local_stop_event = threading.Event()
-
-    if GPIO and poi_pin:
-        flash_thread = threading.Thread(target=flashLED, args=(poi_pin, local_stop_event, 0.5))
-        flash_thread.start()
 
     log.info("Person - Purging...")
 
@@ -402,27 +309,11 @@ def purgePeople(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Person - Purge complete.")
     log.info(f"Person - Time to complete: {elapsed_time:.2f}")
-
-    if GPIO and poi_pin:
-        local_stop_event.set()
-        flash_thread.join()
-
     return 1  # Completed
 
 
 def printPersonName(to_delete, persons):
-    """
-    Returns the label of a PoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     person_name = None  # Pre-define
 
     for person in persons:
@@ -437,12 +328,10 @@ was no name found, as well.
 
 
 def runPeople():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
+    # Uncomment the lines below if you want to manually set these values
+    # each time the program is ran
+
     log.info("Retrieving persons")
     persons = getPeople()
     log.info("persons retrieved.")
@@ -450,7 +339,7 @@ def runPeople():
     # Sort JSON dictionaries by person id
     persons = sorted(persons, key=lambda x: x['person_id'])
 
-    #Run if persons were found
+    # Run if persons were found
     if persons:
         log.info("Person - Gather IDs")
         all_person_ids = getPeopleIds(persons)
@@ -496,16 +385,7 @@ There are no more persons to delete.")
 
 
 def getPlates(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted plates in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of license plates in an organization.
-    :rtype: list
-    """
+    """Returns JSON-formatted plates in a Command org"""
     global CALL_COUNT
 
     headers = {
@@ -541,16 +421,7 @@ Status code {response.status_code}")
 
 
 def getPlateIds(plates=None):
-    """
-    Returns an array of all LPoI labels in an organization.
-    
-    :param plates: A list of dictionaries representing LPoIs in an
-organization. Each dictionary should have 'license_plate' key. 
-Defaults to None.
-    :type plates: list, optional
-    :return: A list of IDs of the LPoIs in an organization.
-    :rtype: list
-    """
+    """Returns an array of all LPoI labels in an organization"""
     plate_id = []
 
     for plate in plates:
@@ -564,17 +435,7 @@ Defaults to None.
 
 
 def getPlateId(plate=PERSISTENT_PLATES, plates=None):
-    """
-    Returns the Verkada ID for a given LPoI.
-    
-    :param plate: The label of a LPoI whose ID is being searched for.
-    :type plate: str
-    :param plates: A list of LPoI IDs found inside of an organization.
-Each dictionary should have the 'license_plate' key. Defaults to None.
-    :type plates: list, optional
-    :return: The plate ID of the given LPoI.
-    :rtype: str
-    """
+    """Returns the Verkada ID for a given LPoI"""
     plate_id = None  # Pre-define
 
     for name in plates:
@@ -670,12 +531,6 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     if not delete:
         log.warning("Plate - There's nothing here")
         return
-    
-    local_stop_event = threading.Event()
-
-    if GPIO and poi_pin:
-        flash_thread = threading.Thread(target=flashLED, args=(lpoi_pin, local_stop_event, 0.5))
-        flash_thread.start()
 
     log.info("Plate - Purging...")
 
@@ -695,27 +550,11 @@ def purgePlates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
     log.info("Plate - Purge complete.")
     log.info(f"Plate - Time to complete: {elapsed_time:.2f}")
-
-    if GPIO and poi_pin:
-        local_stop_event.set()
-        flash_thread.join()
-    
     return 1  # Completed
 
 
 def printPlateName(to_delete, plates):
-    """
-    Returns the description of a LPoI with a given ID
-    
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     plate_name = None  # Pre-define
 
     for plate in plates:
@@ -730,12 +569,7 @@ was no name found, as well.
 
 
 def runPlates():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     log.info("Retrieving plates")
     plates = getPlates()
     log.info("Plates retrieved.")
@@ -801,7 +635,5 @@ if __name__ == "__main__":
     PoI.join()
     LPoI.join()
     elapsed_time = time.time() - start_time
-    if GPIO:
-        GPIO.output(work_pin, False)
 
     log.info(f"Total time to complete: {elapsed_time:.2f}") 

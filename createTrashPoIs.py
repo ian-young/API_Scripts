@@ -3,6 +3,7 @@
 
 import base64
 import colorama
+import creds
 import datetime
 import logging
 import random
@@ -11,11 +12,9 @@ import string
 import threading
 import time
 
-from os import getenv
 from colorama import Fore, Style
-from dotenv import load_dotenv
 
-# Set style to reset at EoLpython
+# Set style to reset at EoL
 colorama.init(autoreset=True)
 
 # Globally-defined Verkada PoI URL
@@ -23,8 +22,8 @@ URL_POI = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 URL_LPR = "https://api.verkada.com/cameras/v1/\
 analytics/lpr/license_plate_of_interest"
 
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 MAX_RETRIES = 10
 DEFAULT_RETRY_DELAY = 0.25

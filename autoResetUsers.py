@@ -3,14 +3,10 @@
 # These names will be "persistent users" which are to remain in Command.
 # Any user not marked thusly will be deleted from the org.
 
-import logging, requests, threading, time
-from os import getenv
-from dotenv import load_dotenv
+import creds, logging, requests, threading, time
 
-load_dotenv()
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = creds.lab_id
+API_KEY = creds.lab_key
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -33,14 +29,7 @@ USER_CONTROL_URL = "https://api.verkada.com/core/v1/user"
 
 
 def cleanList(list):
-    """
-    Removes any None values from error codes
-    
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
+    """Removes any None values from error codes"""
     for value in list:
         if value == None:
             list.remove(value)
@@ -49,16 +38,7 @@ def cleanList(list):
 
 
 def getUsers(org_id=ORG_ID, api_key=API_KEY):
-    """
-    Returns JSON-formatted users in a Command org.
-    
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: A List of dictionaries of users in an organization.
-    :rtype: list
-    """
+    """Returns JSON-formatted users in a Command org"""
     headers = {
         "accept": "application/json",
         "x-api-key": api_key
@@ -84,16 +64,7 @@ Status code {response.status_code}")
 
 
 def getIds(users=None):
-    """
-    Returns an array of all user labels in an organization.
-    
-    :param users: A list of dictionaries representing users in an
-organization. Each dictionary should have 'user' key.
-Defaults to None.
-    :type users: list, optional
-    :return: A list of IDs of the users in an organization.
-    :rtype: list
-    """
+    """Returns an array of all user IDs in an organization"""
     user_id = []
 
     for user in users:
@@ -107,17 +78,7 @@ Defaults to None.
 
 
 def getUserId(user=PERSISTENT_USERS, users=None):
-    """
-    Returns the Verkada ID for a given user.
-    
-    :param user: The label of a user whose ID is being searched for.
-    :type user: str
-    :param users: A list of users IDs found inside of an organization.
-Each dictionary should have the 'user_id' key. Defaults to None.
-    :type users: list, optional
-    :return: The user ID of the given user.
-    :rtype: str
-    """
+    """Returns the Verkada user_id for a given user"""
     user_id = None  # Pre-define
 
     for name in users:
@@ -133,20 +94,7 @@ Each dictionary should have the 'user_id' key. Defaults to None.
 
 
 def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Deletes the given user from the organization.
-
-    :param user: The user to be deleted.
-    :type user: str
-    :param users: A list of PoI IDs found inside of an organization.
-    :type users: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
-    """
+    """Deletes the given user"""
     # Format the URL
     url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
 
@@ -170,20 +118,7 @@ def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
 
 
 def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
-    """
-    Purges all users that aren't marked as safe/persistent.
-    
-    :param delete: A list of users to be deleted from the organization.
-    :type delete: list
-    :param users: A list of users found inside of an organization.
-    :type users: list
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: Returns the value of 1 if completed successfully.
-    :rtype: int
-    """
+    """Purges all users that aren't marked as safe/persistent"""
     global CALL_COUNT
 
     if not delete:
@@ -220,18 +155,7 @@ def purge(delete, users, org_id=ORG_ID, api_key=API_KEY):
 
 
 def printName(to_delete, users):
-    """
-    Returns the full name of a user with a given ID
-    
-    :param to_delete: The user ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param users: A list of users found inside of an organization.
-    :type users: list
-    :return: Returns the name of the user searched for. Will return if there
-was no name found, as well.
-    :rtype: str
-    """
+    """Returns the full name with a given ID"""
     user_name = None  # Pre-define
 
     for user in users:
@@ -247,12 +171,7 @@ was no name found, as well.
 
 
 def run():
-    """
-    Allows the program to be ran if being imported as a module.
-    
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
+    """Allows the program to be ran if being imported as a module"""
     log.info("Retrieving users")
     users = getUsers()
     log.info("Users retrieved.\n")
