@@ -399,7 +399,6 @@ def check_archive_timestamp(archive_library, x_verkada_token, x_verkada_auth,
 
 def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
                                    usr, archive_library, age_limit=AGE_LIMIT):
-                                   usr, archive_library, age_limit=AGE_LIMIT):
     """
     Will iterate through all Verkada archives visible to a given user and
     delete them permanently.
@@ -663,8 +662,8 @@ if __name__ == "__main__":
 
     # Gracefully handle an interrupt
     except KeyboardInterrupt:
-        print(f"\nKeyboard interrupt detected. Aborting...")
+        print(f"\nKeyboard interrupt detected. Aboting...")
 
-        finally:
-            session.close()
-            log.debug("Session closed. Exiting...")
+    finally:
+        session.close()
+        log.debug("Session closed. Exiting...")
