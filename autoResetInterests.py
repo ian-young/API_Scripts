@@ -476,6 +476,7 @@ def runPeople():
         if PERSISTENT_PID:
             for person in PERSISTENT_PID:
                 safe_person_ids.append(person)
+
         log.info("Safe persons found.")
 
         # New list that filters persons that are safe
@@ -523,7 +524,7 @@ def getPlates(org_id=ORG_ID, api_key=API_KEY):
     }
 
     params = {
-        "org_id": org_id,
+        "org_id": org_id
     }
 
     response = requests.get(PLATE_URL, headers=headers, params=params)

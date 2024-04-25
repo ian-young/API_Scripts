@@ -1,5 +1,7 @@
 # API_Scripts
-Private API Scripts that may be modified and then shared interally within Verkada.
+This is a private repository where API scripts and projects may live before being published to a different repository. Scripts that are ready to be published are found within the `main` branch. These scripts may be shared as long as they are located on the `main` branch since the credentials are not hard-coded. When sharing scripts, it is important to rememeber to send over the [requirements.txt](/requirements.txt) file and the [.env-generic](/.env-generic) file to give the user a base to work from. 
+>[!IMPORTANT]
+>When sending the `.env-generic` file over, it is important to remember to mentino that the name needs to be changed to `.env` and the file must be in the same directory as the script for the code to function properly.
 
 The purpose of these scripts is:
 * Enhance personal understanding of how to work with API
@@ -24,4 +26,7 @@ Scripts that will have a larger impact will have an associated project where iss
 Current running projects in the repository are:
 1. [Delete Devices](https://github.com/users/ian-young/projects/3)
    - This project is to aid with running VCE
-   - Will delete nearly every device from a Verkada Command organization
+   - Finished with phase 1
+   - Beginning phase 2 soon
+      - Need to find endpoints to list Guest sites, Desk Stations, Guest iPads, and Guest Printers.
+      - Phase 2 is the finaly phase for this script and is expected to take longer
