@@ -365,11 +365,9 @@ process.")
             elapsed_time = time.time() - start_time
             log.info(f"Total time to complete {elapsed_time:.2f}")
 
-            session.close()
-
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
-            print(f"\nKeyboard interrupt detected. Aborting...")
+            print(f"\nKeyboard interrupt detected. Aboting...")
 
         finally:
             session.close()
