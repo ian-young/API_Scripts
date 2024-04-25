@@ -638,7 +638,7 @@ if __name__ == "__main__":
 
     # Gracefully handle an interrupt
     except KeyboardInterrupt:
-        print(f"\nKeyboard interrupt detected. Aborting...")
+        print(f"\nKeyboard interrupt detected. Aboting...")
 
     finally:
         session.close()
