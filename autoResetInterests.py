@@ -820,3 +820,4 @@ if __name__ == "__main__":
         GPIO.output(work_pin, False)
 
     log.info(f"Total time to complete: {elapsed_time:.2f}")
+    
