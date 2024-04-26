@@ -271,8 +271,8 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                     ASENSORS_DECOM, headers=headers, json=data)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
-                log.debug(f"Deleted wireless sensor: {
-                          device.get('deviceType')}"
+                log.debug(f"Deleted wireless sensor: "
+                          f"{device.get('deviceType')}"
                           )
 
             # Handle exceptions
