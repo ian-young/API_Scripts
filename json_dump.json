@@ -4513,13 +4513,23 @@
     "documentId": "67185bc8-7921-498e-a759-05651eb37bff",
     "documentText": "This is a test for language at\xa0{company
 }. Please indicate your name\xa0{guestName
-}. Thanks.\xa0", "isGlobal": "True", "isPdfDocument": "False", "isVideoDocument": "False", "lastModified": 1713972604, "orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489", "pdfsByLocale": {}, "siteId": "None", "translations": {"en_US": {"description": "Translation Test", "documentText": "This is a test for language at\xa0{company
-}. Please indicate your name\xa0{guestName
-}. Thanks.\xa0"
+}. Thanks.\xa0", "isGlobal": "True",
+"isPdfDocument": "False",
+"isVideoDocument": "False",
+"lastModified": 1713972604,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"pdfsByLocale": {},
+"siteId": "None",
+"translations": {
+    "en_US": {
+        "description": "Translation Test",
+        "documentText": "This is a test for language at\xa0{company
+    }. Please indicate your name\xa0{guestName
+    }. Thanks.\xa0"
 },
 "es": {
-"description": "Test in Spanish",
-"documentText": "\\\nEsta es una prueba de idioma en {company
+    "description": "Test in Spanish",
+    "documentText": "\\\nEsta es una prueba de idioma en {company
 }. Por favor indica tu nombre {guestName
 }. Gracias."
 }
@@ -4669,8 +4679,8 @@
 "siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
 "translations": {
 "en_US": {
-"description": "NDA Document",
-"documentText": "\nIn connection with a proposed business relationship,{company
+    "description": "NDA Document",
+    "documentText": "\nIn connection with a proposed business relationship,{company
 } has allowed you {guestName
 } access, or may allow you access, to business, technical or other information, materials and/or ideas (\"Proprietary Information,\" which term shall include, without limitation, anything you learn or discover as a result of exposure to or analysis of any Proprietary Information).\n\nIn consideration of any disclosure and any negotiations concerning the proposed business relationship, you agree as follows:\n\nYou will hold in confidence and will not possess or use (except as required to evaluate the proposed business relationship within the U.S.) or disclose any Proprietary Information except information you can document (a) is in the public domain through no fault of yours, (b)\xa0was properly known to you, without restriction, prior to disclosure by Company or (c) was properly disclosed to you by another person without restriction.  You will not reverse engineer or attempt to derive the composition or underlying information, structure or ideas of any Proprietary Information.  The foregoing does not grant you a license in or to any of the Proprietary Information.\n\nIf you decide not to proceed with the proposed business relationship or if asked by Company, you will promptly return all Proprietary Information and all copies, extracts and other objects or items in which Proprietary Information may be contained or embodied.\n\nYou will promptly notify Company of any unauthorized release, disclosure or use of Proprietary Information.\n\nYou understand that this Agreement does not obligate Company to disclose any information or negotiate or enter into any agreement or relationship. You will strictly abide by any and all instructions and restrictions provided by Company from time to time with respect to Proprietary Information or Company systems.  You will ensure the security of any facilities, machines, accounts, passwords and methods you use to store any Proprietary Information or to access Company systems and ensure that no other person has or obtains access thereto.\n\nThe terms of this Agreement will remain in effect with respect to any particular Proprietary Information until you can document that such Proprietary Information falls into one of the exceptions stated in Paragraph 1 above.\n\nYou acknowledge and agree that due to the unique nature of the Proprietary Information, any breach of this agreement would cause irreparable harm to Company for which damages are not an adequate remedy, and that Company shall therefore be entitled to equitable relief in addition to all other remedies available at law.\n\nThis Agreement is personal to you, is nonassignable by you, is governed by the internal laws of the State and may be modified or waived only in writing signed by both parties.  If any provision of this Agreement is found to be unenforceable, such provision will be limited or deleted to the minimum extent necessary so that the remaining terms remain in full force and effect.  The prevailing party in any dispute or legal action regarding the subject matter of this Agreement shall be entitled to recover attorneys’ fees and costs.\n\nAcknowledged and agreed on :\n\n\n"
 }
