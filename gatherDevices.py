@@ -32,7 +32,6 @@ SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
 DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/{ORG_ID}/device"
 IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/{ORG_ID}/site/"
-# Filter 'sites' first. Each site is an object.
 SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
 
 # Set up the logger
@@ -855,7 +854,7 @@ def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
     
 
 def list_guest(x_verkada_token, x_verkada_auth, usr, session,
-               org_id=ORG_ID):
+               org_id=ORG_ID, sites=None):
     """
     Lists all guest printers and iPads.
 
@@ -877,8 +876,9 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
     }
 
     ipad_ids, printer_ids = [], []
-
-    sites = get_sites(x_verkada_token, x_verkada_auth, usr, session, org_id )
+    
+    if not sites:
+        sites = get_sites(x_verkada_token, x_verkada_auth, usr, session, org_id )
 
     try:
         # Request the JSON archive library
