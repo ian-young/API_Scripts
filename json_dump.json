@@ -10,7 +10,7 @@
             "configs": {},
             "connectedAt": "None",
             "created": 1701099692,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "147c460f-1a28-42af-8a19-caa0522f2853",
             "deviceIos": [
                 {
@@ -118,8 +118,8 @@
                     "auxInputId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
                     "cacheId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 10.0,
                         "unlockTimeS": 0.0
                     },
@@ -161,7 +161,7 @@
             },
             "connectedAt": 1658507847.367142,
             "created": 1658507847,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "3d3295e6-30da-44eb-bc05-bfa47249afbd",
             "deviceIos": [
                 {
@@ -446,8 +446,8 @@
                     "auxInputId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
                     "cacheId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 10.0,
                         "unlockTimeS": 0.0
                     },
@@ -492,7 +492,7 @@
             },
             "connectedAt": "None",
             "created": 1710341318,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "43fa1fcd-17f0-4b95-9c24-ac8ff38131ed",
             "deviceIos": [
                 {
@@ -568,7 +568,7 @@
             },
             "connectedAt": "None",
             "created": 1710277103,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "90c971bd-2a15-4305-bc8c-710374a3d089",
             "deviceIos": [
                 {
@@ -792,7 +792,7 @@
             },
             "connectedAt": "None",
             "created": 1662564357,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "a41766d1-4cd7-4331-a7ed-c4e874a31147",
             "deviceIos": [],
             "engageSerialNumber": "A20000000F1622C0",
@@ -825,8 +825,8 @@
                     "auxInputId": "a4e09322-281a-485c-8109-ee00f53b63f6",
                     "cacheId": "a4e09322-281a-485c-8109-ee00f53b63f6",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 60.0,
                         "unlockTimeS": 0.0
                     },
@@ -864,7 +864,7 @@
                     "cacheId": "d98b4c97-8c45-43af-bb2d-ac9446d63cf5",
                     "createdAt": 1700507117,
                     "createdBy": "070310e3-6b69-46f8-a67b-6f25300242f5",
-                    "isLegacy": false,
+                    "isLegacy": "False",
                     "lockdownId": "None",
                     "modifiedAt": 1700507117,
                     "name": "Lightbulb",
@@ -876,7 +876,7 @@
                     "cacheId": "7011493e-9625-4f83-af6f-04bb438cd5b7",
                     "createdAt": 1700151628,
                     "createdBy": "fe48adb3-156c-44c8-a65b-4f4927e27451",
-                    "isLegacy": true,
+                    "isLegacy": "True",
                     "lockdownId": "422a896e-b674-4186-9651-fc25ee0c7cfa",
                     "modifiedAt": 1700151628,
                     "name": "Lock",
@@ -891,7 +891,7 @@
             },
             "connectedAt": "None",
             "created": 1692999360,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "a44fb274-1e00-4786-a55b-3d79fcb152cb",
             "deviceIos": [
                 {
@@ -970,8 +970,8 @@
                     "auxInputId": "d4df5457-657d-4a77-ab88-48b552c787c0",
                     "cacheId": "d4df5457-657d-4a77-ab88-48b552c787c0",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 60.0,
                         "unlockTimeS": 0.0
                     },
@@ -1021,8 +1021,8 @@
                     "auxInputId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
                     "cacheId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 10.0,
                         "unlockTimeS": 0.0
                     },
@@ -1060,7 +1060,7 @@
                     "cacheId": "73d73cdd-43ff-49f7-b7f7-a1a24ae5850f",
                     "createdAt": 1710258270,
                     "createdBy": "d49fc433-2375-4b77-9719-a1084341bb1a",
-                    "isLegacy": false,
+                    "isLegacy": "False",
                     "lockdownId": "None",
                     "modifiedAt": 1710258270,
                     "name": "test",
@@ -1075,7 +1075,7 @@
             },
             "connectedAt": "None",
             "created": 1671486047,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "f5762caa-a268-4538-8b84-6252e3b92984",
             "deviceIos": [
                 {
@@ -1284,8 +1284,8 @@
             "auxInputId": "a4e09322-281a-485c-8109-ee00f53b63f6",
             "cacheId": "a4e09322-281a-485c-8109-ee00f53b63f6",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 60.0,
                 "unlockTimeS": 0.0
             },
@@ -1323,8 +1323,8 @@
             "auxInputId": "d4df5457-657d-4a77-ab88-48b552c787c0",
             "cacheId": "d4df5457-657d-4a77-ab88-48b552c787c0",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 60.0,
                 "unlockTimeS": 0.0
             },
@@ -1377,8 +1377,8 @@
             "auxInputId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
             "cacheId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 10.0,
                 "unlockTimeS": 0.0
             },
@@ -1430,8 +1430,8 @@
             "auxInputId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
             "cacheId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 10.0,
                 "unlockTimeS": 0.0
             },
@@ -1481,8 +1481,8 @@
             "auxInputId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
             "cacheId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 10.0,
                 "unlockTimeS": 0.0
             },
@@ -1595,7 +1595,7 @@
             },
             "created": 1662564357.576875,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [],
             "displayName": "None",
             "doorId": "d2160921-5437-4e8f-9fe0-3525868d280a",
@@ -1605,8 +1605,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -1698,7 +1698,7 @@
             },
             "created": 1671486146.490864,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "f5762caa-a268-4538-8b84-6252e3b92984",
@@ -1785,8 +1785,8 @@
             "floorId": "cfd29286-c0f5-4c88-8b28-2e0195300db6",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -1871,7 +1871,7 @@
             },
             "created": 1710280880.210077,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "3d3295e6-30da-44eb-bc05-bfa47249afbd",
@@ -1954,8 +1954,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -2044,7 +2044,7 @@
             },
             "created": 1709235751.51533,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "147c460f-1a28-42af-8a19-caa0522f2853",
@@ -2103,8 +2103,8 @@
             "floorId": "None",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -2221,7 +2221,7 @@
             },
             "created": 1662998165.267099,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "3d3295e6-30da-44eb-bc05-bfa47249afbd",
@@ -2308,8 +2308,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -2426,7 +2426,7 @@
             },
             "created": 1671488360.561138,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "f5762caa-a268-4538-8b84-6252e3b92984",
@@ -2513,8 +2513,8 @@
             "floorId": "cfd29286-c0f5-4c88-8b28-2e0195300db6",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -2580,7 +2580,7 @@
             },
             "created": 1689111125.834043,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "3d3295e6-30da-44eb-bc05-bfa47249afbd",
@@ -2607,8 +2607,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -2718,7 +2718,7 @@
             },
             "created": 1688741594.346773,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "3d3295e6-30da-44eb-bc05-bfa47249afbd",
@@ -2741,8 +2741,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": 720.0,
-                "enabled": true,
-                "flipped": false,
+                "enabled": "True",
+                "flipped": "False",
                 "lat": 40.72356046679746,
                 "long": -111.85615311841526,
                 "scale": 1.7924724723905063,
@@ -2828,7 +2828,7 @@
             },
             "created": 1700168326.711477,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "a44fb274-1e00-4786-a55b-3d79fcb152cb",
@@ -2851,8 +2851,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -2936,7 +2936,7 @@
             },
             "created": 1710453197.136876,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "90c971bd-2a15-4305-bc8c-710374a3d089",
@@ -3023,8 +3023,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -3115,7 +3115,7 @@
             },
             "created": 1710277341.997212,
             "defaultDisplayImage": "None",
-            "deleted": false,
+            "deleted": "False",
             "deviceIos": [
                 {
                     "accessControllerId": "90c971bd-2a15-4305-bc8c-710374a3d089",
@@ -3198,8 +3198,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": "None",
-                "enabled": false,
-                "flipped": false,
+                "enabled": "False",
+                "flipped": "False",
                 "lat": "None",
                 "long": "None",
                 "scale": "None",
@@ -3358,7 +3358,7 @@
                     },
                     "created": 1710341425.161352,
                     "defaultDisplayImage": "None",
-                    "deleted": false,
+                    "deleted": "False",
                     "deviceIos": [
                         {
                             "accessControllerId": "43fa1fcd-17f0-4b95-9c24-ac8ff38131ed",
@@ -3381,8 +3381,8 @@
                     "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
                     "floorplan": {
                         "angle": "None",
-                        "enabled": false,
-                        "flipped": false,
+                        "enabled": "False",
+                        "flipped": "False",
                         "lat": "None",
                         "long": "None",
                         "scale": "None",
@@ -3517,10 +3517,10 @@
         {
             "contactSensorType": "door",
             "created": 1694529943,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "9b9ce168-607f-4db5-9e5a-39f8be6dd1e3",
-            "enableTransmitterMode": false,
-            "isOnline": false,
+            "enableTransmitterMode": "False",
+            "isOnline": "False",
             "lastSeen": "None",
             "lastTestTimestamp": "None",
             "name": "Unnamed Door Contact Sensor",
@@ -3532,10 +3532,10 @@
         {
             "contactSensorType": "door",
             "created": 1703102631,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "389a5914-e2b7-4b8a-9294-c6f29f8f144f",
-            "enableTransmitterMode": true,
-            "isOnline": false,
+            "enableTransmitterMode": "True",
+            "isOnline": "False",
             "lastSeen": 1703104999,
             "lastTestTimestamp": 1703103501,
             "name": "BR31 · DC3N-CA9C-WALK",
@@ -3665,9 +3665,9 @@
     "glassBreakSensor": [
         {
             "created": 1648499507,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "3f3e2aba-e314-4d7f-bf5e-9e9a43094756",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1657139304,
             "name": "Rowdy Sensor",
             "serialNumber": "DG3T-LKDF-XF4A",
@@ -3678,9 +3678,9 @@
         {
             "claimedSerialNumber": "DQ4F-JXQF-H7JQ",
             "created": 1694805789,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "320f127f-913e-4ce4-bee1-54edccaa124f",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1694806188,
             "name": "Test Alarm Location Alarm Panel",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
@@ -3690,9 +3690,9 @@
         {
             "claimedSerialNumber": "KP4J-NJCE-YYL9",
             "created": 1701971270,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "4c74397f-33db-4298-b668-7fbfac1879ea",
-            "isOnline": true,
+            "isOnline": "True",
             "lastSeen": 1706645730,
             "name": "BC82 · KP4J-NJCE-YYL9",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
@@ -3702,9 +3702,9 @@
         {
             "claimedSerialNumber": "DQ46-YJRC-FQW7",
             "created": 1707426628,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "9058348e-a3ee-49f4-9a07-36abe9883f34",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": "None",
             "name": "Demo BP41",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
@@ -3714,9 +3714,9 @@
         {
             "claimedSerialNumber": "KP79-77RP-DNKN",
             "created": 1707428060,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "f59f392b-2b20-4bce-96b6-9c2fafca9089",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1709830555,
             "name": "Demo BK21",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
@@ -3728,7 +3728,7 @@
         {
             "claimedSerialNumber": "KP4J-NJCE-YYL9",
             "created": 1701971270,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "4c74397f-33db-4298-b668-7fbfac1879ea",
             "name": "BC82 · KP4J-NJCE-YYL9",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489"
@@ -3736,7 +3736,7 @@
         {
             "claimedSerialNumber": "KP79-77RP-DNKN",
             "created": 1707428060,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "f59f392b-2b20-4bce-96b6-9c2fafca9089",
             "name": "Demo BK21",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489"
@@ -3746,10 +3746,10 @@
     "panicButton": [
         {
             "created": 1705445871,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "ec4730fa-6344-4a46-bed9-aa8889495cf2",
-            "enableMobileMode": false,
-            "isOnline": false,
+            "enableMobileMode": "False",
+            "isOnline": "False",
             "lastSeen": "None",
             "name": "Panicky Button",
             "panicPressType": "single",
@@ -3760,9 +3760,9 @@
     "waterSensor": [
         {
             "created": 1657820337,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "6f57c44d-d0e9-40ec-bfdf-8a0a9bc60744",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1703105109,
             "name": "",
             "serialNumber": "DW3Q-EAXH-4RR3",
@@ -3779,12 +3779,12 @@
             "cacheId ": "46e7561a-06fc-452b-9ef7-0a329710bf08 ",
             "claimedSerialNumber ": "DRJN-PLJM-FPCT ",
             "created ": 1708714930,
-            "deleted ": false,
+            "deleted ": "False",
             "emailsToNotify ": [],
             "gridData ": {
-                "historyPlaybackEnabled ": true,
-                "mp4SockEnabled ": true,
-                "muteAudio ": true,
+                "historyPlaybackEnabled ": "True",
+                "mp4SockEnabled ": "True",
+                "muteAudio ": "True",
                 "name ": "VX52 · DRJN-PLJM-FPCT ",
                 "pages ": [
                     {
@@ -4073,7 +4073,7 @@
             "logLevel ": "None",
             "macAddress ": "None",
             "macAddressEncrypted ": "None",
-            "offlineNotificationsEnabled ": false,
+            "offlineNotificationsEnabled ": "False",
             "organizationId ": "cbe2df58-36fd-46f3-9148-e300bbee8489 ",
             "screenHeight ": 1080.0,
             "screenScaleFactor ": 1.0,
@@ -4095,15 +4095,15 @@
         "claimed_serial_number": "PR4H-6D3F-QJJM",
         "claimed_at": "2024-03-18T21: 50: 44.57297Z",
         "name": "GC31 · PR4H-6D3F-QJJM",
-        "is_online": true,
+        "is_online": "True",
         "model_id": "JONAS_GATEWAY_INDOOR",
         "connected_at": "2024-03-18T21: 51: 52.946778Z",
-        "is_deleted": false,
+        "is_deleted": "False",
         "location_latitude": 40.7234056,
         "location_longitude": -111.8560359,
         "location_label": "1215 Wilmington Ave #200, Salt Lake City, UT 84106, USA",
         "timezone": "America/Denver",
-        "is_camera_always_streaming": false,
+        "is_camera_always_streaming": "False",
         "upload": 3332577792,
         "download": 1432138752,
         "upload_month": 3332577792,
@@ -4149,8 +4149,8 @@
         "ip": "100.90.77.209/30",
         "imei": "354175753167727",
         "iccid": "89148000007745421772",
-        "is_firmware_latest": true,
-        "is_using_verkada_sim": true,
+        "is_firmware_latest": "True",
+        "is_using_verkada_sim": "True",
         "tower_latitude": 40.680402,
         "tower_longitude": -111.804087,
         "tower_range": 1068
@@ -4167,10 +4167,10 @@
             "connectedAt": 1696960906,
             "deviceId": "f411c4cc-a0be-43e8-b0ab-693b2b4f3ef5",
             "floorId": "None",
-            "hasThumbnail": false,
+            "hasThumbnail": "False",
             "ipAddress": "10.21.145.70/20",
-            "isOnline": false,
-            "is_firmware_latest": true,
+            "isOnline": "False",
+            "is_firmware_latest": "True",
             "lastSeenAt": "None",
             "lastSeenAtCached": "None",
             "locationLabel": "1215 Wilmington Ave 160, Salt Lake City, UT 84106, US",
@@ -4201,7 +4201,7 @@
                 "formaldehyde"
             ],
             "timezone": "America/Denver",
-            "useCelsiusWhenDisplayingTemp": false,
+            "useCelsiusWhenDisplayingTemp": "False",
             "usersToNotify": [],
             "zoneId": "None"
         },
@@ -4213,10 +4213,10 @@
             "connectedAt": 1686086471,
             "deviceId": "c871eae4-203d-4864-be99-0083baab0bb7",
             "floorId": "None",
-            "hasThumbnail": false,
+            "hasThumbnail": "False",
             "ipAddress": "10.21.145.79/20",
-            "isOnline": false,
-            "is_firmware_latest": true,
+            "isOnline": "False",
+            "is_firmware_latest": "True",
             "lastSeenAt": "None",
             "lastSeenAtCached": "None",
             "locationLabel": "1215 E Wilmington Ave Salt Lake City, UT 84106 US",
@@ -4234,7 +4234,7 @@
                 "tamper"
             ],
             "timezone": "America/Denver",
-            "useCelsiusWhenDisplayingTemp": false,
+            "useCelsiusWhenDisplayingTemp": "False",
             "usersToNotify": [],
             "zoneId": "None"
         }
@@ -4249,20 +4249,20 @@
             ],
             "cacheId": "NotImplemented-Garfunkel-5827927c-d09b-42a2-9234-7bec2e727714",
             "created": 1701213554,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "8c15772e-ebd7-43ab-9945-1be67f4b0ef4",
-            "hasSufficientPower": true,
+            "hasSufficientPower": "True",
             "ipAddress": "None",
-            "isMicMuted": false,
-            "isOnline": false,
-            "isUnassigned": false,
+            "isMicMuted": "False",
+            "isOnline": "False",
+            "isUnassigned": "False",
             "macAddress": "None",
-            "mediaOnEvent": false,
+            "mediaOnEvent": "False",
             "microphoneSensitivityPercent": 37,
             "modified": 1710167062,
             "name": "BZ11 · ANN4-L4CR-AHE4",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
-            "recordingEnabled": false,
+            "recordingEnabled": "False",
             "serialNumber": "ANN4-L4CR-AHE4",
             "siteId": "03c9dcc4-d8b8-47f0-ab38-3671f1abc856",
             "speakerVolumePercent": 0
@@ -4271,20 +4271,20 @@
             "associatedCameraIds": [],
             "cacheId": "NotImplemented-Garfunkel-f30bc3ef-1c45-4741-84f4-cf9b9e9bdff1",
             "created": 1685572751,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "6d138a27-f9d7-4d42-981c-b1c812928f74",
-            "hasSufficientPower": false,
+            "hasSufficientPower": "False",
             "ipAddress": "10.21.145.218",
-            "isMicMuted": false,
-            "isOnline": false,
-            "isUnassigned": false,
+            "isMicMuted": "False",
+            "isOnline": "False",
+            "isUnassigned": "False",
             "macAddress": "e0:a7: 00: 45: 2b:de",
-            "mediaOnEvent": false,
+            "mediaOnEvent": "False",
             "microphoneSensitivityPercent": 37,
             "modified": 1698666881,
             "name": "CORP Motivation",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
-            "recordingEnabled": false,
+            "recordingEnabled": "False",
             "serialNumber": "ANN3-A746-7RJ4",
             "siteId": "03c9dcc4-d8b8-47f0-ab38-3671f1abc856",
             "speakerVolumePercent": 84
@@ -4295,20 +4295,20 @@
             ],
             "cacheId": "NotImplemented-Garfunkel-0d666682-0345-47b4-a055-f709cadbf254",
             "created": 1678298120,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "7e93297d-114f-41ba-9569-a7f911cd56ea",
-            "hasSufficientPower": true,
+            "hasSufficientPower": "True",
             "ipAddress": "10.21.145.57",
-            "isMicMuted": false,
-            "isOnline": false,
-            "isUnassigned": false,
+            "isMicMuted": "False",
+            "isOnline": "False",
+            "isUnassigned": "False",
             "macAddress": "e0:a7: 00: 45: 2b:5e",
-            "mediaOnEvent": false,
+            "mediaOnEvent": "False",
             "microphoneSensitivityPercent": 50,
             "modified": 1710160123,
             "name": "SE Lab Plywood Speaker",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
-            "recordingEnabled": false,
+            "recordingEnabled": "False",
             "serialNumber": "ANNN-C9W7-RRJF",
             "siteId": "03c9dcc4-d8b8-47f0-ab38-3671f1abc856",
             "speakerVolumePercent": 35
@@ -4323,15 +4323,15 @@
         "claimed_serial_number": "PR4H-6D3F-QJJM",
         "claimed_at": "2024-03-18T21: 50: 44.57297Z",
         "name": "GC31 · PR4H-6D3F-QJJM",
-        "is_online": true,
+        "is_online": "True",
         "model_id": "JONAS_GATEWAY_INDOOR",
         "connected_at": "2024-03-18T21: 51: 52.946778Z",
-        "is_deleted": false,
+        "is_deleted": "False",
         "location_latitude": 40.7234056,
         "location_longitude": -111.8560359,
         "location_label": "1215 Wilmington Ave #200, Salt Lake City, UT 84106, USA",
         "timezone": "America/Denver",
-        "is_camera_always_streaming": false,
+        "is_camera_always_streaming": "False",
         "upload": 3334220288,
         "download": 1434210560,
         "upload_month": 3334220288,
@@ -4379,213 +4379,678 @@
         "ip": "100.90.77.209/30",
         "imei": "354175753167727",
         "iccid": "89148000007745421772",
-        "is_firmware_latest": true,
-        "is_using_verkada_sim": true,
+        "is_firmware_latest": "True",
+        "is_using_verkada_sim": "True",
         "tower_latitude": 40.680402,
         "tower_longitude": -111.804087,
         "tower_range": 1068
     }
 ]
 
-[
-    {
-        "camera_id": "10ce866e-3574-4125-998e-4bd0169599ed",
-        "cloud_retention": 0,
-        "date_added": 1698877856,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450228-keenan",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342735, "local_ip": "10.21.145.147", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.72363195681064, "location_lon": -111.85581778818306, "mac": "E0:A7: 00: 05: 63:F5", "model": "CM61", "name": "CM61", "people_history_enabled": True, "serial": "RK7R-4FHM-4JLW", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
+{
+    "deskApps": [
+        {
+            "associatedCameraIds": [],
+            "associatedDoorIds": [],
+            "associatedIntercomIds": [],
+            "claimedAt": 1701201265,
+            "deletedAt": "None",
+            "deviceId": "9097a015-040f-4c89-a406-f8e38421dfb0",
+            "deviceModelId": "DESK_APP",
+            "deviceType": "desk_app",
+            "grid": {
+                "cells": []
+            },
+            "isAway": "False",
+            "lockdownId": "None",
+            "name": "Desk Station · DEKH-6Y93-YCYE",
+            "networkAddress": {
+                "ipAddress": "None",
+                "macAddress": "None"
+            },
+            "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+            "serialNumber": "DEKH-6Y93-YCYE",
+            "siteId": "3753467d-7499-4bbc-a806-1374fb1a1656",
+            "updatedAt": 1704745227,
+            "webRtcEnabled": "True"
+        },
+        {
+            "associatedCameraIds": [],
+            "associatedDoorIds": [],
+            "associatedIntercomIds": [],
+            "claimedAt": 1712245584,
+            "deletedAt": "None",
+            "deviceId": "b9793f02-865c-4bb4-b919-c1b351747580",
+            "deviceModelId": "DESK_APP",
+            "deviceType": "desk_app",
+            "grid": {
+                "cells": []
+            },
+            "isAway": "False",
+            "lockdownId": "None",
+            "name": "Austin Desk Staion",
+            "networkAddress": {
+                "ipAddress": "None",
+                "macAddress": "None"
+            },
+            "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+            "serialNumber": "DEKR-DXMW-KQDA",
+            "siteId": "7f7ab177-bdcd-44e3-8f6d-5106ae380868",
+            "updatedAt": 1712245601,
+            "webRtcEnabled": "True"
+        }
+    ],
+    "intercoms": []
+}
+
+{
+    "checkpoints": [],
+    "devices": [],
+    "documents": [
+        {
+            "description": "Test Upload?",
+            "documentId": "0b6e37be-b393-457c-9f50-c3b59e803a32",
+            "documentText": "None",
+            "isGlobal": "True",
+            "isPdfDocument": "False",
+            "isVideoDocument": "False",
+            "lastModified": 1712677514,
+            "orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+            "pdfsByLocale": {},
+            "siteId": "None",
+            "translations": {
+                "en_US": {
+                    "description": "Test Upload?",
+                    "documentText": "None"
+                }
+            },
+            "videosByLocale": {}
+        },
+        {
+            "description": "NDA Document",
+            "documentId": "003a6714-d8a7-4adc-828d-12dbc6cbfe68",
+            "documentText": "\nIn connection with a proposed business relationship,{company
+        } has allowed you {guestName
+        } access, or may allow you access, to business, technical or other information, materials and/or ideas (\"Proprietary Information,\" which term shall include, without limitation, anything you learn or discover as a result of exposure to or analysis of any Proprietary Information).\n\nIn consideration of any disclosure and any negotiations concerning the proposed business relationship, you agree as follows:\n\nYou will hold in confidence and will not possess or use (except as required to evaluate the proposed business relationship within the U.S.) or disclose any Proprietary Information except information you can document (a) is in the public domain through no fault of yours, (b)\xa0was properly known to you, without restriction, prior to disclosure by Company or (c) was properly disclosed to you by another person without restriction.  You will not reverse engineer or attempt to derive the composition or underlying information, structure or ideas of any Proprietary Information.  The foregoing does not grant you a license in or to any of the Proprietary Information.\n\nIf you decide not to proceed with the proposed business relationship or if asked by Company, you will promptly return all Proprietary Information and all copies, extracts and other objects or items in which Proprietary Information may be contained or embodied.\n\nYou will promptly notify Company of any unauthorized release, disclosure or use of Proprietary Information.\n\nYou understand that this Agreement does not obligate Company to disclose any information or negotiate or enter into any agreement or relationship. You will strictly abide by any and all instructions and restrictions provided by Company from time to time with respect to Proprietary Information or Company systems.  You will ensure the security of any facilities, machines, accounts, passwords and methods you use to store any Proprietary Information or to access Company systems and ensure that no other person has or obtains access thereto.\n\nThe terms of this Agreement will remain in effect with respect to any particular Proprietary Information until you can document that such Proprietary Information falls into one of the exceptions stated in Paragraph 1 above.\n\nYou acknowledge and agree that due to the unique nature of the Proprietary Information, any breach of this agreement would cause irreparable harm to Company for which damages are not an adequate remedy, and that Company shall therefore be entitled to equitable relief in addition to all other remedies available at law.\n\nThis Agreement is personal to you, is nonassignable by you, is governed by the internal laws of the State and may be modified or waived only in writing signed by both parties.  If any provision of this Agreement is found to be unenforceable, such provision will be limited or deleted to the minimum extent necessary so that the remaining terms remain in full force and effect.  The prevailing party in any dispute or legal action regarding the subject matter of this Agreement shall be entitled to recover attorneys’ fees and costs.\n\nAcknowledged and agreed on :\n\n\n",
+        "isGlobal": "False",
+        "isPdfDocument": "False",
+        "isVideoDocument": "False",
+        "lastModified": 1710954578,
+        "orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+        "pdfsByLocale": {},
+        "siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+        "translations": {
+            "en_US": {
+                "description": "NDA Document",
+                "documentText": "\nIn connection with a proposed business relationship,{company
+            } has allowed you {guestName
+            } access, or may allow you access, to business, technical or other information, materials and/or ideas (\"Proprietary Information,\" which term shall include, without limitation, anything you learn or discover as a result of exposure to or analysis of any Proprietary Information).\n\nIn consideration of any disclosure and any negotiations concerning the proposed business relationship, you agree as follows:\n\nYou will hold in confidence and will not possess or use (except as required to evaluate the proposed business relationship within the U.S.) or disclose any Proprietary Information except information you can document (a) is in the public domain through no fault of yours, (b)\xa0was properly known to you, without restriction, prior to disclosure by Company or (c) was properly disclosed to you by another person without restriction.  You will not reverse engineer or attempt to derive the composition or underlying information, structure or ideas of any Proprietary Information.  The foregoing does not grant you a license in or to any of the Proprietary Information.\n\nIf you decide not to proceed with the proposed business relationship or if asked by Company, you will promptly return all Proprietary Information and all copies, extracts and other objects or items in which Proprietary Information may be contained or embodied.\n\nYou will promptly notify Company of any unauthorized release, disclosure or use of Proprietary Information.\n\nYou understand that this Agreement does not obligate Company to disclose any information or negotiate or enter into any agreement or relationship. You will strictly abide by any and all instructions and restrictions provided by Company from time to time with respect to Proprietary Information or Company systems.  You will ensure the security of any facilities, machines, accounts, passwords and methods you use to store any Proprietary Information or to access Company systems and ensure that no other person has or obtains access thereto.\n\nThe terms of this Agreement will remain in effect with respect to any particular Proprietary Information until you can document that such Proprietary Information falls into one of the exceptions stated in Paragraph 1 above.\n\nYou acknowledge and agree that due to the unique nature of the Proprietary Information, any breach of this agreement would cause irreparable harm to Company for which damages are not an adequate remedy, and that Company shall therefore be entitled to equitable relief in addition to all other remedies available at law.\n\nThis Agreement is personal to you, is nonassignable by you, is governed by the internal laws of the State and may be modified or waived only in writing signed by both parties.  If any provision of this Agreement is found to be unenforceable, such provision will be limited or deleted to the minimum extent necessary so that the remaining terms remain in full force and effect.  The prevailing party in any dispute or legal action regarding the subject matter of this Agreement shall be entitled to recover attorneys’ fees and costs.\n\nAcknowledged and agreed on :\n\n\n"
+        }
     },
-    {
-        "camera_id": "12e337f5-f82b-4d5d-869e-55df5cdafcbe",
-        "cloud_retention": 0,
-        "date_added": 1650470290,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450239-spurdog",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342751, "local_ip": "10.21.145.131", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 19: 24:AD", "model": "CF81-E", "name": "CF81-E", "people_history_enabled": True, "serial": "NMCD-GGAD-WL7L", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": False
+    "videosByLocale": {}
+},
+{
+    "description": "Surveillance Consent",
+    "documentId": "6219644e-858a-42da-a1fa-082e2b0e8a98",
+    "documentText": "\nDear guest, \nIn order to ensure the safety of our employees, guests, and visitors, our facility is monitored by video surveillance, which may collect images of you.  These images may be shared with our third-party security provider(s), and may be stored for up to one year (or longer as part of an investigation).  By signing below, you agree to be monitored by video surveillance in accordance with these terms.\n\n",
+    "isGlobal": "False",
+    "isPdfDocument": "False",
+    "isVideoDocument": "False",
+    "lastModified": 1710954578,
+    "orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+    "pdfsByLocale": {},
+    "siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+    "translations": {
+        "en_US": {
+            "description": "Surveillance Consent",
+            "documentText": "\nDear guest, \nIn order to ensure the safety of our employees, guests, and visitors, our facility is monitored by video surveillance, which may collect images of you.  These images may be shared with our third-party security provider(s), and may be stored for up to one year (or longer as part of an investigation).  By signing below, you agree to be monitored by video surveillance in accordance with these terms.\n\n"
+        }
     },
-    {
-        "camera_id": "155d3f62-56bf-4f3f-9c18-98e8d6eb0755",
-        "cloud_retention": 0,
-        "date_added": 1647450918,
-        "device_retention": 30,
-        "firmware": "Up to date v2022.12.16.278216-arnold-5mp",
-        "firmware_update_schedule": "0,86400", "last_online": 1674160374, "local_ip": "10.21.145.33", "location": "1215 Wilmington Ave #160, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234072, "location_lon": -111.8560232, "mac": "E0:A7: 00: 24: 33: 28", "model": "CD42", "name": "CD42", "people_history_enabled": True, "serial": "PJFE-CYEQ-M7GP", "site": "SLC-1", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "2478f418-9de6-4a7a-b1aa-2468d5e1ce5c",
-        "cloud_retention": 0,
-        "date_added": 1709056737,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450240-arnold-5mp",
-        "firmware_update_schedule": "0,86400", "last_online": 1711045605, "local_ip": "192.168.1.55", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 23: 3D:1E", "model": "CD52-E", "name": "Does this plant need water?", "people_history_enabled": True, "serial": "4HAD-X94H-TM4R", "site": "Gateway Testing", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "40a511d2-5fde-4614-bfe5-6470a71f3915",
-        "cloud_retention": 0,
-        "date_added": 1706051159,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.02.24.445590-goro",
-        "firmware_update_schedule": "0,86400", "last_online": 1709920443, "local_ip": "10.21.145.248", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, US", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 31: 35: 8A", "model": "CH52-E", "name": "CH52-E · 7JE9-DPJW-P3XB", "people_history_enabled": True, "serial": "7JE9-DPJW-P3XB", "site": "Blue Plywood", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "548bb538-cf7b-48f0-882a-ea3571ce6db3",
-        "cloud_retention": 0,
-        "date_added": 1689711995,
-        "device_retention": 30,
-        "firmware": "Up to date v2023.07.31.357771-gilfoyle",
-        "firmware_update_schedule": "0,86400", "last_online": 1691012915, "local_ip": "10.21.145.63", "location": "1215 Wilmington Ave 160, Salt Lake City, UT 84106, US", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00:0E: 52:B8", "model": "CM41", "name": "SE Lab CM41", "people_history_enabled": True, "serial": "PD76-EHAN-RMPR", "site": "Rhett Test Site", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "58d7f955-b43e-4a44-aea5-c1eb06233eff",
-        "cloud_retention": 0,
-        "date_added": 1706051159,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.02.24.445590-goro",
-        "firmware_update_schedule": "0,86400", "last_online": 1709920427, "local_ip": "10.21.145.249", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, US", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 31: 35: 8B", "model": "CH52-E", "name": "CH52-E · 7JE9-DPJW-P3XC", "people_history_enabled": True, "serial": "7JE9-DPJW-P3XC", "site": "Blue Plywood", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "5b5e20b9-9ea5-45f8-9b35-5e969a057201",
-        "cloud_retention": 0,
-        "date_added": 1697210543,
-        "device_retention": 30,
-        "firmware": "Up to date v2023.12.20.406961-bruce-4k",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342765, "local_ip": "10.21.145.42", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 2B: 24: 39", "model": "CB62-TE", "name": "CB62-TE", "people_history_enabled": True, "serial": "TEPC-NXQG-PQHW", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "61444d39-646e-4689-be45-fee6106b0f3d",
-        "cloud_retention": 0,
-        "date_added": 1703007368,
-        "device_retention": 30,
-        "firmware": "Up to date v2023.11.01.391132-arnold-5mp",
-        "firmware_update_schedule": "0,86400", "last_online": 1703008034, "local_ip": "10.21.146.86", "location": "1215 Wilmington Ave 160, Salt Lake City, UT 84106, US", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 22: 9F:D1", "model": "CD52", "name": "CD52 · PEG6-L6XM-R4Q7", "people_history_enabled": False, "serial": "PEG6-L6XM-R4Q7", "site": "SLC-1", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "716103ea-77d2-497f-bfc9-f08e7c0ea1a6",
-        "cloud_retention": 0,
-        "date_added": 1710965621,
-        "device_retention": None,
-        "firmware": "Needs update ",
-        "firmware_update_schedule": "0,86400", "last_online": 0, "local_ip": None, "location": "406 E 3rd Ave, San Mateo, CA 94401, US", "location_angle": 0.0, "location_lat": 37.56613979999999, "location_lon": -122.3210929, "mac": None, "model": "CD62", "name": "CD62 · HFJQ-PKNN-GCYC", "people_history_enabled": False, "serial": "HFJQ-PKNN-GCYC", "site": "Test Sub Site", "status": "Offline", "timezone": "America/Los_Angeles", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "7331098b-0a94-4f6b-8502-629efb3651e0",
-        "cloud_retention": 0,
-        "date_added": 1647450918,
-        "device_retention": None,
-        "firmware": "Needs update ",
-        "firmware_update_schedule": "0,86400", "last_online": 0, "local_ip": None, "location": "1215 Wilmington Ave #160, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234072, "location_lon": -111.8560232, "mac": None, "model": "CD42", "name": "CD42", "people_history_enabled": False, "serial": "PJF6-3FFN-QW6T", "site": "SLC-1", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "79fb8fa0-e104-4755-beb1-3c79a00e655d",
-        "cloud_retention": 0,
-        "date_added": 1712240463,
-        "device_retention": None,
-        "firmware": "Needs update ",
-        "firmware_update_schedule": "0,86400", "last_online": 0, "local_ip": None, "location": "406 E 3rd Ave, San Mateo, CA 94401, US", "location_angle": 0.0, "location_lat": 37.56613979999999, "location_lon": -122.3210929, "mac": None, "model": "CD31", "name": "CD31 · 49K3-XE46-43NW", "people_history_enabled": False, "serial": "49K3-XE46-43NW", "site": "Test Sub Site", "status": "Offline", "timezone": "America/Los_Angeles", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "7d480dd9-4cd6-4d6e-9ff2-96182e266c3a",
-        "cloud_retention": 0,
-        "date_added": 1706051159,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.02.24.445590-goro",
-        "firmware_update_schedule": "0,86400", "last_online": 1709920405, "local_ip": "10.21.145.242", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, US", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 31: 35: 8C", "model": "CH52-E", "name": "CH52-E · 7JE9-DPJW-P3XD", "people_history_enabled": True, "serial": "7JE9-DPJW-P3XD", "site": "Blue Plywood", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "8511bf35-2bda-4ef6-8e2b-2fe3b19fc088",
-        "cloud_retention": 0,
-        "date_added": 1698446179,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450240-arnold-5mp",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342779, "local_ip": "10.21.145.3", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 127.0, "location_lat": 40.72366270350459, "location_lon": -111.85586523872314, "mac": "E0:A7: 00: 22: 9F:A7", "model": "CD52", "name": "CD52", "people_history_enabled": True, "serial": "PEGQ-4ADQ-6FJ4", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "91ad8281-dbf8-4cb3-8370-8ad53a0ec0f2",
-        "cloud_retention": 0,
-        "date_added": 1706051159,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.02.24.445590-goro",
-        "firmware_update_schedule": "0,86400", "last_online": 1709920442, "local_ip": "10.21.145.250", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, US", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 31: 35: 89", "model": "CH52-E", "name": "CH52-E · 7JE9-DPJW-P3XA", "people_history_enabled": True, "serial": "7JE9-DPJW-P3XA", "site": "Blue Plywood", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "927dd6ac-fa7d-42f3-b51d-8f42c1bbde54",
-        "cloud_retention": 0,
-        "date_added": 1698877390,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450223-tommy",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342744, "local_ip": "10.21.145.105", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 43: 27: 5C", "model": "CM42", "name": "CM42", "people_history_enabled": True, "serial": "RNTD-FDMK-G3J4", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "b0088e46-7621-4d2b-923c-ea5036521be3",
-        "cloud_retention": 0,
-        "date_added": 1698447194,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450240-arnold-5mp",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342742, "local_ip": "10.21.145.174", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 24:DF:EC", "model": "CD42", "name": "CD42", "people_history_enabled": True, "serial": "PJFH-MMF6-WER4", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "c3e1c775-8626-4923-becf-a1bf49eaac06",
-        "cloud_retention": 0,
-        "date_added": 1698445571,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450219-arnold-4k",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342777, "local_ip": "10.21.145.144", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 1D: 47: 93", "model": "CD62-E", "name": "CD62-E", "people_history_enabled": True, "serial": "KXRC-YXHQ-WXTW", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "c45ec793-43f1-49fb-8dc1-6bdca6a6ef00",
-        "cloud_retention": 0,
-        "date_added": 1698446442,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450240-arnold-5mp",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342743, "local_ip": "10.21.145.137", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.72363405503192, "location_lon": -111.85597177963741, "mac": "E0:A7: 00: 4B: 24: 23", "model": "CD32-E", "name": "CD32-E", "people_history_enabled": True, "serial": "CRJN-RLGG-K9DJ", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "cb504877-9e4e-4613-91fc-077443fed2f0",
-        "cloud_retention": 0,
-        "date_added": 1696869651,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.04.01.465530-sauron",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342765, "local_ip": "10.21.145.7", "location": "1215 Wilmington Ave 160, Salt Lake City, UT 84106, US", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 49: 24:E3", "model": "CP52-E", "name": "SLC-1 CP52-E", "people_history_enabled": True, "serial": "E9W4-KYGQ-4H9E", "site": "SLC-1", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "cc965ea0-90cd-4cb6-bb22-99d41fd62d57",
-        "cloud_retention": 0,
-        "date_added": 1678131885,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450226-nelson-4k",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342775, "local_ip": "10.21.145.29", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 0B:BE: 19", "model": "CD61-E", "name": "CD61-E", "people_history_enabled": True, "serial": "TTRK-XC7Q-RNDX", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": True
-    },
-    {
-        "camera_id": "dc42eca7-0df5-449c-ac77-e9df489ab9d9",
-        "cloud_retention": 0,
-        "date_added": 1678131928,
-        "device_retention": 30,
-        "firmware": "Up to date v2024.03.05.450225-mako",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342758, "local_ip": "10.21.145.108", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 03: 7D: 46", "model": "D80", "name": "D80", "people_history_enabled": False, "serial": "KDTJ-4X79-YFDA", "site": "Blue Plywood", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "e2f0f186-c549-4688-bff9-513c9aceac3c",
-        "cloud_retention": 0,
-        "date_added": 1662058787,
-        "device_retention": 30,
-        "firmware": "Up to date v2022.09.30.262389-spurdog",
-        "firmware_update_schedule": "0,86400", "last_online": 1668639485, "local_ip": "10.21.145.186", "location": "Verkada HQ", "location_angle": 0.0, "location_lat": 37.56564, "location_lon": -122.32074, "mac": "E0:A7: 00: 19:C0: 30", "model": "CF81-E", "name": "Santee Bus Test Cam", "people_history_enabled": False, "serial": "NMCH-JQNF-W7M6", "site": "Missing Cameras", "status": "Offline", "timezone": "America/Los_Angeles", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "e8d9f54d-0b1a-40f8-8a8c-b6563e8e3d80",
-        "cloud_retention": 0,
-        "date_added": 1678131894,
-        "device_retention": 30,
-        "firmware": "Up to date v2023.10.11.385323-nelson",
-        "firmware_update_schedule": "0,86400", "last_online": 1698427666, "local_ip": "10.21.145.36", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234057, "location_lon": -111.8560368, "mac": "E0:A7: 00: 08: 63:F1", "model": "CD51", "name": "SE Lab - CD51", "people_history_enabled": True, "serial": "GJ7E-4TGK-3JH6", "site": "Rhett Test Site", "status": "Offline", "timezone": "America/Denver", "vehicle_history_enabled": False
-    },
-    {
-        "camera_id": "ff4731b6-ae7c-4194-934c-b6a3770d1f7b",
-        "cloud_retention": 0,
-        "date_added": 1712244842,
-        "device_retention": 30,
-        "firmware": "Up to date iv4.0.1-leia",
-        "firmware_update_schedule": "0,86400", "last_online": 1712342744, "local_ip": "10.21.145.69", "location": "1215 Wilmington Ave, Salt Lake City, UT 84106, USA", "location_angle": 0.0, "location_lat": 40.7234056, "location_lon": -111.8560359, "mac": "E0:A7: 00: 41: 24:C1", "model": "TD52", "name": "TD52 · DDD3-HH46-N9QT", "people_history_enabled": False, "serial": "DDD3-HH46-N9QT", "site": "Landing Site", "status": "Live", "timezone": "America/Denver", "vehicle_history_enabled": False
-    }
+    "videosByLocale": {}
+},
+{
+    "description": "Translation Test",
+    "documentId": "67185bc8-7921-498e-a759-05651eb37bff",
+    "documentText": "This is a test for language at\xa0{company
+}. Please indicate your name\xa0{guestName
+}. Thanks.\xa0", "isGlobal": "True",
+"isPdfDocument": "False",
+"isVideoDocument": "False",
+"lastModified": 1713972604,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"pdfsByLocale": {},
+"siteId": "None",
+"translations": {
+    "en_US": {
+        "description": "Translation Test",
+        "documentText": "This is a test for language at\xa0{company
+    }. Please indicate your name\xa0{guestName
+    }. Thanks.\xa0"
+},
+"es": {
+    "description": "Test in Spanish",
+    "documentText": "\\\nEsta es una prueba de idioma en {company
+}. Por favor indica tu nombre {guestName
+}. Gracias."
+}
+},
+"videosByLocale": {}
+},
+{
+"description": "Test Upload",
+"documentId": "6defeaec-4832-474a-940e-f42633476b76",
+"documentText": "None",
+"isGlobal": "True",
+"isPdfDocument": "True",
+"isVideoDocument": "False",
+"lastModified": 1713475961,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"pdfsByLocale": {
+"en_US": "a00b5a70-1646-4009-8daf-e9588bd51509"
+},
+"siteId": "None",
+"translations": {
+"en_US": {
+"description": "Test Upload",
+"documentText": "None"
+}
+},
+"videosByLocale": {}
+}
+],
+"entrances": [],
+"multiPartDocuments": [],
+"printers": [],
+"sites": [
+{
+"autoSignOutAt": "None",
+"backgroundColor": "None",
+"badgeBackgroundColor": "None",
+"badgeHighlightColor": "None",
+"badgeLogoUrl": "None",
+"badgeTextColor": "None",
+"brandLogoUrl": "None",
+"cleverIntegrationState": "None",
+"contactlessCheckIn": "True",
+"countryCode": "US",
+"defaultHostId": "None",
+"defaultHostIds": [],
+"defaultHostName": "None",
+"defaultHostNames": [],
+"defaultLocale": "en_US",
+"denyEntry": "True",
+"denyEntryMessage": "Sorry, you cannot enter at this time.",
+"denyListCsvName": "None",
+"denyListEntryCount": 0,
+"denyListUploadTime": "None",
+"failContacts": [],
+"fullAddress": "1215 Wilmington Avenue, Salt Lake City, UT, USA",
+"hasDismissedFtux": "False",
+"hasDismissedTablet": "False",
+"hasEditedVisitorTypes": "True",
+"hasHadCameras": "False",
+"hasHadDoors": "False",
+"hasHadPrinters": "False",
+"hasHadTablets": "False",
+"hasHadVisitor": "True",
+"healthcareEnabled": "False",
+"hideMatchesMissingPhotos": "False",
+"highlightColor": "None",
+"hostInputMethod": "None",
+"hostsCount": 7,
+"hostsCsvFilename": "None",
+"hostsLastUploaded": "None",
+"latitude": 40.7234056,
+"longitude": -111.8560359,
+"notifyHost": "False",
+"numStudents": 0,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"pinnedPiiRetentionDays": 90,
+"schoolCsvFilename": "None",
+"schoolLastUploaded": "None",
+"securityEntityGroupId": "None",
+"securityEntityLastSync": "None",
+"settingsPin": "3570",
+"signOutReminderSeconds": 14400,
+"sisIntegrationState": "None",
+"siteCode": "pz",
+"siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+"siteInUSA": "True",
+"siteName": "Austin Test Site",
+"supportedLocales": [
+"en_US"
+],
+"tabletCallButtonEnabled": "False",
+"textColor": "None",
+"timezone": "America/Denver",
+"translations": {
+"en_US": {
+"denyEntryMessage": "Sorry, you cannot enter at this time."
+}
+},
+"visitorTypeIds": {
+"19eb0712-17b3-4c2a-9203-cf634fcb9bf6": {
+"hidden": "False",
+"inviteAlias": "visitor",
+"order": 1,
+"visitorTypeId": "19eb0712-17b3-4c2a-9203-cf634fcb9bf6"
+},
+"56b953e4-b975-406c-a4cf-99e2ed23df57": {
+"hidden": "False",
+"inviteAlias": "interview",
+"order": 0,
+"visitorTypeId": "56b953e4-b975-406c-a4cf-99e2ed23df57"
+},
+"75419b47-5549-461f-8a72-c624472a7e1d": {
+"hidden": "False",
+"inviteAlias": "student-pickup",
+"order": 2,
+"visitorTypeId": "75419b47-5549-461f-8a72-c624472a7e1d"
+},
+"a84e86c2-4aea-4206-a4a6-18dc442cbfc6": {
+"hidden": "False",
+"inviteAlias": "test",
+"order": 3,
+"visitorTypeId": "a84e86c2-4aea-4206-a4a6-18dc442cbfc6"
+}
+}
+}
+],
+"visitorTypes": [
+{
+"documents": [
+{
+"active": "True",
+"description": "NDA Document",
+"documentId": "003a6714-d8a7-4adc-828d-12dbc6cbfe68",
+"documentText": "\nIn connection with a proposed business relationship,{company
+} has allowed you {guestName
+} access, or may allow you access, to business, technical or other information, materials and/or ideas (\"Proprietary Information,\" which term shall include, without limitation, anything you learn or discover as a result of exposure to or analysis of any Proprietary Information).\n\nIn consideration of any disclosure and any negotiations concerning the proposed business relationship, you agree as follows:\n\nYou will hold in confidence and will not possess or use (except as required to evaluate the proposed business relationship within the U.S.) or disclose any Proprietary Information except information you can document (a) is in the public domain through no fault of yours, (b)\xa0was properly known to you, without restriction, prior to disclosure by Company or (c) was properly disclosed to you by another person without restriction.  You will not reverse engineer or attempt to derive the composition or underlying information, structure or ideas of any Proprietary Information.  The foregoing does not grant you a license in or to any of the Proprietary Information.\n\nIf you decide not to proceed with the proposed business relationship or if asked by Company, you will promptly return all Proprietary Information and all copies, extracts and other objects or items in which Proprietary Information may be contained or embodied.\n\nYou will promptly notify Company of any unauthorized release, disclosure or use of Proprietary Information.\n\nYou understand that this Agreement does not obligate Company to disclose any information or negotiate or enter into any agreement or relationship. You will strictly abide by any and all instructions and restrictions provided by Company from time to time with respect to Proprietary Information or Company systems.  You will ensure the security of any facilities, machines, accounts, passwords and methods you use to store any Proprietary Information or to access Company systems and ensure that no other person has or obtains access thereto.\n\nThe terms of this Agreement will remain in effect with respect to any particular Proprietary Information until you can document that such Proprietary Information falls into one of the exceptions stated in Paragraph 1 above.\n\nYou acknowledge and agree that due to the unique nature of the Proprietary Information, any breach of this agreement would cause irreparable harm to Company for which damages are not an adequate remedy, and that Company shall therefore be entitled to equitable relief in addition to all other remedies available at law.\n\nThis Agreement is personal to you, is nonassignable by you, is governed by the internal laws of the State and may be modified or waived only in writing signed by both parties.  If any provision of this Agreement is found to be unenforceable, such provision will be limited or deleted to the minimum extent necessary so that the remaining terms remain in full force and effect.  The prevailing party in any dispute or legal action regarding the subject matter of this Agreement shall be entitled to recover attorneys’ fees and costs.\n\nAcknowledged and agreed on :\n\n\n",
+"isGlobal": "False",
+"isPdfDocument": "False",
+"isVideoDocument": "False",
+"lastModified": 1710954578,
+"multiPartDocumentId": "None",
+"order": 0,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"pdfsByLocale": {},
+"remember": "True",
+"requiresSignature": "True",
+"siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+"translations": {
+"en_US": {
+    "description": "NDA Document",
+    "documentText": "\nIn connection with a proposed business relationship,{company
+} has allowed you {guestName
+} access, or may allow you access, to business, technical or other information, materials and/or ideas (\"Proprietary Information,\" which term shall include, without limitation, anything you learn or discover as a result of exposure to or analysis of any Proprietary Information).\n\nIn consideration of any disclosure and any negotiations concerning the proposed business relationship, you agree as follows:\n\nYou will hold in confidence and will not possess or use (except as required to evaluate the proposed business relationship within the U.S.) or disclose any Proprietary Information except information you can document (a) is in the public domain through no fault of yours, (b)\xa0was properly known to you, without restriction, prior to disclosure by Company or (c) was properly disclosed to you by another person without restriction.  You will not reverse engineer or attempt to derive the composition or underlying information, structure or ideas of any Proprietary Information.  The foregoing does not grant you a license in or to any of the Proprietary Information.\n\nIf you decide not to proceed with the proposed business relationship or if asked by Company, you will promptly return all Proprietary Information and all copies, extracts and other objects or items in which Proprietary Information may be contained or embodied.\n\nYou will promptly notify Company of any unauthorized release, disclosure or use of Proprietary Information.\n\nYou understand that this Agreement does not obligate Company to disclose any information or negotiate or enter into any agreement or relationship. You will strictly abide by any and all instructions and restrictions provided by Company from time to time with respect to Proprietary Information or Company systems.  You will ensure the security of any facilities, machines, accounts, passwords and methods you use to store any Proprietary Information or to access Company systems and ensure that no other person has or obtains access thereto.\n\nThe terms of this Agreement will remain in effect with respect to any particular Proprietary Information until you can document that such Proprietary Information falls into one of the exceptions stated in Paragraph 1 above.\n\nYou acknowledge and agree that due to the unique nature of the Proprietary Information, any breach of this agreement would cause irreparable harm to Company for which damages are not an adequate remedy, and that Company shall therefore be entitled to equitable relief in addition to all other remedies available at law.\n\nThis Agreement is personal to you, is nonassignable by you, is governed by the internal laws of the State and may be modified or waived only in writing signed by both parties.  If any provision of this Agreement is found to be unenforceable, such provision will be limited or deleted to the minimum extent necessary so that the remaining terms remain in full force and effect.  The prevailing party in any dispute or legal action regarding the subject matter of this Agreement shall be entitled to recover attorneys’ fees and costs.\n\nAcknowledged and agreed on :\n\n\n"
+}
+},
+"videosByLocale": {},
+"visitorTypeDocId": "b2c62363-309d-4def-9b32-797a067fb649",
+"visitorTypeId": "56b953e4-b975-406c-a4cf-99e2ed23df57"
+},
+{
+"active": "True",
+"description": "Surveillance Consent",
+"documentId": "6219644e-858a-42da-a1fa-082e2b0e8a98",
+"documentText": "\nDear guest, \nIn order to ensure the safety of our employees, guests, and visitors, our facility is monitored by video surveillance, which may collect images of you.  These images may be shared with our third-party security provider(s), and may be stored for up to one year (or longer as part of an investigation).  By signing below, you agree to be monitored by video surveillance in accordance with these terms.\n\n",
+"isGlobal": "False",
+"isPdfDocument": "False",
+"isVideoDocument": "False",
+"lastModified": 1710954578,
+"multiPartDocumentId": "None",
+"order": 1,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"pdfsByLocale": {},
+"remember": "True",
+"requiresSignature": "True",
+"siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+"translations": {
+"en_US": {
+"description": "Surveillance Consent",
+"documentText": "\nDear guest, \nIn order to ensure the safety of our employees, guests, and visitors, our facility is monitored by video surveillance, which may collect images of you.  These images may be shared with our third-party security provider(s), and may be stored for up to one year (or longer as part of an investigation).  By signing below, you agree to be monitored by video surveillance in accordance with these terms.\n\n"
+}
+},
+"videosByLocale": {},
+"visitorTypeDocId": "ff7e7a63-893a-4be2-bfbf-47644e7945fa",
+"visitorTypeId": "56b953e4-b975-406c-a4cf-99e2ed23df57"
+}
+],
+"openEndedQuestions": [],
+"visitorType": {
+"allowMultipleHosts": "False",
+"allowSelfSignOut": "True",
+"allowTemporaryGuardians": "False",
+"applicantVisitorTypeIds": [],
+"automaticallyAssignHost": "False",
+"badgeBorderColor": "None",
+"badgeBorderTreatment": "None",
+"checkDenyList": "False",
+"closingMessage": "Thank you for signing into Austin Test Site",
+"contactUserIds": [],
+"contactUsers": [],
+"contacts": [],
+"defaultHostIds": [],
+"defaultHostNames": [],
+"displayBadgePreview": "True",
+"enableBotd": "False",
+"hidden": "False",
+"inviteAlias": "interview",
+"invitesEnabled": "False",
+"minimumAppVersion": "1.31.0",
+"name": "Interview",
+"needsFurtherApproval": "False",
+"order": 0,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"printBadge": "True",
+"printDepartment": "True",
+"printHost": "True",
+"printName": "True",
+"printPhoto": "True",
+"printRoomNumber": "False",
+"rememberHost": "False",
+"rememberName": "True",
+"rememberPhoto": "False",
+"rememberSecurityScreen": "False",
+"remembersSomething": "True",
+"requireAddress": "False",
+"requireEmail": "True",
+"requireFace": "False",
+"requireHost": "False",
+"requireHostApproval": "False",
+"requireName": "True",
+"requirePhone": "True",
+"requirePhoneAndEmail": "False",
+"requirePhoto": "True",
+"requireReason": "False",
+"runBgCheck": "False",
+"runCriminalCheck": "False",
+"runOffenderCheck": "False",
+"saveId": "True",
+"siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+"tokenId": "None",
+"translationStatusPerLocale": {
+"en_US": "True"
+},
+"translations": {
+"en_US": {
+"closingMessage": "Thank you for signing into Austin Test Site",
+"name": "Interview",
+"takePhotoMessage": "None",
+"welcomeInfo": "None"
+}
+},
+"type": "STANDARD",
+"usePortraitBadge": "False",
+"visitorTypeAccessEnabled": "False",
+"visitorTypeId": "56b953e4-b975-406c-a4cf-99e2ed23df57",
+"welcomeInfo": "None"
+}
+},
+{
+"documents": [],
+"openEndedQuestions": [
+{
+"canSelectMultiple": "False",
+"hasOtherOption": "False",
+"includeInNotification": "False",
+"includeOnBadge": "False",
+"isMultipleChoice": "False",
+"isReason": "False",
+"openEndedQuestionId": "690bc303-385a-4a89-bef4-65997b3b4964",
+"possibleAnswers": [],
+"question": "Why are you visiting today?",
+"remember": "False",
+"translations": {
+"en_US": {
+"question": "Why are you visiting today?"
+}
+},
+"visitorTypeId": "19eb0712-17b3-4c2a-9203-cf634fcb9bf6"
+},
+{
+"canSelectMultiple": "False",
+"hasOtherOption": "False",
+"includeInNotification": "False",
+"includeOnBadge": "False",
+"isMultipleChoice": "True",
+"isReason": "False",
+"openEndedQuestionId": "3dfcc072-b554-4b39-8a78-e1f58c408457",
+"possibleAnswers": [
+{
+"answer": "None",
+"openEndedQuestionId": "3dfcc072-b554-4b39-8a78-e1f58c408457",
+"possibleAnswerId": "fe1d4fc3-4396-448c-8292-6b14b9e279db",
+"translations": {}
+},
+{
+"answer": "None",
+"openEndedQuestionId": "3dfcc072-b554-4b39-8a78-e1f58c408457",
+"possibleAnswerId": "3a772a97-56c9-4bc3-bbdf-3f6b650879f7",
+"translations": {}
+}
+],
+"question": "None",
+"remember": "False",
+"translations": {},
+"visitorTypeId": "19eb0712-17b3-4c2a-9203-cf634fcb9bf6"
+}
+],
+"visitorType": {
+"allowMultipleHosts": "False",
+"allowSelfSignOut": "True",
+"allowTemporaryGuardians": "False",
+"applicantVisitorTypeIds": [],
+"automaticallyAssignHost": "False",
+"badgeBorderColor": "None",
+"badgeBorderTreatment": "None",
+"checkDenyList": "False",
+"closingMessage": "Thank you for signing into Austin Test Site",
+"contactUserIds": [],
+"contactUsers": [],
+"contacts": [],
+"defaultHostIds": [],
+"defaultHostNames": [],
+"displayBadgePreview": "True",
+"enableBotd": "False",
+"hidden": "False",
+"inviteAlias": "visitor",
+"invitesEnabled": "True",
+"minimumAppVersion": "1.31.0",
+"name": "Visitor",
+"needsFurtherApproval": "False",
+"order": 1,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"printBadge": "False",
+"printDepartment": "True",
+"printHost": "True",
+"printName": "True",
+"printPhoto": "True",
+"printRoomNumber": "False",
+"rememberHost": "False",
+"rememberName": "True",
+"rememberPhoto": "False",
+"rememberSecurityScreen": "False",
+"remembersSomething": "True",
+"requireAddress": "False",
+"requireEmail": "True",
+"requireFace": "False",
+"requireHost": "False",
+"requireHostApproval": "False",
+"requireName": "True",
+"requirePhone": "True",
+"requirePhoneAndEmail": "False",
+"requirePhoto": "False",
+"requireReason": "False",
+"runBgCheck": "False",
+"runCriminalCheck": "False",
+"runOffenderCheck": "False",
+"saveId": "False",
+"siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+"tokenId": "None",
+"translationStatusPerLocale": {
+"en_US": "False"
+},
+"translations": {
+"en_US": {
+"closingMessage": "Thank you for signing into Austin Test Site",
+"name": "Visitor",
+"takePhotoMessage": "None",
+"welcomeInfo": "None"
+}
+},
+"type": "STANDARD",
+"usePortraitBadge": "False",
+"visitorTypeAccessEnabled": "False",
+"visitorTypeId": "19eb0712-17b3-4c2a-9203-cf634fcb9bf6",
+"welcomeInfo": "None"
+}
+},
+{
+"documents": [],
+"openEndedQuestions": [],
+"visitorType": {
+"allowMultipleHosts": "False",
+"allowSelfSignOut": "True",
+"allowTemporaryGuardians": "False",
+"applicantVisitorTypeIds": [],
+"automaticallyAssignHost": "False",
+"badgeBorderColor": "None",
+"badgeBorderTreatment": "None",
+"checkDenyList": "False",
+"closingMessage": "Thank you for signing into Austin Test Site",
+"contactUserIds": [],
+"contactUsers": [],
+"contacts": [],
+"defaultHostIds": [],
+"defaultHostNames": [],
+"displayBadgePreview": "True",
+"enableBotd": "False",
+"hidden": "False",
+"inviteAlias": "student-pickup",
+"invitesEnabled": "True",
+"name": "Student Pickup",
+"needsFurtherApproval": "False",
+"order": 2,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"printBadge": "True",
+"printDepartment": "True",
+"printHost": "True",
+"printName": "True",
+"printPhoto": "True",
+"printRoomNumber": "False",
+"rememberHost": "False",
+"rememberName": "True",
+"rememberPhoto": "False",
+"rememberSecurityScreen": "False",
+"remembersSomething": "True",
+"requireAddress": "False",
+"requireEmail": "True",
+"requireFace": "False",
+"requireHost": "False",
+"requireHostApproval": "False",
+"requireName": "True",
+"requirePhone": "True",
+"requirePhoneAndEmail": "False",
+"requirePhoto": "True",
+"requireReason": "False",
+"runBgCheck": "False",
+"runCriminalCheck": "False",
+"runOffenderCheck": "False",
+"saveId": "False",
+"siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+"tokenId": "None",
+"translationStatusPerLocale": {
+"en_US": "True"
+},
+"translations": {
+"en_US": {
+"closingMessage": "Thank you for signing into Austin Test Site",
+"name": "Student Pickup",
+"takePhotoMessage": "None",
+"welcomeInfo": "None"
+}
+},
+"type": "STANDARD",
+"usePortraitBadge": "False",
+"visitorTypeAccessEnabled": "False",
+"visitorTypeId": "75419b47-5549-461f-8a72-c624472a7e1d",
+"welcomeInfo": "None"
+}
+},
+{
+"documents": [],
+"openEndedQuestions": [],
+"visitorType": {
+"allowMultipleHosts": "False",
+"allowSelfSignOut": "True",
+"allowTemporaryGuardians": "False",
+"applicantVisitorTypeIds": [],
+"associatedVisitorTypeIds": [],
+"automaticallyAssignHost": "False",
+"badgeBorderColor": "None",
+"badgeBorderTreatment": "None",
+"checkDenyList": "False",
+"closingMessage": "Thank you for your application.",
+"contactUserIds": [],
+"contactUsers": [],
+"contacts": [],
+"defaultHostIds": [],
+"defaultHostNames": [],
+"displayBadgePreview": "True",
+"enableBotd": "False",
+"hidden": "False",
+"inviteAlias": "test",
+"invitesEnabled": "False",
+"minimumAppVersion": "1.20.0",
+"name": "test",
+"needsFurtherApproval": "False",
+"order": 3,
+"orgId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
+"printBadge": "False",
+"printDepartment": "True",
+"printHost": "True",
+"printName": "True",
+"printPhoto": "True",
+"printRoomNumber": "False",
+"rememberHost": "False",
+"rememberName": "True",
+"rememberPhoto": "False",
+"rememberSecurityScreen": "False",
+"remembersSomething": "True",
+"requireAddress": "True",
+"requireEmail": "True",
+"requireFace": "False",
+"requireHost": "False",
+"requireHostApproval": "False",
+"requireName": "True",
+"requirePhone": "False",
+"requirePhoneAndEmail": "False",
+"requirePhoto": "True",
+"requireReason": "False",
+"runBgCheck": "False",
+"runCriminalCheck": "False",
+"runOffenderCheck": "False",
+"saveId": "False",
+"siteId": "74aa631e-6fcc-4a1c-8978-f9144bed6e3a",
+"tokenId": "None",
+"translationStatusPerLocale": {
+"en_US": "True"
+},
+"translations": {
+"en_US": {
+"closingMessage": "Thank you for your application.",
+"name": "test",
+"takePhotoMessage": "None",
+"welcomeInfo": "None"
+}
+},
+"type": "APPLICANT",
+"usePortraitBadge": "False",
+"visitorTypeAccessEnabled": "False",
+"visitorTypeId": "a84e86c2-4aea-4206-a4a6-18dc442cbfc6",
+"welcomeInfo": "None"
+}
+}
 ]
+}
