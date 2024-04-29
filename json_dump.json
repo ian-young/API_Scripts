@@ -10,7 +10,7 @@
             "configs": {},
             "connectedAt": null,
             "created": 1701099692,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "147c460f-1a28-42af-8a19-caa0522f2853",
             "deviceIos": [
                 {
@@ -118,8 +118,8 @@
                     "auxInputId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
                     "cacheId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 10.0,
                         "unlockTimeS": 0.0
                     },
@@ -161,7 +161,7 @@
             },
             "connectedAt": 1658507847.367142,
             "created": 1658507847,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "3d3295e6-30da-44eb-bc05-bfa47249afbd",
             "deviceIos": [
                 {
@@ -446,8 +446,8 @@
                     "auxInputId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
                     "cacheId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 10.0,
                         "unlockTimeS": 0.0
                     },
@@ -492,7 +492,7 @@
             },
             "connectedAt": null,
             "created": 1710341318,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "43fa1fcd-17f0-4b95-9c24-ac8ff38131ed",
             "deviceIos": [
                 {
@@ -568,7 +568,7 @@
             },
             "connectedAt": null,
             "created": 1710277103,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "90c971bd-2a15-4305-bc8c-710374a3d089",
             "deviceIos": [
                 {
@@ -792,7 +792,7 @@
             },
             "connectedAt": null,
             "created": 1662564357,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "a41766d1-4cd7-4331-a7ed-c4e874a31147",
             "deviceIos": [],
             "engageSerialNumber": "A20000000F1622C0",
@@ -825,8 +825,8 @@
                     "auxInputId": "a4e09322-281a-485c-8109-ee00f53b63f6",
                     "cacheId": "a4e09322-281a-485c-8109-ee00f53b63f6",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 60.0,
                         "unlockTimeS": 0.0
                     },
@@ -876,7 +876,7 @@
                     "cacheId": "7011493e-9625-4f83-af6f-04bb438cd5b7",
                     "createdAt": 1700151628,
                     "createdBy": "fe48adb3-156c-44c8-a65b-4f4927e27451",
-                    "isLegacy": true,
+                    "isLegacy": "True",
                     "lockdownId": "422a896e-b674-4186-9651-fc25ee0c7cfa",
                     "modifiedAt": 1700151628,
                     "name": "Lock",
@@ -891,7 +891,7 @@
             },
             "connectedAt": null,
             "created": 1692999360,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "a44fb274-1e00-4786-a55b-3d79fcb152cb",
             "deviceIos": [
                 {
@@ -970,8 +970,8 @@
                     "auxInputId": "d4df5457-657d-4a77-ab88-48b552c787c0",
                     "cacheId": "d4df5457-657d-4a77-ab88-48b552c787c0",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 60.0,
                         "unlockTimeS": 0.0
                     },
@@ -1021,8 +1021,8 @@
                     "auxInputId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
                     "cacheId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
                     "configs": {
-                        "notifyTurnedOff": false,
-                        "thoEnabled": false,
+                        "notifyTurnedOff": "False",
+                        "thoEnabled": "False",
                         "thoTriggerTimeS": 10.0,
                         "unlockTimeS": 0.0
                     },
@@ -1075,7 +1075,7 @@
             },
             "connectedAt": null,
             "created": 1671486047,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "f5762caa-a268-4538-8b84-6252e3b92984",
             "deviceIos": [
                 {
@@ -1284,8 +1284,8 @@
             "auxInputId": "a4e09322-281a-485c-8109-ee00f53b63f6",
             "cacheId": "a4e09322-281a-485c-8109-ee00f53b63f6",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 60.0,
                 "unlockTimeS": 0.0
             },
@@ -1323,8 +1323,8 @@
             "auxInputId": "d4df5457-657d-4a77-ab88-48b552c787c0",
             "cacheId": "d4df5457-657d-4a77-ab88-48b552c787c0",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 60.0,
                 "unlockTimeS": 0.0
             },
@@ -1377,8 +1377,8 @@
             "auxInputId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
             "cacheId": "b21a641b-53e9-4fb4-95e3-98c9d75283d1",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 10.0,
                 "unlockTimeS": 0.0
             },
@@ -1430,8 +1430,8 @@
             "auxInputId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
             "cacheId": "6e1e2b49-4460-4a47-8bfd-b93624fa880a",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 10.0,
                 "unlockTimeS": 0.0
             },
@@ -1481,8 +1481,8 @@
             "auxInputId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
             "cacheId": "ac1b6273-e5fb-4031-a56b-3648da5e2075",
             "configs": {
-                "notifyTurnedOff": false,
-                "thoEnabled": false,
+                "notifyTurnedOff": "False",
+                "thoEnabled": "False",
                 "thoTriggerTimeS": 10.0,
                 "unlockTimeS": 0.0
             },
@@ -2741,8 +2741,8 @@
             "floorId": "8e477a88-7594-4803-af6a-029e145816c8",
             "floorplan": {
                 "angle": 720.0,
-                "enabled": true,
-                "flipped": false,
+                "enabled": "True",
+                "flipped": "False",
                 "lat": 40.72356046679746,
                 "long": -111.85615311841526,
                 "scale": 1.7924724723905063,
@@ -3517,7 +3517,7 @@
         {
             "contactSensorType": "door",
             "created": 1694529943,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "9b9ce168-607f-4db5-9e5a-39f8be6dd1e3",
             "enableTransmitterMode": false,
             "isOnline": false,
@@ -3532,10 +3532,10 @@
         {
             "contactSensorType": "door",
             "created": 1703102631,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "389a5914-e2b7-4b8a-9294-c6f29f8f144f",
-            "enableTransmitterMode": true,
-            "isOnline": false,
+            "enableTransmitterMode": "True",
+            "isOnline": "False",
             "lastSeen": 1703104999,
             "lastTestTimestamp": 1703103501,
             "name": "BR31 · DC3N-CA9C-WALK",
@@ -3665,9 +3665,9 @@
     "glassBreakSensor": [
         {
             "created": 1648499507,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "3f3e2aba-e314-4d7f-bf5e-9e9a43094756",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1657139304,
             "name": "Rowdy Sensor",
             "serialNumber": "DG3T-LKDF-XF4A",
@@ -3678,9 +3678,9 @@
         {
             "claimedSerialNumber": "DQ4F-JXQF-H7JQ",
             "created": 1694805789,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "320f127f-913e-4ce4-bee1-54edccaa124f",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1694806188,
             "name": "Test Alarm Location Alarm Panel",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
@@ -3690,9 +3690,9 @@
         {
             "claimedSerialNumber": "KP4J-NJCE-YYL9",
             "created": 1701971270,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "4c74397f-33db-4298-b668-7fbfac1879ea",
-            "isOnline": true,
+            "isOnline": "True",
             "lastSeen": 1706645730,
             "name": "BC82 · KP4J-NJCE-YYL9",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
@@ -3702,7 +3702,7 @@
         {
             "claimedSerialNumber": "DQ46-YJRC-FQW7",
             "created": 1707426628,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "9058348e-a3ee-49f4-9a07-36abe9883f34",
             "isOnline": false,
             "lastSeen": null,
@@ -3714,9 +3714,9 @@
         {
             "claimedSerialNumber": "KP79-77RP-DNKN",
             "created": 1707428060,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "f59f392b-2b20-4bce-96b6-9c2fafca9089",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1709830555,
             "name": "Demo BK21",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
@@ -3728,7 +3728,7 @@
         {
             "claimedSerialNumber": "KP4J-NJCE-YYL9",
             "created": 1701971270,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "4c74397f-33db-4298-b668-7fbfac1879ea",
             "name": "BC82 · KP4J-NJCE-YYL9",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489"
@@ -3736,7 +3736,7 @@
         {
             "claimedSerialNumber": "KP79-77RP-DNKN",
             "created": 1707428060,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "f59f392b-2b20-4bce-96b6-9c2fafca9089",
             "name": "Demo BK21",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489"
@@ -3746,7 +3746,7 @@
     "panicButton": [
         {
             "created": 1705445871,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "ec4730fa-6344-4a46-bed9-aa8889495cf2",
             "enableMobileMode": false,
             "isOnline": false,
@@ -3760,9 +3760,9 @@
     "waterSensor": [
         {
             "created": 1657820337,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "6f57c44d-d0e9-40ec-bfdf-8a0a9bc60744",
-            "isOnline": false,
+            "isOnline": "False",
             "lastSeen": 1703105109,
             "name": "",
             "serialNumber": "DW3Q-EAXH-4RR3",
@@ -3779,12 +3779,12 @@
             "cacheId ": "46e7561a-06fc-452b-9ef7-0a329710bf08 ",
             "claimedSerialNumber ": "DRJN-PLJM-FPCT ",
             "created ": 1708714930,
-            "deleted ": false,
+            "deleted ": "False",
             "emailsToNotify ": [],
             "gridData ": {
-                "historyPlaybackEnabled ": true,
-                "mp4SockEnabled ": true,
-                "muteAudio ": true,
+                "historyPlaybackEnabled ": "True",
+                "mp4SockEnabled ": "True",
+                "muteAudio ": "True",
                 "name ": "VX52 · DRJN-PLJM-FPCT ",
                 "pages ": [
                     {
@@ -4095,15 +4095,15 @@
         "claimed_serial_number": "PR4H-6D3F-QJJM",
         "claimed_at": "2024-03-18T21: 50: 44.57297Z",
         "name": "GC31 · PR4H-6D3F-QJJM",
-        "is_online": true,
+        "is_online": "True",
         "model_id": "JONAS_GATEWAY_INDOOR",
         "connected_at": "2024-03-18T21: 51: 52.946778Z",
-        "is_deleted": false,
+        "is_deleted": "False",
         "location_latitude": 40.7234056,
         "location_longitude": -111.8560359,
         "location_label": "1215 Wilmington Ave #200, Salt Lake City, UT 84106, USA",
         "timezone": "America/Denver",
-        "is_camera_always_streaming": false,
+        "is_camera_always_streaming": "False",
         "upload": 3332577792,
         "download": 1432138752,
         "upload_month": 3332577792,
@@ -4149,8 +4149,8 @@
         "ip": "100.90.77.209/30",
         "imei": "354175753167727",
         "iccid": "89148000007745421772",
-        "is_firmware_latest": true,
-        "is_using_verkada_sim": true,
+        "is_firmware_latest": "True",
+        "is_using_verkada_sim": "True",
         "tower_latitude": 40.680402,
         "tower_longitude": -111.804087,
         "tower_range": 1068
@@ -4201,7 +4201,7 @@
                 "formaldehyde"
             ],
             "timezone": "America/Denver",
-            "useCelsiusWhenDisplayingTemp": false,
+            "useCelsiusWhenDisplayingTemp": "False",
             "usersToNotify": [],
             "zoneId": null
         },
@@ -4234,7 +4234,7 @@
                 "tamper"
             ],
             "timezone": "America/Denver",
-            "useCelsiusWhenDisplayingTemp": false,
+            "useCelsiusWhenDisplayingTemp": "False",
             "usersToNotify": [],
             "zoneId": null
         }
@@ -4249,7 +4249,7 @@
             ],
             "cacheId": "NotImplemented-Garfunkel-5827927c-d09b-42a2-9234-7bec2e727714",
             "created": 1701213554,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "8c15772e-ebd7-43ab-9945-1be67f4b0ef4",
             "hasSufficientPower": true,
             "ipAddress": null,
@@ -4262,7 +4262,7 @@
             "modified": 1710167062,
             "name": "BZ11 · ANN4-L4CR-AHE4",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
-            "recordingEnabled": false,
+            "recordingEnabled": "False",
             "serialNumber": "ANN4-L4CR-AHE4",
             "siteId": "03c9dcc4-d8b8-47f0-ab38-3671f1abc856",
             "speakerVolumePercent": 0
@@ -4271,20 +4271,20 @@
             "associatedCameraIds": [],
             "cacheId": "NotImplemented-Garfunkel-f30bc3ef-1c45-4741-84f4-cf9b9e9bdff1",
             "created": 1685572751,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "6d138a27-f9d7-4d42-981c-b1c812928f74",
-            "hasSufficientPower": false,
+            "hasSufficientPower": "False",
             "ipAddress": "10.21.145.218",
-            "isMicMuted": false,
-            "isOnline": false,
-            "isUnassigned": false,
+            "isMicMuted": "False",
+            "isOnline": "False",
+            "isUnassigned": "False",
             "macAddress": "e0:a7: 00: 45: 2b:de",
-            "mediaOnEvent": false,
+            "mediaOnEvent": "False",
             "microphoneSensitivityPercent": 37,
             "modified": 1698666881,
             "name": "CORP Motivation",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
-            "recordingEnabled": false,
+            "recordingEnabled": "False",
             "serialNumber": "ANN3-A746-7RJ4",
             "siteId": "03c9dcc4-d8b8-47f0-ab38-3671f1abc856",
             "speakerVolumePercent": 84
@@ -4295,20 +4295,20 @@
             ],
             "cacheId": "NotImplemented-Garfunkel-0d666682-0345-47b4-a055-f709cadbf254",
             "created": 1678298120,
-            "deleted": false,
+            "deleted": "False",
             "deviceId": "7e93297d-114f-41ba-9569-a7f911cd56ea",
-            "hasSufficientPower": true,
+            "hasSufficientPower": "True",
             "ipAddress": "10.21.145.57",
-            "isMicMuted": false,
-            "isOnline": false,
-            "isUnassigned": false,
+            "isMicMuted": "False",
+            "isOnline": "False",
+            "isUnassigned": "False",
             "macAddress": "e0:a7: 00: 45: 2b:5e",
-            "mediaOnEvent": false,
+            "mediaOnEvent": "False",
             "microphoneSensitivityPercent": 50,
             "modified": 1710160123,
             "name": "SE Lab Plywood Speaker",
             "organizationId": "cbe2df58-36fd-46f3-9148-e300bbee8489",
-            "recordingEnabled": false,
+            "recordingEnabled": "False",
             "serialNumber": "ANNN-C9W7-RRJF",
             "siteId": "03c9dcc4-d8b8-47f0-ab38-3671f1abc856",
             "speakerVolumePercent": 35
@@ -4323,15 +4323,15 @@
         "claimed_serial_number": "PR4H-6D3F-QJJM",
         "claimed_at": "2024-03-18T21: 50: 44.57297Z",
         "name": "GC31 · PR4H-6D3F-QJJM",
-        "is_online": true,
+        "is_online": "True",
         "model_id": "JONAS_GATEWAY_INDOOR",
         "connected_at": "2024-03-18T21: 51: 52.946778Z",
-        "is_deleted": false,
+        "is_deleted": "False",
         "location_latitude": 40.7234056,
         "location_longitude": -111.8560359,
         "location_label": "1215 Wilmington Ave #200, Salt Lake City, UT 84106, USA",
         "timezone": "America/Denver",
-        "is_camera_always_streaming": false,
+        "is_camera_always_streaming": "False",
         "upload": 3334220288,
         "download": 1434210560,
         "upload_month": 3334220288,
@@ -4379,8 +4379,8 @@
         "ip": "100.90.77.209/30",
         "imei": "354175753167727",
         "iccid": "89148000007745421772",
-        "is_firmware_latest": true,
-        "is_using_verkada_sim": true,
+        "is_firmware_latest": "True",
+        "is_using_verkada_sim": "True",
         "tower_latitude": 40.680402,
         "tower_longitude": -111.804087,
         "tower_range": 1068
