@@ -15,9 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set final, global credential variables
-USERNAME = getenv("lab_username")
-PASSWORD = getenv("lab_password")
-ORG_ID = getenv("lab_id")
+USERNAME = getenv("slc_username")
+PASSWORD = getenv("slc_password")
+ORG_ID = getenv("slc_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -30,18 +30,15 @@ VX_URL = "https://vvx.command.verkada.com/device/list"
 GC_URL = "https://vnet.command.verkada.com/devices/list"
 SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
-# TODO: Find Desk Station endpoint
-TD_URL = ""
-# Filter 'sites' first. Each site is an object.
+DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/{ORG_ID}/device"
+IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/{ORG_ID}/site/"
 SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
-# PRINTER_TABLETS = f"https://vdoorman.command.verkada.com/site/settings/v2/org\
-# /{ORG_ID}/site/{site_id}"
 
 # Set up the logger
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(levelname)s: %(message)s"
 )
 
@@ -263,7 +260,6 @@ def list_cameras(api_key, session):
         return None
 
 
-# TODO: Need to troubleshoot. Only giving parent sites.
 def get_sites(x_verkada_token, x_verkada_auth, usr, session,
               org_id=ORG_ID):
     """
@@ -292,11 +288,11 @@ def get_sites(x_verkada_token, x_verkada_auth, usr, session,
 
     try:
         # Request the JSON archive library
-        log.debug("Requesting access control devices.")
+        log.debug("Requesting sites.")
         # print(url)
         response = session.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
-        log.debug("Access control JSON retrieved. Parsing and logging.")
+        log.debug("Sites JSON retrieved. Parsing and logging.")
 
         sites = response.json()['sites']
 
@@ -517,7 +513,7 @@ def list_Viewing_Stations(x_verkada_token, x_verkada_auth, usr, session,
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video station device IDs.
+    :return: An array of archived viewing station device IDs.
     :rtype: list
     """
     body = {
@@ -794,51 +790,118 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_DeskStaions(x_verkada_token, x_verkada_auth, usr, session,
-                     org_id=ORG_ID):
+def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
     """
-    Lists all intercom-related devices (TD and desk station).
+    Lists all desk stations.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
     :param usr: The user ID for a valid user in the Verkad organization.
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
-    :return: An array of archived video export IDs.
+    :return: An array of registered desk station apps on iPads.
     :rtype: list
     """
-    body = {
-        "organizationId": org_id
+    headers = {
+        "x-verkada-organization-id": org_id,
+        "x-verkada-token": x_verkada_token,
+        "x-verkada-user-id": usr
     }
 
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
-    }
+    desk_ids = []
 
     try:
         # Request the JSON archive library
-        log.debug("Requesting intercom-related devices.")
-        response = session.post(TD_URL, json=body, headers=headers)
+        log.debug("Requesting desk stations.")
+        response = session.get(DESK_URL, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
-        log.debug("Intercom devices JSON retrieved. Parsing and logging.")
+        log.debug("Desk station JSON retrieved. Parsing and logging.")
 
-        #! Will need to adjust this as the right endpoint is found.
-        td_devices = response.json()['deskStation']
+        desk_stations = response.json()["deskApps"]
 
         # print("-------")
-        # print("Intercom-related devices:")
-        for td in td_devices:
-            # print(td['deviceId'])
-            with ARRAY_LOCK:
-                devices_serials.append(td['deviceId'])
+        # print("desk stations:")
+        for ds in desk_stations:
+            desk_ids.append(ds['deviceId'])
+            # print(ds['serialNumber'])
 
-        return td_devices
+        return desk_ids
+
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"Connection timed out.")
+        return None
+
+    except requests.exceptions.TooManyRedirects:
+        log.error(f"Too many redirects.\nAborting...")
+        return None
+
+    except requests.exceptions.HTTPError:
+        log.error(
+            f"Desk stations returned with a non-200 code: "
+            f"{response.status_code}"
+        )
+        return None
+
+    except requests.exceptions.ConnectionError:
+        log.error(f"Error connecting to the server.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"Verkada API Error: {e}")
+        return None
+    
+
+def list_guest(x_verkada_token, x_verkada_auth, usr, session,
+               org_id=ORG_ID, sites=None):
+    """
+    Lists all guest printers and iPads.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param usr: The user ID for a valid user in the Verkad organization.
+    :type usr: str
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
+    :return: An array of registered iPads with Verkada Guest software and
+    any printers associated with the Verkada Guest platform. Returns iPad_ids
+    followed by printer_ids.
+    :rtype: list
+    """
+    headers = {
+        "x-verkada-organization-id": org_id,
+        "x-verkada-token": x_verkada_token,
+        "x-verkada-user-id": usr
+    }
+
+    ipad_ids, printer_ids = [], []
+    
+    if not sites:
+        sites = get_sites(x_verkada_token, x_verkada_auth, usr, session, org_id )
+
+    try:
+        # Request the JSON archive library
+        log.debug("Requesting guest information.")
+        for site in sites:
+            url = IPAD_URL + site
+            response = session.get(url, headers=headers)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            log.debug("Guest information JSON retrieved. Parsing and logging.")
+
+            guest_devices = response.json()
+
+            log.debug(f"Retrieving iPads for site {site}.")
+            for ipad in guest_devices['devices']:
+                ipad_ids.append(ipad['deviceId'])
+            log.debug("IPads retrieved.")
+
+            log.debug(f"Retrieving printers for site {site}.")
+            for printer in guest_devices['printers']:
+                printer_ids.append(printer['printerId'])
+            log.debug("Pritners retrieved.")
+
+        return ipad_ids, printer_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -896,14 +959,16 @@ if __name__ == "__main__":
                 bz_thread = create_thread_with_args(
                     list_Horns, [csrf_token, user_token, user_id, ORG_ID])
 
-                threads = [c_thread, ac_thread, br_thread, vx_thread,
-                           gc_thread, sv_thread, bz_thread]
+                list_guest(csrf_token, user_token, user_id, session, ORG_ID)
 
-                for thread in threads:
-                    thread.start()
+                # threads = [c_thread, ac_thread, br_thread, vx_thread,
+                #            gc_thread, sv_thread, bz_thread]
 
-                for thread in threads:
-                    thread.join()
+                # for thread in threads:
+                #     thread.start()
+
+                # for thread in threads:
+                #     thread.join()
 
                 #--for thread in threads:
                 #--    print(thread.result)
