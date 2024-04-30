@@ -2,9 +2,9 @@
 # Purpose: Will return all devices in a Verkada Command organization.
 # This is to be imported as a module and not ran directly.
 
-# [ ] TODO: Grab Desk Station endpoint from published script.
+# [x] TODO: Grab Desk Station endpoint from published script.
+# [x] TODO: Grab Guest URLs from published scripts.
 # [ ] TODO: Add functionality to pull access levels.
-# [ ] TODO: Grab Guest URLs from published scripts.
 # [ ] TODO: Improve commenting and logging.
 
 # Import essential libraries
@@ -18,10 +18,9 @@ from dotenv import load_dotenv
 load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
-API_KEY = getenv("burn_key")
-USERNAME = getenv("burn_username")
-PASSWORD = getenv("burn_password")
-ORG_ID = getenv("burn_id")
+USERNAME = getenv("slc_username")
+PASSWORD = getenv("slc_password")
+ORG_ID = getenv("slc_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -34,13 +33,15 @@ VX_URL = "https://vvx.command.verkada.com/device/list"
 GC_URL = "https://vnet.command.verkada.com/devices/list"
 SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
+DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/{ORG_ID}/device"
+IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/{ORG_ID}/site/"
 SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
 
 # Set up the logger
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(levelname)s: %(message)s"
 )
 
@@ -263,7 +264,6 @@ def list_cameras(api_key, session):
         return None
 
 
-# TODO: Need to troubleshoot. Only giving parent sites.
 def get_sites(x_verkada_token, x_verkada_auth, usr, session,
               org_id=ORG_ID):
     """
@@ -818,8 +818,7 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_DeskStaions(x_verkada_token, x_verkada_auth, usr, session,
-                     org_id=ORG_ID):
+def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
     """
     Lists all desk stations.
 
@@ -849,11 +848,11 @@ def list_DeskStaions(x_verkada_token, x_verkada_auth, usr, session,
 
         desk_stations = response.json()["deskApps"]
 
-        log.debug("-------")
+        # print("-------")
+        # print("desk stations:")
         for ds in desk_stations:
-            log.debug(f"Retrieved desk station {ds['name']}: \
-{ds['deviceId']}")
             desk_ids.append(ds['deviceId'])
+            # print(ds['serialNumber'])
 
         return desk_ids
 
@@ -880,9 +879,9 @@ def list_DeskStaions(x_verkada_token, x_verkada_auth, usr, session,
     except requests.exceptions.RequestException as e:
         log.error(f"Verkada API Error: {e}")
         return None
+    
 
-
-def list_Guest(x_verkada_token, x_verkada_auth, usr, session,
+def list_guest(x_verkada_token, x_verkada_auth, usr, session,
                org_id=ORG_ID, sites=None):
     """
     Lists all guest printers and iPads.
@@ -905,10 +904,9 @@ def list_Guest(x_verkada_token, x_verkada_auth, usr, session,
     }
 
     ipad_ids, printer_ids = [], []
-
+    
     if not sites:
-        sites = get_Sites(x_verkada_token, x_verkada_auth,
-                          usr, session, org_id)
+        sites = get_sites(x_verkada_token, x_verkada_auth, usr, session, org_id )
 
     try:
         # Request the JSON archive library
@@ -917,23 +915,17 @@ def list_Guest(x_verkada_token, x_verkada_auth, usr, session,
             url = IPAD_URL + site
             response = session.get(url, headers=headers)
             response.raise_for_status()  # Raise an exception for HTTP errors
-            log.debug("Guest JSON retrieved. Parsing and logging.")
+            log.debug("Guest information JSON retrieved. Parsing and logging.")
 
             guest_devices = response.json()
 
-            log.debug("-------")
             log.debug(f"Retrieving iPads for site {site}.")
             for ipad in guest_devices['devices']:
-                log.debug(f"Retrieved guest iPad {ipad['name']}: \
-{ipad['deviceId']}")
                 ipad_ids.append(ipad['deviceId'])
             log.debug("IPads retrieved.")
 
-            log.debug("-------")
             log.debug(f"Retrieving printers for site {site}.")
             for printer in guest_devices['printers']:
-                log.debug(f"Retrieved guest printer {printer['name']}: \
-{printer['printerId']}")
                 printer_ids.append(printer['printerId'])
             log.debug("Pritners retrieved.")
 
@@ -1070,15 +1062,16 @@ if __name__ == "__main__":
                 acl_thread = create_thread_with_args(
                     list_ACLs, [csrf_token, user_id, session])
 
-                threads = [c_thread, ac_thread, br_thread, vx_thread,
-                           gc_thread, sv_thread, bz_thread, ds_thread, guest_thread,
-                           acl_thread]
+                list_guest(csrf_token, user_token, user_id, session, ORG_ID)
 
-                for thread in threads:
-                    thread.start()
+                # threads = [c_thread, ac_thread, br_thread, vx_thread,
+                #            gc_thread, sv_thread, bz_thread]
 
-                for thread in threads:
-                    thread.join()
+                # for thread in threads:
+                #     thread.start()
+
+                # for thread in threads:
+                #     thread.join()
 
                 for thread in threads:
                     print(thread)
