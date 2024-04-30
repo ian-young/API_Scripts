@@ -1,3 +1,13 @@
+# Author: Ian Young
+# Purpose: Reset a Verkada Command organization for use at VCE. An API key and
+# valid user credentials are needed to run this script. Please use EXTREME
+# caution when running because this will delete all devices from an org
+# without any additional warnings.
+
+# [ ] TODO: Add Access Level deletion.
+# [ ] TODO: Format the deletion of iPads and printers.
+# [ ] TODO: Test if intercoms delete.
+
 import requests
 import logging
 import threading
@@ -39,9 +49,9 @@ ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
 APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
 ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
 ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
-# DELETE, not POST (works with desk station, too)
+# * DELETE, not POST (works with desk station, too)
 # INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
-# DELETE, not POST
+# * DELETE, not POST
 # GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/{site_id}?deviceId={device_id}"
 # DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
 
@@ -706,8 +716,9 @@ if __name__ == '__main__':
                     target=deleteEnvironmental, args=(
                         csrf_token, user_token, user_id,))
 
+                #! Uncomment before publishing.
                 # List all the threads to be ran
-                threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
+                # threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
 
                 # Start the threads
                 for thread in threads:
