@@ -2,11 +2,6 @@
 # Purpose: Will return all devices in a Verkada Command organization.
 # This is to be imported as a module and not ran directly.
 
-# [x] TODO: Grab Desk Station endpoint from published script.
-# [x] TODO: Grab Guest URLs from published scripts.
-# [ ] TODO: Add functionality to pull access levels.
-# [ ] TODO: Improve commenting and logging.
-
 # Import essential libraries
 import threading
 import requests
@@ -18,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
+API_KEY = getenv("slc_key")
 USERNAME = getenv("slc_username")
 PASSWORD = getenv("slc_password")
 ORG_ID = getenv("slc_id")
@@ -67,6 +63,7 @@ class ResultThread(threading.Thread):
     values are saved to be viewed for later. They may be accessed by typing
     the objectname.result
     """
+
     def __init__(self, target, *args, **kwargs):
         super().__init__(target=target, args=args, kwargs=kwargs)
         self._result = None
@@ -304,6 +301,7 @@ def get_sites(x_verkada_token, x_verkada_auth, usr, session,
 
         sites = response.json()['sites']
 
+        log.debug("-------")
         for site in sites:
             log.debug(f"Retrieved {site['siteId']}: {site['siteName']}")
             site_ids.append(site['siteId'])
@@ -378,7 +376,6 @@ def list_AC(x_verkada_token, x_verkada_auth, usr, session,
         for controller in access_devices:
             log.debug(f"Retrieved controller {controller['name']}: \
 {controller['deviceId']}")
-
             access_ids.append(controller['deviceId'])
 
         return access_ids
@@ -458,41 +455,49 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
         alarm_devices = response.json()
         print(alarm_devices)
 
+        log.debug("-------")
         for dcs in alarm_devices['doorContactSensor']:
             log.debug(f"Retrieved door contact sensor {dcs['name']}: \
 {dcs['deviceId']}")
             dcs_ids.append(dcs['deviceId'])
 
+        log.debug("-------")
         for gbs in alarm_devices['glassBreakSensor']:
             log.debug(f"Retrieved glass break sensor {gbs['name']}: \
 {gbs['deviceId']}")
             gbs_ids.append(gbs['deviceId'])
 
+        log.debug("-------")
         for hub in alarm_devices['hubDevice']:
             log.debug(f"Retrieved hub device {hub['name']}: \
 {hub['deviceId']}")
             hub_ids.append(hub['deviceId'])
 
+        log.debug("-------")
         for keypad in alarm_devices['keypadHub']:
             log.debug(f"Retrieved keypad device {keypad['name']}: \
 {keypad['deviceId']}")
             hub_ids.append(keypad['deviceId'])
 
+        log.debug("-------")
         for ms in alarm_devices['motionSensor']:
             log.debug(f"Retrieved motion sensor {ms['name']}: \
 {ms['deviceId']}")
             ms_ids.append(ms['deviceId'])
 
+        log.debug("-------")
         for pb in alarm_devices['panicButton']:
             log.debug(f"Retrieved panic button {pb['name']}: \
 {pb['deviceId']}")
             pb_ids.append(pb['deviceId'])
 
+        log.debug("-------")
         for ws in alarm_devices['waterSensor']:
             log.debug(f"Retrieved water leak sensor {ws['name']}: \
 {ws['deviceId']}")
             ws_ids.append(ws['deviceId'])
 
+        log.debug("-------")
         for wr in alarm_devices['wirelessRelay']:
             log.debug(f"Retrieved wireless relay {wr['name']}: \
 {wr['deviceId']}")
@@ -851,11 +856,11 @@ def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
 
         desk_stations = response.json()["deskApps"]
 
-        # print("-------")
-        # print("desk stations:")
+        log.debug("-------")
         for ds in desk_stations:
+            log.debug(f"Retrieved desk station {ds['name']}: \
+{ds['deviceId']}")
             desk_ids.append(ds['deviceId'])
-            # print(ds['serialNumber'])
 
         return desk_ids
 
@@ -882,7 +887,7 @@ def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
     except requests.exceptions.RequestException as e:
         log.error(f"Verkada API Error: {e}")
         return None
-    
+
 
 def list_guest(x_verkada_token, x_verkada_auth, usr, session,
                org_id=ORG_ID, sites=None):
@@ -907,9 +912,10 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
     }
 
     ipad_ids, printer_ids = [], []
-    
+
     if not sites:
-        sites = get_sites(x_verkada_token, x_verkada_auth, usr, session, org_id )
+        sites = get_sites(x_verkada_token, x_verkada_auth,
+                          usr, session, org_id)
 
     try:
         # Request the JSON archive library
@@ -918,17 +924,23 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
             url = IPAD_URL + site
             response = session.get(url, headers=headers)
             response.raise_for_status()  # Raise an exception for HTTP errors
-            log.debug("Guest information JSON retrieved. Parsing and logging.")
+            log.debug("Guest JSON retrieved. Parsing and logging.")
 
             guest_devices = response.json()
 
+            log.debug("-------")
             log.debug(f"Retrieving iPads for site {site}.")
             for ipad in guest_devices['devices']:
+                log.debug(f"Retrieved guest iPad {ipad['name']}: \
+{ipad['deviceId']}")
                 ipad_ids.append(ipad['deviceId'])
             log.debug("IPads retrieved.")
 
+            log.debug("-------")
             log.debug(f"Retrieving printers for site {site}.")
             for printer in guest_devices['printers']:
+                log.debug(f"Retrieved guest printer {printer['name']}: \
+{printer['printerId']}")
                 printer_ids.append(printer['printerId'])
             log.debug("Pritners retrieved.")
 
@@ -959,7 +971,7 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_ACLs(x_verkada_token, usr, session,
+def list_acls(x_verkada_token, usr, session,
               org_id=ORG_ID):
     """
     Lists all access control levels.
@@ -1044,7 +1056,7 @@ if __name__ == "__main__":
             if csrf_token and user_token and user_id:
                 # Define the threads with arguments
                 c_thread = create_thread_with_args(
-                    list_Cameras, [API_KEY, session])
+                    list_cameras, [API_KEY, session])
                 ac_thread = create_thread_with_args(
                     list_AC, [csrf_token, user_token, user_id, session])
                 br_thread = create_thread_with_args(
@@ -1058,21 +1070,21 @@ if __name__ == "__main__":
                     list_Sensors, [csrf_token, user_token, user_id, session])
                 bz_thread = create_thread_with_args(
                     list_Horns, [csrf_token, user_token, user_id, session])
-                ds_thread = create_thread_with_args(
-                    list_Desk_Stations, [csrf_token, user_id, session])
                 guest_thread = create_thread_with_args(
-                    list_Guest, [csrf_token, user_token, user_id, session])
+                    list_guest, [csrf_token, user_token, user_id, session]
+                )
                 acl_thread = create_thread_with_args(
-                    list_ACLs, [csrf_token, user_id, session])
+                    list_acls, [csrf_token, user_id, session])
 
-                # threads = [c_thread, ac_thread, br_thread, vx_thread,
-                #            gc_thread, sv_thread, bz_thread]
+                threads = [c_thread, ac_thread, br_thread, vx_thread,
+                           gc_thread, sv_thread, bz_thread, guest_thread,
+                           acl_thread]
 
-                # for thread in threads:
-                #     thread.start()
+                for thread in threads:
+                    thread.start()
 
-                # for thread in threads:
-                #     thread.join()
+                for thread in threads:
+                    thread.join()
 
                 for thread in threads:
                     print(thread)
