@@ -12,7 +12,8 @@ import requests
 import logging
 import threading
 import time
-from datetime import datetime
+import gatherDevices
+from os import getenv
 from dotenv import load_dotenv
 from os import getenv
 from colorama import Fore, Style
@@ -686,6 +687,11 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
         log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
 
 
+##############################################################################
+                                #   Main   #
+##############################################################################
+
+
 if __name__ == '__main__':
     start_run_time = time.time()  # Start timing the script
     with requests.Session() as session:
@@ -721,12 +727,12 @@ if __name__ == '__main__':
                 # threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
 
                 # Start the threads
-                for thread in threads:
-                    thread.start()
+                # for thread in threads:
+                #     thread.start()
 
                 # Join the threads as they finish
-                for thread in threads:
-                    thread.join()
+                # for thread in threads:
+                #     thread.join()
 
             # Handles when the required credentials were not received
             else:
