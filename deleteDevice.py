@@ -24,6 +24,7 @@ API_KEY = getenv()
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
 SHARD = "?sharding=true"
 
+# TODO: Delete access levels, too!
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
@@ -34,7 +35,7 @@ APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
 ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
 ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
 # DELETE, not POST (works with desk station, too)
-# INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
+# DESK_STATION_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
 # DELETE, not POST
 # GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/{site_id}?deviceId={device_id}"
 # DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
@@ -565,6 +566,11 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
     except requests.exceptions.RequestException as e:
         log.error(f"Verkada API Error: {e}")
         return None
+    
+
+##############################################################################
+                                #   Main   #
+##############################################################################
 
 
 if __name__ == '__main__':
@@ -593,7 +599,8 @@ if __name__ == '__main__':
                         csrf_token, user_token, user_id,))
 
                 # List all the threads to be ran
-                threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
+                #! Uncomment before publishing
+                # threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
 
                 # Start the threads
                 for thread in threads:
