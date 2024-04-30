@@ -12,7 +12,7 @@ import requests
 import logging
 import threading
 import time
-import gatherDevices  # TODO: Need to adjust to pull IDs and not serials
+import gatherDevices
 from os import getenv
 from dotenv import load_dotenv
 
@@ -577,6 +577,11 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
         return None
 
 
+##############################################################################
+                                #   Main   #
+##############################################################################
+
+
 if __name__ == '__main__':
     start_run_time = time.time()  # Start timing the script
     with requests.Session() as session:
@@ -607,12 +612,12 @@ if __name__ == '__main__':
                 # threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
 
                 # Start the threads
-                for thread in threads:
-                    thread.start()
+                # for thread in threads:
+                #     thread.start()
 
                 # Join the threads as they finish
-                for thread in threads:
-                    thread.join()
+                # for thread in threads:
+                #     thread.join()
 
             # Handles when the required credentials were not received
             else:
