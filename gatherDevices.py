@@ -855,7 +855,7 @@ def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
     
 
 def list_guest(x_verkada_token, x_verkada_auth, usr, session,
-               org_id=ORG_ID):
+               org_id=ORG_ID, sites=None):
     """
     Lists all guest printers and iPads.
 
@@ -877,8 +877,9 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
     }
 
     ipad_ids, printer_ids = [], []
-
-    sites = get_sites(x_verkada_token, x_verkada_auth, usr, session, org_id )
+    
+    if not sites:
+        sites = get_sites(x_verkada_token, x_verkada_auth, usr, session, org_id )
 
     try:
         # Request the JSON archive library
