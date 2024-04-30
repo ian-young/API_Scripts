@@ -1,8 +1,11 @@
 # Author: Ian Young
-# Purpose: Iterate through all archives that are visible to a user and delete
-# them. This is ONLY to be used to keep a given org clean. Extreme caution is
-# advised since the changes this script will make to the org cannot be undone
-# once made.
+# Purpose: Will return all devices in a Verkada Command organization.
+# This is to be imported as a module and not ran directly.
+
+# [ ] TODO: Grab Desk Station endpoint from published script.
+# [ ] TODO: Add functionality to pull access levels.
+# [ ] TODO: Grab Guest URLs from published scripts.
+# [ ] TODO: Improve commenting and logging.
 
 # Import essential libraries
 import threading
@@ -30,12 +33,7 @@ VX_URL = "https://vvx.command.verkada.com/device/list"
 GC_URL = "https://vnet.command.verkada.com/devices/list"
 SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
-# TODO: Find Desk Station endpoint
-TD_URL = ""
-# Filter 'sites' first. Each site is an object.
 SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
-# PRINTER_TABLETS = f"https://vdoorman.command.verkada.com/site/settings/v2/org\
-# /{ORG_ID}/site/{site_id}"
 
 # Set up the logger
 log = logging.getLogger()
