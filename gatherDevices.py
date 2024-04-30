@@ -32,7 +32,6 @@ SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
 DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/{ORG_ID}/device"
 IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/{ORG_ID}/site/"
-# Filter 'sites' first. Each site is an object.
 SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
 
 # Set up the logger

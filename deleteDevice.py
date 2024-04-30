@@ -2,7 +2,7 @@ import requests
 import logging
 import threading
 import time
-import gatherDevices  # TODO: Need to adjust to pull IDs and not serials
+import gatherDevices
 from os import getenv
 from dotenv import load_dotenv
 
@@ -24,7 +24,7 @@ API_KEY = getenv()
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
 SHARD = "?sharding=true"
 
-# TODO: Delete access levels, too!
+# [ ] TODO: Delete access levels, too!
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
