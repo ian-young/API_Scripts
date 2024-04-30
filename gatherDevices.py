@@ -33,9 +33,13 @@ VX_URL = "https://vvx.command.verkada.com/device/list"
 GC_URL = "https://vnet.command.verkada.com/devices/list"
 SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
-DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/{ORG_ID}/device"
-IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/{ORG_ID}/site/"
+DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/\
+{ORG_ID}/device"
+IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/\
+{ORG_ID}/site/"
 SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
+ACCESS_LEVELS = f"https://vcerberus.command.verkada.com/organizations/\
+{ORG_ID}/schedules"
 
 # Set up the logger
 log = logging.getLogger()
@@ -300,7 +304,6 @@ def get_sites(x_verkada_token, x_verkada_auth, usr, session,
 
         sites = response.json()['sites']
 
-        log.debug("-------")
         for site in sites:
             log.debug(f"Retrieved {site['siteId']}: {site['siteName']}")
             site_ids.append(site['siteId'])
@@ -1061,8 +1064,6 @@ if __name__ == "__main__":
                     list_Guest, [csrf_token, user_token, user_id, session])
                 acl_thread = create_thread_with_args(
                     list_ACLs, [csrf_token, user_id, session])
-
-                list_guest(csrf_token, user_token, user_id, session, ORG_ID)
 
                 # threads = [c_thread, ac_thread, br_thread, vx_thread,
                 #            gc_thread, sv_thread, bz_thread]
