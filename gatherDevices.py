@@ -33,9 +33,13 @@ VX_URL = "https://vvx.command.verkada.com/device/list"
 GC_URL = "https://vnet.command.verkada.com/devices/list"
 SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
-DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/{ORG_ID}/device"
-IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/{ORG_ID}/site/"
+DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/\
+{ORG_ID}/device"
+IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/\
+{ORG_ID}/site/"
 SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
+ACCESS_LEVELS = f"https://vcerberus.command.verkada.com/organizations/\
+{ORG_ID}/schedules"
 
 # Set up the logger
 log = logging.getLogger()
@@ -299,12 +303,9 @@ def get_sites(x_verkada_token, x_verkada_auth, usr, session,
 
         sites = response.json()['sites']
 
-        # print("-------")
-        # print("Sites:")
         for site in sites:
-            log.debug(site['siteId'] + " " + site['siteName'])
+            log.debug(f"Retrieved {site['siteId']}: {site['siteName']}")
             site_ids.append(site['siteId'])
-            # print(site['siteId'])
 
         return site_ids
 
@@ -931,6 +932,59 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
+def get_acls(x_verkada_token, usr, session,
+               org_id=ORG_ID):
+    """
+    
+    """
+    headers = {
+        "x-verkada-organization-id": org_id,
+        "x-verkada-token": x_verkada_token,
+        "x-verkada-user-id": usr
+    }
+
+    acl_ids = []
+
+    try:
+        log.debug("Gathering access control levels.")
+        response = session.get(ACCESS_LEVELS, headers=headers)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        log.debug("Access control levels received.")
+
+        acls = response.json()['schedules']
+
+        for acl in acls:
+            log.debug(f"Retrieved {acl['name']}: {acl['scheduleId']}")
+            acl_ids.append(acl['scheduleId'])
+        log.debug("Access levels retrieved.")
+
+        return acl_ids
+
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"Connection timed out.")
+        return None
+
+    except requests.exceptions.TooManyRedirects:
+        log.error(f"Too many redirects.\nAborting...")
+        return None
+
+    except requests.exceptions.HTTPError:
+        log.error(
+            f"Desk stations returned with a non-200 code: "
+            f"{response.status_code}"
+        )
+        return None
+
+    except requests.exceptions.ConnectionError:
+        log.error(f"Error connecting to the server.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"Verkada API Error: {e}")
+        return None
+
+
 ##############################################################################
                                 #   Main   #
 ##############################################################################
@@ -961,8 +1015,6 @@ if __name__ == "__main__":
                     list_Sensors, [csrf_token, user_token, user_id, ORG_ID])
                 bz_thread = create_thread_with_args(
                     list_Horns, [csrf_token, user_token, user_id, ORG_ID])
-
-                list_guest(csrf_token, user_token, user_id, session, ORG_ID)
 
                 # threads = [c_thread, ac_thread, br_thread, vx_thread,
                 #            gc_thread, sv_thread, bz_thread]
