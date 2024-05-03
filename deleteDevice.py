@@ -53,8 +53,8 @@ ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission
 # * DELETE, not POST (works with desk station, too)
 # INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
 # * DELETE, not POST
-# GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/{site_id}?deviceId={device_id}"
-# DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
+GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/"
+DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/"
 
 
 ##############################################################################
@@ -516,6 +516,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
         log.warning("No alarm sensors were received.")
 
 
+# [ ] TODO: Check to see if intercoms delete using the AC endpoint.
 def deletePanels(x_verkada_token, x_verkada_auth, usr,
                  org_id=ORG_ID):
     """
@@ -685,6 +686,107 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
 
     except requests.exceptions.RequestException as e:
         log.error(f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} {e}")
+
+
+def deleteGuest(x_verkada_token, x_verkada_auth, usr,
+                        org_id=ORG_ID):
+    """
+    Deletes all Guest devices from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    """
+    params = {
+        "organizationId": org_id
+    }
+
+    headers = {
+        "X-CSRF-Token": x_verkada_token,
+        "X-Verkada-Auth": x_verkada_auth,
+        "User": usr
+    }
+
+    try:
+        # Request the JSON library for Sites
+        log.debug("Initiating site request.")
+        sites = gatherDevices.get_Sites(
+            x_verkada_token, x_verkada_auth, usr, session, org_id)
+        
+        # Request the JSON library for Guest
+        log.debug("Initiating Guest requests.")
+        ipad_ids, printer_ids = gatherDevices.list_Guest(
+            x_verkada_token, x_verkada_auth, usr, session, org_id, sites)
+        
+        for site in sites:
+            ipad_present = True
+            printer_present = True
+            if ipad_ids:
+                for ipad in ipad_ids:
+                    url = f"{GUEST_IPADS}{site}?deviceId={ipad}"
+                    
+                    log.debug(f"Running for iPad: {ipad}")
+
+                    response = session.delete(
+                        url,
+                        headers=headers,
+                        params=params
+                    )
+                    response.raise_for_status()  # Raise for HTTP errors
+
+                log.debug(f"iPads deleted for site {site}")
+
+            else: 
+                ipad_present = False
+                log.debug("No iPads present.")
+            
+            if printer_ids:
+                for printer in printer_ids:
+                    url = f"{DELETE_PRINTER}{site}?printerId={printer}"
+
+                    log.debug(f"Running for printer: {printer}")
+
+                    response = session.delete(
+                        url,
+                        headers=headers,
+                        params=params
+                    )
+                    response.raise_for_status()  # Raise for HTTP errors
+
+                log.debug(f"Printers deleted for site {site}")
+            
+            else:
+                printer_present = False
+                log.debug("No printers present.")
+
+            if not ipad_present and not printer_present:
+                log.warning(f"No Guest devices were received for site {site}.")
+
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"Connection timed out.")
+        return None
+
+    except requests.exceptions.TooManyRedirects:
+        log.error(f"Too many redirects.\nAborting...")
+        return None
+
+    except requests.exceptions.HTTPError:
+        log.error(
+            f"Environmental sensors returned with a non-200 code: "
+            f"{response.status_code}"
+        )
+        return None
+
+    except requests.exceptions.ConnectionError:
+        log.error(f"Error connecting to the server.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"Verkada API Error: {e}")
+        return None
 
 
 ##############################################################################
