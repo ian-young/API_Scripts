@@ -215,7 +215,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-def list_cameras(api_key, session):
+def list_Cameras(api_key, session):
     headers = {
         'x-api-key': api_key,
         'x-api-key': api_key,
@@ -265,7 +265,7 @@ def list_cameras(api_key, session):
         return None
 
 
-def get_sites(x_verkada_token, x_verkada_auth, usr, session,
+def get_Sites(x_verkada_token, x_verkada_auth, usr, session,
               org_id=ORG_ID):
     """
     Lists all Verkada Guest sites.
@@ -826,7 +826,7 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
+def list_Desk_Stations(x_verkada_token, usr, org_id=ORG_ID):
     """
     Lists all desk stations.
 
@@ -889,7 +889,7 @@ def list_desk_stations(x_verkada_token, usr, org_id=ORG_ID):
         return None
 
 
-def list_guest(x_verkada_token, x_verkada_auth, usr, session,
+def list_Guest(x_verkada_token, x_verkada_auth, usr, session,
                org_id=ORG_ID, sites=None):
     """
     Lists all guest printers and iPads.
@@ -914,7 +914,7 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
     ipad_ids, printer_ids = [], []
 
     if not sites:
-        sites = get_sites(x_verkada_token, x_verkada_auth,
+        sites = get_Sites(x_verkada_token, x_verkada_auth,
                           usr, session, org_id)
 
     try:
@@ -971,7 +971,7 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_acls(x_verkada_token, usr, session,
+def list_ACLs(x_verkada_token, usr, session,
               org_id=ORG_ID):
     """
     Lists all access control levels.
@@ -1056,7 +1056,7 @@ if __name__ == "__main__":
             if csrf_token and user_token and user_id:
                 # Define the threads with arguments
                 c_thread = create_thread_with_args(
-                    list_cameras, [API_KEY, session])
+                    list_Cameras, [API_KEY, session])
                 ac_thread = create_thread_with_args(
                     list_AC, [csrf_token, user_token, user_id, session])
                 br_thread = create_thread_with_args(
@@ -1071,10 +1071,10 @@ if __name__ == "__main__":
                 bz_thread = create_thread_with_args(
                     list_Horns, [csrf_token, user_token, user_id, session])
                 guest_thread = create_thread_with_args(
-                    list_guest, [csrf_token, user_token, user_id, session]
+                    list_Guest, [csrf_token, user_token, user_id, session]
                 )
                 acl_thread = create_thread_with_args(
-                    list_acls, [csrf_token, user_id, session])
+                    list_ACLs, [csrf_token, user_id, session])
 
                 threads = [c_thread, ac_thread, br_thread, vx_thread,
                            gc_thread, sv_thread, bz_thread, guest_thread,
