@@ -999,7 +999,7 @@ def list_ACLs(x_verkada_token, usr, session,
             acl_ids.append(acl['scheduleId'])
         log.debug("Access levels retrieved.")
 
-        return acl_ids
+        return acls, acl_ids
 
     # Handle exceptions
     except requests.exceptions.Timeout:
