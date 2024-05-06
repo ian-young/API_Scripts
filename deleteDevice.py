@@ -4,14 +4,17 @@
 # caution when running because this will delete all devices from an org
 # without any additional warnings.
 
-# [ ] TODO: Add Access Level deletion.
-# [ ] TODO: Format the deletion of iPads and printers.
-# [ ] TODO: Test if intercoms delete.
+# [x] TODO: Add Access Level deletion.
+# [x] TODO: Change for ACLs
+# [x] TODO: Need to format the JSON Body
+# [x] TODO: Format the deletion of iPads and printers.
+# [ ] TODO: Test if Guest devices delete.
 
 import requests
 import logging
 import threading
 import time
+import json
 import gatherDevices
 from os import getenv
 from dotenv import load_dotenv
@@ -31,10 +34,10 @@ logging.basicConfig(
 
 load_dotenv()
 
-USERNAME = getenv()
-PASSWORD = getenv()
-ORG_ID = getenv()
-API_KEY = getenv()
+USERNAME = getenv("slc_username")
+PASSWORD = getenv("slc_password")
+ORG_ID = getenv("slc_id")
+API_KEY = getenv("slc_key")
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
@@ -52,9 +55,10 @@ ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
 ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
 # * DELETE, not POST (works with desk station, too)
 # INTERCOM_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
-# * DELETE, not POST
 GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/"
-DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/"
+GUEST_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/"
+# * PUT, not DELETE or POST
+ACCESS_LEVEL = f"https://vcerberus.command.verkada.com/organizations/{ORG_ID}/schedules"
 
 
 ##############################################################################
@@ -744,7 +748,7 @@ def deleteGuest(x_verkada_token, x_verkada_auth, usr,
             
             if printer_ids:
                 for printer in printer_ids:
-                    url = f"{DELETE_PRINTER}{site}?printerId={printer}"
+                    url = f"{GUEST_PRINTER}{site}?printerId={printer}"
 
                     log.debug(f"Running for printer: {printer}")
 
@@ -779,6 +783,81 @@ def deleteGuest(x_verkada_token, x_verkada_auth, usr,
             f"{response.status_code}"
         )
         return None
+
+    except requests.exceptions.ConnectionError:
+        log.error(f"Error connecting to the server.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"Verkada API Error: {e}")
+        return None
+    
+
+def deleteACLs(x_verkada_token, x_verkada_auth, usr,
+                        org_id=ORG_ID):
+    """
+    Deletes all access control levels from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    """
+    def find_schedule_by_id(schedule_id, schedules):
+        for schedule in schedules:
+            if schedule["scheduleId"] == schedule_id:
+                return schedule
+        return None
+
+    headers = {
+        "x-verkada-organization-id": org_id,
+        "x-verkada-token": x_verkada_token,
+        "x-verkada-user-id": usr
+    }
+
+    try:
+        # Request the JSON archive library
+        log.debug("Initiating request for access control levels.")
+        acls, acl_ids = gatherDevices.list_ACLs(x_verkada_token, usr, session,
+                                         org_id)
+        if acl_ids:
+            for acl in acl_ids:
+                schedule = find_schedule_by_id(acl, acls)
+                log.info(f"Running for access control level {acl}")
+                schedule['deleted'] = True
+                data = {
+                    'sitesEnabled': True,
+                    'schedules': [schedule]
+                }
+
+                response = session.put(
+                    ACCESS_LEVEL,
+                    json=data,
+                    headers=headers
+                )
+                response.raise_for_status()  # Raise an exception for HTTP errors
+
+            log.debug("Access control levels deleted.")
+
+        else:
+            log.warning("No access control levels were received.")
+
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"Connection timed out.")
+        return None
+
+    except requests.exceptions.TooManyRedirects:
+        log.error(f"Too many redirects.\nAborting...")
+        return None
+
+    # except requests.exceptions.HTTPError:
+    #     log.error(
+    #         f"Access control levels returned with a non-200 code: "
+    #         f"{response.status_code}"
+    #     )
+    #     return None
 
     except requests.exceptions.ConnectionError:
         log.error(f"Error connecting to the server.")
@@ -823,6 +902,8 @@ if __name__ == '__main__':
                 sv_thread = threading.Thread(
                     target=deleteEnvironmental, args=(
                         csrf_token, user_token, user_id,))
+
+                deleteACLs(csrf_token, user_token, user_id)
 
                 #! Uncomment before publishing.
                 # List all the threads to be ran
