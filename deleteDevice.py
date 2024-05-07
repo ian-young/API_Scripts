@@ -7,7 +7,6 @@ import requests
 import logging
 import threading
 import time
-import json
 import gatherDevices
 from os import getenv
 from dotenv import load_dotenv
