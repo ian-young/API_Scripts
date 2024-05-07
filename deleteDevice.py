@@ -33,24 +33,27 @@ SHARD = "?sharding=true"
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 CAMERA_DECOM = "https://vprovision.command.verkada.com/camera/decommission"
-AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/decommission"
+AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/\
+decommission"
 ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
 APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
-ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
-ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
+ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/\
+decommission"
+ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/\
+decommission"
 # * DELETE not POST
 DESK_DECOM = f"{ROOT}/organization/{ORG_ID}/device/"
-GUEST_IPADS_DECOM = f"https://vdoorman.command.verkada.com/device/org/{
-    ORG_ID}/site/"
-GUEST_PRINTER_DECOM = f"https://vdoorman.command.verkada.com/printer/org/{
-    ORG_ID}/site/"
+GUEST_IPADS_DECOM = f"https://vdoorman.command.verkada.com/device/org/\
+{ORG_ID}/site/"
+GUEST_PRINTER_DECOM = f"https://vdoorman.command.verkada.com/printer/org/\
+{ORG_ID}/site/"
 # * PUT not POST
-ACCESS_LEVEL_DECOM = f"https://vcerberus.command.verkada.com/organizations/{
-    ORG_ID}/schedules"
+ACCESS_LEVEL_DECOM = f"https://vcerberus.command.verkada.com/organizations/\
+{ORG_ID}/schedules"
 
 
 ##############################################################################
-#   Authentication   #
+                        #   Authentication   #
 ##############################################################################
 
 
@@ -124,7 +127,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     :param org_id: The organization ID for the targeted Verkada org.
@@ -178,7 +181,7 @@ def deleteCameras(x_verkada_token, x_verkada_auth, usr):
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     :param usr: The user ID of the authenticated user for a valid Verkada
@@ -243,7 +246,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     :param usr: The user ID of the authenticated user for a valid Verkada
@@ -280,8 +283,8 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                     ASENSORS_DECOM, headers=headers, json=data)
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
-                log.debug(f"Deleted wireless sensor: {
-                          device.get('deviceType')}"
+                log.debug(f"Deleted wireless sensor: 
+                          {device.get('deviceType')}"
                           )
 
             # Handle exceptions
