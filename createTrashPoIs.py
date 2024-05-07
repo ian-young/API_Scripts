@@ -1,15 +1,33 @@
 # Author: Ian Young
 # This script will create a POI when given a name and uri to image
 
-import base64, creds, logging, requests, threading, time
+import base64
+import colorama
+import datetime
+import logging
+import random
+import requests
+import string
+import threading
+import time
+from os import getenv
+from dotenv import load_dotenv
+
+from colorama import Fore, Style
+
+# Load environment variables
+load_dotenv()
+
+# Set style to reset at EoL
+colorama.init(autoreset=True)
 
 # Globally-defined Verkada PoI URL
 URL_POI = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 URL_LPR = "https://api.verkada.com/cameras/v1/\
 analytics/lpr/license_plate_of_interest"
 
-ORG_ID = creds.lab_id
-API_KEY = creds.lab_key
+ORG_ID = getenv("lab_id")
+API_KEY = getenv("lab_key")
 
 # This will help prevent exceeding the call limit
 CALL_COUNT = 0
@@ -45,7 +63,7 @@ def createPOI(name, image, download):
     # Don't bother running if at throttle limit
     if CALL_COUNT >= 500:
         return
-    
+
     file_content = None  # Pre-define
 
     if download == 'y':
@@ -73,13 +91,13 @@ def createPOI(name, image, download):
     try:
         response = requests.post(
             URL_POI, json=payload, headers=HEADERS, params=PARAMS)
-        
+
         with CALL_COUNT_LOCK:
             CALL_COUNT += 1
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
-        
+
         elif response.status_code != 200:
             log.warning(f"{response.status_code}: Could not create {name}")
 
@@ -94,7 +112,7 @@ def createPlate(name, plate):
     # Don't even bother running if at the throttle limit
     if CALL_COUNT >= 500:
         return
-    
+
     payload = {
         "description": name,
         "license_plate": plate
@@ -103,7 +121,7 @@ def createPlate(name, plate):
     try:
         response = requests.post(
             URL_LPR, json=payload, headers=HEADERS, params=PARAMS)
-        
+
         with CALL_COUNT_LOCK:
             CALL_COUNT += 1
 
@@ -140,18 +158,10 @@ c58609d4feca744209047e57&ipo=images'
         thread_poi.start()
         threads.append(thread_poi)
 
-<<<<<<< HEAD
         thread_lpoi = threading.Thread(
             target=createPlate, args=(plate_name, plate)
         )
         thread_lpoi.start()
-        threads.append(thread_lpoi)
-=======
-        # thread_lpoi = threading.Thread(
-        #    target=createPlate, args=(plate_name, plate)
-        #)
-        #threads.append(thread_lpoi)
->>>>>>> e8a6a9d (Device Deletion Addition (#16))
 
     for thread in threads:
         thread.join()
