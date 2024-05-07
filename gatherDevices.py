@@ -818,7 +818,8 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_Desk_Stations(x_verkada_token, usr, org_id=ORG_ID):
+def list_Desk_Stations(x_verkada_token, usr, session,
+                    org_id=ORG_ID):
     """
     Lists all desk stations.
 
@@ -1058,14 +1059,15 @@ if __name__ == "__main__":
                     list_Sensors, [csrf_token, user_token, user_id, session])
                 bz_thread = create_thread_with_args(
                     list_Horns, [csrf_token, user_token, user_id, session])
+                ds_thread = create_thread_with_args(
+                    list_Desk_Stations, [csrf_token, user_id, session])
                 guest_thread = create_thread_with_args(
-                    list_Guest, [csrf_token, user_token, user_id, session]
-                )
+                    list_Guest, [csrf_token, user_token, user_id, session])
                 acl_thread = create_thread_with_args(
                     list_ACLs, [csrf_token, user_id, session])
 
                 threads = [c_thread, ac_thread, br_thread, vx_thread,
-                           gc_thread, sv_thread, bz_thread, guest_thread,
+                           gc_thread, sv_thread, bz_thread, ds_thread, guest_thread,
                            acl_thread]
 
                 for thread in threads:
