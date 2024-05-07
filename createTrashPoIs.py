@@ -10,10 +10,14 @@ import requests
 import string
 import threading
 import time
+from os import getenv
+from dotenv import load_dotenv
 
 from os import getenv
 from colorama import Fore, Style
-from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Set style to reset at EoLpython
 colorama.init(autoreset=True)
