@@ -1,3 +1,9 @@
+
+# Author: Ian Young
+# Purpose: Reset a Verkada Command organization for use at VCE. An API key and
+# valid user credentials are needed to run this script. Please use EXTREME
+# caution when running because this will delete all devices from an org
+# without any additional warnings.
 import requests
 import logging
 import threading
@@ -24,21 +30,27 @@ API_KEY = getenv()
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
 SHARD = "?sharding=true"
 
-# [ ] TODO: Delete access levels, too!
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 CAMERA_DECOM = "https://vprovision.command.verkada.com/camera/decommission"
-AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/decommission"
+AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/\
+decommission"
 ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
 APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
-ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
-ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
-# DELETE, not POST (works with desk station, too)
-# DESK_STATION_DECOM = f"{ROOT}/organization/{ORG_ID}/device/{placeholder}{SHARD}"
-# DELETE, not POST
-# GUEST_IPADS = f"https://vdoorman.command.verkada.com/device/org/{ORG_ID}/site/{site_id}?deviceId={device_id}"
-# DELETE_PRINTER = f"https://vdoorman.command.verkada.com/printer/org/{ORG_ID}/site/{site_id}?printerId={printer_id}"
+ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/\
+decommission"
+ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/\
+decommission"
+# * DELETE not POST
+DESK_DECOM = f"{ROOT}/organization/{ORG_ID}/device/"
+GUEST_IPADS_DECOM = f"https://vdoorman.command.verkada.com/device/org/\
+{ORG_ID}/site/"
+GUEST_PRINTER_DECOM = f"https://vdoorman.command.verkada.com/printer/org/\
+{ORG_ID}/site/"
+# * PUT not POST
+ACCESS_LEVEL_DECOM = f"https://vcerberus.command.verkada.com/organizations/\
+{ORG_ID}/schedules"
 
 
 ##############################################################################
@@ -116,7 +128,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     :param org_id: The organization ID for the targeted Verkada org.
@@ -170,7 +182,7 @@ def deleteCameras(x_verkada_token, x_verkada_auth, usr):
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     :param usr: The user ID of the authenticated user for a valid Verkada
@@ -235,7 +247,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     :param usr: The user ID of the authenticated user for a valid Verkada
@@ -442,6 +454,7 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
         'a41766d1-4cd7-4331-a7ed-c4e874a31147',
         'ff4731b6-ae7c-4194-934c-b6a3770d1f7b'
     ]
+
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
@@ -566,7 +579,244 @@ def deleteEnvironmental(x_verkada_token, x_verkada_auth, usr,
     except requests.exceptions.RequestException as e:
         log.error(f"Verkada API Error: {e}")
         return None
-    
+
+
+def deleteGuest(x_verkada_token, x_verkada_auth, usr,
+                org_id=ORG_ID):
+    """
+    Deletes all Guest devices from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    """
+    params = {
+        "organizationId": org_id
+    }
+
+    headers = {
+        "X-CSRF-Token": x_verkada_token,
+        "X-Verkada-Auth": x_verkada_auth,
+        "User": usr
+    }
+
+    try:
+        # Request the JSON library for Sites
+        log.debug("Initiating site request.")
+        sites = gatherDevices.get_Sites(
+            x_verkada_token, x_verkada_auth, usr, session, org_id)
+
+        # Request the JSON library for Guest
+        log.debug("Initiating Guest requests.")
+        ipad_ids, printer_ids = gatherDevices.list_Guest(
+            x_verkada_token, x_verkada_auth, usr, session, org_id, sites)
+
+        for site in sites:
+            ipad_present = True
+            printer_present = True
+            
+            if ipad_ids:
+                for ipad in ipad_ids:
+                    url = f"{GUEST_IPADS_DECOM}{site}?deviceId={ipad}"
+
+                    log.debug(f"Running for iPad: {ipad}")
+
+                    response = session.delete(
+                        url,
+                        headers=headers,
+                        params=params
+                    )
+                    response.raise_for_status()  # Raise for HTTP errors
+
+                log.debug(f"iPads deleted for site {site}")
+
+            else:
+                ipad_present = False
+                log.debug("No iPads present.")
+
+            if printer_ids:
+                for printer in printer_ids:
+                    url = f"{GUEST_PRINTER_DECOM}{site}?printerId={printer}"
+
+                    log.debug(f"Running for printer: {printer}")
+
+                    response = session.delete(
+                        url,
+                        headers=headers,
+                        params=params
+                    )
+                    response.raise_for_status()  # Raise for HTTP errors
+
+                log.debug(f"Printers deleted for site {site}")
+
+            else:
+                printer_present = False
+                log.debug("No printers present.")
+
+            if not ipad_present and not printer_present:
+                log.warning(f"No Guest devices were received for site {site}.")
+
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"Connection timed out.")
+        return None
+
+    except requests.exceptions.TooManyRedirects:
+        log.error(f"Too many redirects.\nAborting...")
+        return None
+
+    except requests.exceptions.HTTPError:
+        log.error(
+            f"Environmental sensors returned with a non-200 code: "
+            f"{response.status_code}"
+        )
+        return None
+
+    except requests.exceptions.ConnectionError:
+        log.error(f"Error connecting to the server.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"Verkada API Error: {e}")
+        return None
+
+
+def deleteACLs(x_verkada_token, usr, org_id=ORG_ID):
+    """
+    Deletes all access control levels from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    """
+    def find_schedule_by_id(schedule_id, schedules):
+        for schedule in schedules:
+            if schedule["scheduleId"] == schedule_id:
+                return schedule
+        return None
+
+    headers = {
+        "x-verkada-organization-id": org_id,
+        "x-verkada-token": x_verkada_token,
+        "x-verkada-user-id": usr
+    }
+
+    try:
+        # Request the JSON archive library
+        log.debug("Initiating request for access control levels.")
+        acls, acl_ids = gatherDevices.list_ACLs(x_verkada_token, usr, session,
+                                                org_id)
+        
+        if acl_ids:
+            for acl in acl_ids:
+                schedule = find_schedule_by_id(acl, acls)
+                log.info(f"Running for access control level {acl}")
+                schedule['deleted'] = True
+                data = {
+                    'sitesEnabled': True,
+                    'schedules': [schedule]
+                }
+
+                response = session.put(
+                    ACCESS_LEVEL_DECOM,
+                    json=data,
+                    headers=headers
+                )
+                response.raise_for_status()  # Raise an exception for HTTP errors
+
+            log.debug("Access control levels deleted.")
+
+        else:
+            log.warning("No access control levels were received.")
+
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"Connection timed out.")
+        return None
+
+    except requests.exceptions.TooManyRedirects:
+        log.error(f"Too many redirects.\nAborting...")
+        return None
+
+    # except requests.exceptions.HTTPError:
+    #     log.error(
+    #         f"Access control levels returned with a non-200 code: "
+    #         f"{response.status_code}"
+    #     )
+    #     return None
+
+    except requests.exceptions.ConnectionError:
+        log.error(f"Error connecting to the server.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"Verkada API Error: {e}")
+        return None
+
+
+def deleteDeskStation(x_verkada_token, usr, org_id=ORG_ID):
+    """
+    Deletes all Guest devices from a Verkada organization.
+
+    :param x_verkada_token: The csrf token for a valid, authenticated session.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    session.
+    :type x_verkada_auth: str
+    """
+    headers = {
+        "x-verkada-organization-id": org_id,
+        "x-verkada-token": x_verkada_token,
+        "x-verkada-user-id": usr
+    }
+
+    try:
+        # Request the JSON library for Desk Station
+        log.debug("Initiating Desk Station requests.")
+        # ds_ids = gatherDevices.list_Desk_Stations(
+            # x_verkada_token, x_verkada_auth, usr, session, org_id)
+
+        ds_ids = ["9097a015-040f-4c89-a406-f8e38421dfb0"]
+        if ds_ids:
+            for desk_station in ds_ids:
+                url = DESK_DECOM + desk_station + SHARD
+
+                log.debug(f"Running for Desk Station: {desk_station}")
+
+                response = session.delete(
+                    url,
+                    headers=headers
+                )
+                response.raise_for_status()  # Raise for HTTP errors
+
+    # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.error(f"Connection timed out.")
+        return None
+
+    except requests.exceptions.TooManyRedirects:
+        log.error(f"Too many redirects.\nAborting...")
+        return None
+
+    except requests.exceptions.HTTPError:
+        log.error(
+            f"Desk Station returned with a non-200 code: "
+            f"{response.status_code}"
+        )
+        return None
+
+    except requests.exceptions.ConnectionError:
+        log.error(f"Error connecting to the server.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        log.error(f"Verkada API Error: {e}")
+        return None
+
 
 ##############################################################################
                                 #   Main   #
@@ -584,24 +834,37 @@ if __name__ == '__main__':
             if csrf_token and user_token and user_id:
                 # Place each element in their own thread to speed up runtime
                 camera_thread = threading.Thread(
-                    target=deleteCameras, args=(
-                        csrf_token, user_token, user_id,))
+                    target=deleteCameras, 
+                    args=(csrf_token, user_token, user_id,))
 
-                alarm_thread = threading.Thread(target=deleteSensors, args=(
-                    csrf_token, user_token, user_id, session,))
+                alarm_thread = threading.Thread(
+                    target=deleteSensors, 
+                    args=(csrf_token, user_token, user_id, session,))
 
                 ac_thread = threading.Thread(
-                    target=deletePanels, args=(
-                        csrf_token, user_token, user_id,))
+                    target=deletePanels, 
+                    args=(csrf_token, user_token, user_id,))
 
                 sv_thread = threading.Thread(
-                    target=deleteEnvironmental, args=(
-                        csrf_token, user_token, user_id,))
+                    target=deleteEnvironmental, 
+                    args=(csrf_token, user_token, user_id,))
+
+                guest_thread = threading.Thread(
+                    target=deleteGuest, 
+                    args=(csrf_token, user_token, user_id,))
+
+                acl_thread = threading.Thread(
+                    target=deleteACLs, 
+                    args=(csrf_token, user_id,))
+
+                desk_thread = threading.Thread(
+                    target=deleteDeskStation, 
+                    args=(csrf_token, user_token, user_id,))
 
                 # List all the threads to be ran
-                #! Uncomment before publishing
-                # threads = [camera_thread, alarm_thread, ac_thread, sv_thread]
-
+                threads = [camera_thread, alarm_thread, ac_thread, sv_thread,
+                           guest_thread, acl_thread, desk_thread]
+                
                 # Start the threads
                 for thread in threads:
                     thread.start()
