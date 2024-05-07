@@ -1,3 +1,4 @@
+
 # Author: Ian Young
 # Purpose: Reset a Verkada Command organization for use at VCE. An API key and
 # valid user credentials are needed to run this script. Please use EXTREME
@@ -53,7 +54,7 @@ ACCESS_LEVEL_DECOM = f"https://vcerberus.command.verkada.com/organizations/\
 
 
 ##############################################################################
-                        #   Authentication   #
+                            #   Authentication   #
 ##############################################################################
 
 
@@ -863,7 +864,7 @@ if __name__ == '__main__':
                 # List all the threads to be ran
                 threads = [camera_thread, alarm_thread, ac_thread, sv_thread,
                            guest_thread, acl_thread, desk_thread]
-
+                
                 # Start the threads
                 for thread in threads:
                     thread.start()

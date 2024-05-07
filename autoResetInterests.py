@@ -17,7 +17,7 @@ BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s: %(message)s"
@@ -473,8 +473,10 @@ def runPeople():
             safe_person_ids.append(getPersonId(person, persons))
         safe_person_ids = cleanList(safe_person_ids)
 
-        for person in PERSISTENT_PID:
-            safe_person_ids.append(person)
+        if PERSISTENT_PID:
+            for person in PERSISTENT_PID:
+                safe_person_ids.append(person)
+
         log.info("Safe persons found.")
 
         # New list that filters persons that are safe
@@ -820,4 +822,3 @@ if __name__ == "__main__":
         GPIO.output(work_pin, False)
 
     log.info(f"Total time to complete: {elapsed_time:.2f}")
-    

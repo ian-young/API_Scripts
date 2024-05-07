@@ -63,7 +63,6 @@ class ResultThread(threading.Thread):
     values are saved to be viewed for later. They may be accessed by typing
     the objectname.result
     """
-
     def __init__(self, target, *args, **kwargs):
         super().__init__(target=target, args=args, kwargs=kwargs)
         self._result = None
@@ -216,6 +215,17 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 def list_Cameras(api_key, session):
+  """
+  Will list all cameras inside of a Verkada organization.
+  
+  :param api_key: The API key generated from the organization to target.
+  :type api_key: str
+  :param session: The request session to use to make the call with.
+  :type session: object
+  :return: Returns a list of all camera device IDs found inside of a Verkada
+  organization.
+  :rtype: list
+  """
     headers = {
         'x-api-key': api_key,
         'Content-Type': 'application/json'
@@ -374,6 +384,7 @@ def list_AC(x_verkada_token, x_verkada_auth, usr, session,
         for controller in access_devices:
             log.debug(f"Retrieved controller {controller['name']}: \
 {controller['deviceId']}")
+
             access_ids.append(controller['deviceId'])
 
         return access_ids
@@ -1095,7 +1106,8 @@ if __name__ == "__main__":
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
             log.warning(
-                f"\nKeyboard interrupt detected. Logging out & aborting...")
+                f"\nKeyboard interrupt detected. Logging out & aborting..."
+            )
 
         finally:
             if csrf_token and user_token:
