@@ -20,10 +20,10 @@ logging.basicConfig(
 
 load_dotenv()
 
-USERNAME = getenv("slc_username")
-PASSWORD = getenv("slc_password")
-ORG_ID = getenv("slc_id")
-API_KEY = getenv("slc_key")
+USERNAME = getenv()
+PASSWORD = getenv()
+ORG_ID = getenv()
+API_KEY = getenv()
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"

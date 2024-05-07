@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set final, global credential variables
-API_KEY = getenv("slc_key")
-USERNAME = getenv("slc_username")
-PASSWORD = getenv("slc_password")
-ORG_ID = getenv("slc_id")
+API_KEY = getenv()
+USERNAME = getenv()
+PASSWORD = getenv()
+ORG_ID = getenv()
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
