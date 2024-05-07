@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
-API_KEY = getenv("slc_key")
-USERNAME = getenv("slc_username")
-PASSWORD = getenv("slc_password")
-ORG_ID = getenv("slc_id")
+API_KEY = getenv("burn_key")
+USERNAME = getenv("burn_username")
+PASSWORD = getenv("burn_password")
+ORG_ID = getenv("burn_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -216,6 +216,17 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 def list_Cameras(api_key, session):
+    """
+    Will list all cameras inside of a Verkada organization.
+    
+    :param api_key: The API key generated from the organization to target.
+    :type api_key: str
+    :param session: The request session to use to make the call with.
+    :type session: object
+    :return: Returns a list of all camera device IDs found inside of a Verkada
+    organization.
+    :rtype: list
+    """
     headers = {
         'x-api-key': api_key,
         'x-api-key': api_key,
@@ -826,7 +837,8 @@ def list_Horns(x_verkada_token, x_verkada_auth, usr, session,
         return None
 
 
-def list_Desk_Stations(x_verkada_token, usr, org_id=ORG_ID):
+def list_Desk_Stations(x_verkada_token, usr, session,
+                    org_id=ORG_ID):
     """
     Lists all desk stations.
 
@@ -1070,14 +1082,15 @@ if __name__ == "__main__":
                     list_Sensors, [csrf_token, user_token, user_id, session])
                 bz_thread = create_thread_with_args(
                     list_Horns, [csrf_token, user_token, user_id, session])
+                ds_thread = create_thread_with_args(
+                    list_Desk_Stations, [csrf_token, user_id, session])
                 guest_thread = create_thread_with_args(
-                    list_Guest, [csrf_token, user_token, user_id, session]
-                )
+                    list_Guest, [csrf_token, user_token, user_id, session])
                 acl_thread = create_thread_with_args(
                     list_ACLs, [csrf_token, user_id, session])
 
                 threads = [c_thread, ac_thread, br_thread, vx_thread,
-                           gc_thread, sv_thread, bz_thread, guest_thread,
+                           gc_thread, sv_thread, bz_thread, ds_thread, guest_thread,
                            acl_thread]
 
                 for thread in threads:
