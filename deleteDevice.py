@@ -3,7 +3,6 @@
 # valid user credentials are needed to run this script. Please use EXTREME
 # caution when running because this will delete all devices from an org
 # without any additional warnings.
-# [ ] TODO: Change some DEBUG to INFO
 import colorama
 import gatherDevices
 import logging
@@ -674,7 +673,7 @@ def deletePanels(x_verkada_token, x_verkada_auth, usr,
                         ACCESS_DECOM, headers=headers, json=data)
                     response.raise_for_status()  # Raise an exception for HTTP errors
 
-            log.debug(
+            log.info(
                 f"{Fore.GREEN}"
                 f"Access control panels deleted."
                 f"{Style.RESET_ALL}")
@@ -741,7 +740,7 @@ def deleteIntercom(x_verkada_token, usr, device_id, org_id=ORG_ID):
     try:
         url = DESK_DECOM + device_id + SHARD
 
-        log.debug(f"Running for Desk Station: {device_id}")
+        log.debug(f"Running for intercom: {device_id}")
 
         response = session.delete(
             url,
@@ -749,7 +748,7 @@ def deleteIntercom(x_verkada_token, usr, device_id, org_id=ORG_ID):
         )
         response.raise_for_status()  # Raise for HTTP errors
 
-        log.debug(f"{Fore.GREEN}Intercom deleted.{Style.RESET_ALL}")
+        log.info(f"{Fore.GREEN}Intercom deleted.{Style.RESET_ALL}")
 
     # Handle exceptions
     except requests.exceptions.Timeout:
@@ -913,7 +912,7 @@ def deleteGuest(x_verkada_token, x_verkada_auth, usr,
                     )
                     response.raise_for_status()  # Raise for HTTP errors
 
-                log.debug(
+                log.info(
                     f"{Fore.GREEN}"
                     f"iPads deleted for site {site}"
                     f"{Style.RESET_ALL}"
@@ -936,7 +935,7 @@ def deleteGuest(x_verkada_token, x_verkada_auth, usr,
                     )
                     response.raise_for_status()  # Raise for HTTP errors
 
-                log.debug(
+                log.info(
                     f"{Fore.GREEN}"
                     f"Printers deleted for site {site}"
                     f"{Style.RESET_ALL}"
@@ -1027,7 +1026,7 @@ def deleteACLs(x_verkada_token, usr, org_id=ORG_ID):
                 )
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
-            log.debug(
+            log.info(
                 f"{Fore.GREEN}"
                 f"Access control levels deleted."
                 f"{Style.RESET_ALL}"
@@ -1106,6 +1105,12 @@ def deleteDeskStation(x_verkada_token, usr, org_id=ORG_ID):
                     headers=headers
                 )
                 response.raise_for_status()  # Raise for HTTP errors
+
+                log.info(
+                    f"{Fore.GREEN}"
+                    f"Desk Stations deleted."
+                    f"{Style.RESET_ALL}"
+                )
 
     # Handle exceptions
     except requests.exceptions.Timeout:
