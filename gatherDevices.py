@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set final, global credential variables
-API_KEY = getenv("burn_key")
-USERNAME = getenv("burn_username")
-PASSWORD = getenv("burn_password")
-ORG_ID = getenv("burn_id")
+API_KEY = getenv()
+USERNAME = getenv()
+PASSWORD = getenv()
+ORG_ID = getenv()
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -39,9 +39,9 @@ ACCESS_LEVELS = f"https://vcerberus.command.verkada.com/organizations/\
 
 # Set up the logger
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(levelname)s: %(message)s"
 )
 

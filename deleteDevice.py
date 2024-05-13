@@ -1,4 +1,3 @@
-
 # Author: Ian Young
 # Purpose: Reset a Verkada Command organization for use at VCE. An API key and
 # valid user credentials are needed to run this script. Please use EXTREME
