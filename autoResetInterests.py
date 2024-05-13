@@ -147,9 +147,11 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
     """
     Run a thread with rate limiting.
 
-    :param target: The target function to be executed in the thread:
-    :type targe: function:
-    :return: The thread that was created and ran
+    :param threads: A list of threads that need to be clocked.
+    :type threads: list
+    :param rate_limit: The value of how many threads may be made each sec.
+    :type rate_limit: int
+    :return: The thread that was created and ran.
     :rtype: thread
     """
     limiter = RateLimiter(rate_limit=rate_limit)
