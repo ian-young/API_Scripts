@@ -12,6 +12,8 @@ import time
 import pytz
 import colorama
 import avlTree  # File to work with trees
+from os import getenv
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from os import getenv
 from tzlocal import get_localzone
@@ -20,7 +22,7 @@ from dotenv import load_dotenv
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
-load_dotenv()
+load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
 USERNAME = getenv("lab_username")
