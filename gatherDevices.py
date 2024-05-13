@@ -39,9 +39,9 @@ ACCESS_LEVELS = f"https://vcerberus.command.verkada.com/organizations/\
 
 # Set up the logger
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(levelname)s: %(message)s"
 )
 
@@ -217,7 +217,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 def list_Cameras(api_key, session):
     """
     Will list all cameras inside of a Verkada organization.
-
+    
     :param api_key: The API key generated from the organization to target.
     :type api_key: str
     :param session: The request session to use to make the call with.
@@ -1014,28 +1014,32 @@ def list_ACLs(x_verkada_token, usr, session,
         return acls, acl_ids
 
     # Handle exceptions
+    except KeyError:
+        log.warning("No access control levels were found in this org.")
+        return None, None
+
     except requests.exceptions.Timeout:
         log.error(f"Connection timed out.")
-        return None
+        return None, None
 
     except requests.exceptions.TooManyRedirects:
         log.error(f"Too many redirects.\nAborting...")
-        return None
+        return None, None
 
     except requests.exceptions.HTTPError:
         log.error(
             f"Access control levels returned with a non-200 code: "
             f"{response.status_code}"
         )
-        return None
+        return None, None
 
     except requests.exceptions.ConnectionError:
         log.error(f"Error connecting to the server.")
-        return None
+        return None, None
 
     except requests.exceptions.RequestException as e:
         log.error(f"Verkada API Error: {e}")
-        return None
+        return None, None
 
 
 ##############################################################################

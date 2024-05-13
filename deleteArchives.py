@@ -12,6 +12,8 @@ import time
 import pytz
 import colorama
 import avlTree  # File to work with trees
+from os import getenv
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from tzlocal import get_localzone
 from colorama import Fore, Style
