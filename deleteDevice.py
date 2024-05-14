@@ -3,6 +3,7 @@
 # valid user credentials are needed to run this script. Please use EXTREME
 # caution when running because this will delete all devices from an org
 # without any additional warnings.
+from signal import alarm
 import colorama
 import gatherDevices
 import logging
@@ -19,17 +20,17 @@ colorama.init(autoreset=True)  # Initialize colorized output
 load_dotenv()  # Load credentials file
 
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(levelname)s: %(message)s"
 )
 
 # Set final, global credential variables
-API_KEY = getenv()
-USERNAME = getenv()
-PASSWORD = getenv()
-ORG_ID = getenv()
+API_KEY = getenv("burn_key")
+USERNAME = getenv("burn_username")
+PASSWORD = getenv("burn_password")
+ORG_ID = getenv("burn_id")
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
@@ -289,7 +290,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 ##############################################################################
-                            #   Requests   #
+                                #   Requests   #
 ##############################################################################
 
 
@@ -475,7 +476,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                 try:
                     log.debug(f"Running for {device_id}")
                     response = session.post(
-                        AKEYPADS_DECOM, headers=headers, json=data)
+                        APANEL_DECOM, headers=headers, json=data)
                     response.raise_for_status()  # Raise an exception for HTTP errors
 
                     processed_ids.add(device_id)
@@ -1190,9 +1191,11 @@ if __name__ == '__main__':
                     args=(csrf_token, user_token, user_id,))
 
                 # # List all the threads to be ran
-                threads = [camera_thread, alarm_thread, ac_thread, sv_thread,
-                           guest_thread, acl_thread, desk_thread]
-                
+                # threads = [camera_thread, alarm_thread, ac_thread, sv_thread,
+                        #    guest_thread, acl_thread, desk_thread]
+
+                threads = [alarm_thread
+                           ]
                 # Start the clocked threads
                 run_thread_with_rate_limit(threads)
 
