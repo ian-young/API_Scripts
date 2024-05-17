@@ -10,13 +10,13 @@ import time
 from os import getenv
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
-API_KEY = getenv()
-USERNAME = getenv()
-PASSWORD = getenv()
-ORG_ID = getenv()
+API_KEY = getenv("burn_key")
+USERNAME = getenv("burn_username")
+PASSWORD = getenv("burn_password")
+ORG_ID = getenv("burn_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -53,7 +53,7 @@ devices_serials = []
 ARRAY_LOCK = threading.Lock()
 
 ##############################################################################
-                        #   Thread Management   #
+                            #   Thread Management   #
 ##############################################################################
 
 
@@ -461,6 +461,7 @@ def list_Alarms(x_verkada_token, x_verkada_auth, usr, session,
         log.debug("Alarm JSON retrieved. Parsing and logging.")
 
         alarm_devices = response.json()
+        print(alarm_devices)
 
         log.debug("-------")
         for dcs in alarm_devices['doorContactSensor']:
