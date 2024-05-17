@@ -31,6 +31,7 @@ USERNAME = getenv()
 PASSWORD = getenv()
 ORG_ID = getenv()
 
+
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
 SHARD = "?sharding=true"
@@ -288,7 +289,7 @@ def logout(x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 ##############################################################################
-                            #   Requests   #
+                                #   Requests   #
 ##############################################################################
 
 
@@ -458,7 +459,7 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                 try:
                     log.debug(f"Running for {device_id}")
                     response = session.post(
-                        AKEYPADS_DECOM, headers=headers, json=data)
+                        APANEL_DECOM, headers=headers, json=data)
                     response.raise_for_status()  # Raise an exception for HTTP errors
 
                     processed_ids.add(device_id)
@@ -476,11 +477,32 @@ def deleteSensors(x_verkada_token, x_verkada_auth, usr, session,
                     )
 
                 except requests.exceptions.HTTPError:
-                    log.error(
-                        f"{Fore.RED}"
-                        f"Alarm keypad returned with a non-200"
-                        f" code: {response.status_code}{Style.RESET_ALL}"
-                    )
+                    if response.status_code == 400:
+                        log.debug("Trying as keypad.")
+                        response = session.post(
+                        APANEL_DECOM,
+                        headers=headers,
+                        json=data
+                        )
+                        if response.status == 200:
+                            log.debug(
+                                f"{Fore.GREEN}"
+                                f"Keypad deleted successfully"
+                                )
+                        else:
+                            log.warning(
+                                f"{Fore.RED}"
+                                f"Could not delete {device_id}"
+                                f"{Style.RESET_ALL}\nStatus code: "
+                                f"{response.status_code}"
+                            )
+                        
+                    else:
+                        log.error(
+                            f"{Fore.RED}"
+                            f"Alarm keypad returned with a non-200"
+                            f" code: {response.status_code}{Style.RESET_ALL}"
+                        )
 
                 except requests.exceptions.ConnectionError:
                     log.error(
@@ -1129,7 +1151,7 @@ if __name__ == '__main__':
                 # # List all the threads to be ran
                 threads = [camera_thread, alarm_thread, ac_thread, sv_thread,
                            guest_thread, acl_thread, desk_thread]
-                
+
                 # Start the clocked threads
                 run_thread_with_rate_limit(threads)
 
