@@ -33,8 +33,8 @@ load_dotenv()  # Load credentials file
 # Set the logger
 log = logging.getLogger()
 logging.basicConfig(
-    level = logging.DEBUG,
-    format = "%(levelname)s: %(message)s"
+    level=logging.DEBUG,
+    format="%(levelname)s: %(message)s"
 )
 
 # Mute non-essential logging from requests library

@@ -1,14 +1,20 @@
-# Author: Ian Young
-# Purpose: Test Verkada API endpoints.
-# This script is to be ran using the pip module pytest
-# Anything that starts with test will be ran by pytest
-# The script only looks for a 200 response code.
-# WARNING:
-# You might have a test PoI left in your org if the endpoint is not fixed
+"""
+Author: Ian Young
+Purpose: Test Verkada API endpoints.
+This script is to be ran using the pip module pytest
+Anything that starts with test will be ran by pytest
+The script only looks for a 200 response code.
+NOTE:
+You might have a test PoI left in your org if the endpoint is not fixed.
+"""
+# Import essential libraries
+import base64
+from os import getenv
 
 import requests
-import base64
-import creds
+from dotenv import load_dotenv
+
+load_dotenv()  # Load credentials file
 
 # Set URLs
 URL_PEOPLE = "https://api.verkada.com/cameras/v1/people/person_of_interest"
@@ -28,13 +34,13 @@ URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 
 # Set general testing variables
-ORG_ID = creds.slc_id
-API_KEY = creds.slc_key
-CAMERA_ID = creds.slc_camera_id
-TEST_USER = creds.slc_test_user
-TEST_USER_CRED = creds.slc_test_user_cred
-CARD_ID = creds.slc_card_id
-PLATE = creds.slc_plate
+ORG_ID = getenv("")
+API_KEY = getenv("")
+CAMERA_ID = getenv("")
+TEST_USER = getenv("")
+TEST_USER_CRED = getenv("")
+CARD_ID = getenv("")
+PLATE = getenv("")
 
 GENERAL_HEADER = {
     'accept': 'application/json',
@@ -47,9 +53,9 @@ GENERAL_HEADER = {
 ##############################################################################
 
 
-def getPersonID():
-    """Accepts a string as a search value and returns the person id\
- associated with it"""
+def get_person_id():
+    """Accepts a string as a search value and returns the person id
+    associated with it."""
     # Define query parameters for the request
     params = {
         'org_id': ORG_ID,
@@ -57,7 +63,8 @@ def getPersonID():
     }
 
     # Send a GET request to search for persons of interest
-    response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
+    response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params,
+                            timeout=5)
 
     # Check if the request was successful (status code 200)
     if response.status_code == 200:
@@ -73,15 +80,15 @@ def getPersonID():
             return person_id
             # print(f"Person ID for label '{label_to_search}': {person_id}")
         else:
-            print(f"No person was found with the label 'test'.")
+            print("No person was found with the label 'test'.")
     else:
         print(
             f"Failed to retrieve persons of interest. Status code: \
 {response.status_code}")
 
 
-def test_CreatePOI():
-    """Creates a PoI to test the API endpoint"""
+def test_create_poi():
+    """Creates a PoI to test the API endpoint."""
     file_content = None  # Pre-define
 
     # Download the JPG file from the URL
@@ -89,7 +96,7 @@ def test_CreatePOI():
         'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.pinimg\
 .com%2F736x%2F87%2Fea%2F33%2F87ea336233db8ad468405db8f94da050--human-faces-\
 photos-of.jpg&f=1&nofb=1&ipt=6af7ecf6cd0e15496e7197f3b6cb1527beaa8718c58609d4\
-feca744209047e57&ipo=images')
+feca744209047e57&ipo=images', timeout=5)
 
     if img_response.status_code == 200:
         # File was successfully downloaded
@@ -117,23 +124,24 @@ feca744209047e57&ipo=images')
     }
 
     response = requests.post(
-        URL_PEOPLE, json=payload, headers=headers, params=params)
+        URL_PEOPLE, json=payload, headers=headers, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getPOI():
+def test_get_poi():
     """Looks to see if it can get PoIs"""
     params = {
         "org_id": ORG_ID
     }
 
-    response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params)
+    response = requests.get(URL_PEOPLE, headers=GENERAL_HEADER, params=params,
+                            timeout=5)
 
     assert response.status_code == 200
 
 
-def test_UpdatePOI():
+def test_update_poi():
     """Tests the patch requests for the people endpoint"""
     payload = {"label": 'Test'}
     headers = {
@@ -145,16 +153,16 @@ def test_UpdatePOI():
     # Define query parameters for the request
     params = {
         'org_id': ORG_ID,
-        'person_id': getPersonID()
+        'person_id': get_person_id()
     }
 
     response = requests.patch(
-        URL_PEOPLE, json=payload, headers=headers, params=params)
+        URL_PEOPLE, json=payload, headers=headers, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_DeletePOI():
+def test_delete_poi():
     """Tests the delete request for the people endpoint"""
     headers = {
         "accept": "application/json",
@@ -163,10 +171,11 @@ def test_DeletePOI():
 
     params = {
         "org_id": ORG_ID,
-        "person_id": getPersonID()
+        "person_id": get_person_id()
     }
 
-    response = requests.delete(URL_PEOPLE, headers=headers, params=params)
+    response = requests.delete(URL_PEOPLE, headers=headers, params=params,
+                               timeout=5)
 
     assert response.status_code == 200
 
@@ -176,7 +185,7 @@ def test_DeletePOI():
 ##############################################################################
 
 
-def test_CreatePlate():
+def test_create_plate():
     """Creates a LPoI to test the API endpoint"""
     # Set payload
     payload = {
@@ -195,12 +204,12 @@ def test_CreatePlate():
     }
 
     response = requests.post(
-        URL_PLATE, json=payload, headers=headers, params=params)
+        URL_PLATE, json=payload, headers=headers, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getLPOI():
+def test_get_plate():
     """Looks to see if it can get LPoIs"""
     headers = {
         "accept": "application/json",
@@ -211,12 +220,13 @@ def test_getLPOI():
         "org_id": ORG_ID
     }
 
-    response = requests.get(URL_PLATE, headers=headers, params=params)
+    response = requests.get(URL_PLATE, headers=headers, params=params,
+                            timeout=5)
 
     assert response.status_code == 200
 
 
-def test_UpdateLPOI():
+def test_update_plate():
     """Tests the patch requests for the LPoI endpoint"""
     payload = {"description": 'Test'}
     headers = {
@@ -232,12 +242,12 @@ def test_UpdateLPOI():
     }
 
     response = requests.patch(
-        URL_PLATE, json=payload, headers=headers, params=params)
+        URL_PLATE, json=payload, headers=headers, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_DeleteLPOI():
+def test_delete_plate():
     """Tests the delete request for the LPoI endpoint"""
     params = {
         "org_id": ORG_ID,
@@ -245,7 +255,7 @@ def test_DeleteLPOI():
     }
 
     response = requests.delete(
-        URL_PLATE, headers=GENERAL_HEADER, params=params)
+        URL_PLATE, headers=GENERAL_HEADER, params=params, timeout=5)
 
     assert response.status_code == 200
 
@@ -255,31 +265,33 @@ def test_DeleteLPOI():
 ##############################################################################
 
 
-def test_getCloudSettings():
+def test_get_cloud_settings():
     """Tests to see if it can retrieve cloud backup settings for a camera"""
     params = {
         'org_id': ORG_ID,
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params)
+    response = requests.get(URL_CLOUD, headers=GENERAL_HEADER, params=params,
+                            timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getCounts():
+def test_get_counts():
     """Tests if it can get object counts from a camera"""
     params = {
         'org_id': ORG_ID,
         'camera_id': CAMERA_ID
     }
 
-    response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params)
+    response = requests.get(URL_OBJ, headers=GENERAL_HEADER, params=params,
+                            timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getTrends():
+def test_get_trends():
     """Tests if it can get trend counts from a camera"""
     params = {
         'org_id': ORG_ID,
@@ -287,12 +299,12 @@ def test_getTrends():
     }
 
     response = requests.get(
-        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getCameraData():
+def test_get_camera_data():
     """Tests if it can get camera data on a given camera"""
     params = {
         'org_id': ORG_ID,
@@ -300,12 +312,12 @@ def test_getCameraData():
     }
 
     response = requests.get(
-        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params)
+        URL_OCCUPANCY, headers=GENERAL_HEADER, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getThumbed():
+def test_get_thumbed():
     """Tests if it can get a thumbnail from a camera"""
     params = {
         'org_id': ORG_ID,
@@ -313,7 +325,8 @@ def test_getThumbed():
         'resolution': 'low-res'
     }
 
-    response = requests.get(URL_FOOTAGE, headers=GENERAL_HEADER, params=params)
+    response = requests.get(URL_FOOTAGE, headers=GENERAL_HEADER, params=params,
+                            timeout=5)
 
     assert response.status_code == 200
 
@@ -323,16 +336,19 @@ def test_getThumbed():
 ##############################################################################
 
 
-def test_getAudit():
+def test_get_audit():
     """Tests the ability to retrieve audit logs"""
     params = {
         'org_id': ORG_ID,
         'page_size': '1'
     }
-    response = requests.get(URL_AUDIT, headers=GENERAL_HEADER, params=params)
+    response = requests.get(URL_AUDIT, headers=GENERAL_HEADER, params=params,
+                            timeout=5)
+
+    assert response.status_code == 200
 
 
-def test_updateUser():
+def test_update_user():
     """Tests the ability to update a user"""
     payload = {
         'active': False
@@ -349,20 +365,21 @@ def test_updateUser():
         'user_id': TEST_USER
     }
 
-    response = requests.put(URL_CORE, json=payload,
-                            headers=headers, params=params)
+    response = requests.put(URL_CORE, json=payload, headers=headers,
+                            params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getUser():
+def test_get_user():
     """Tests the ability to retrieve information on a user"""
     params = {
         'org_id': ORG_ID,
         'user_id': TEST_USER
     }
 
-    response = requests.get(URL_CORE, headers=GENERAL_HEADER, params=params)
+    response = requests.get(URL_CORE, headers=GENERAL_HEADER, params=params,
+                            timeout=5)
 
     assert response.status_code == 200
 
@@ -372,31 +389,31 @@ def test_getUser():
 ##############################################################################
 
 
-def test_getGroups():
+def test_get_groups():
     """Tests the ability to get AC Groups"""
     params = {
         'org_id': ORG_ID
     }
 
     response = requests.get(
-        URL_AC_GROUPS, headers=GENERAL_HEADER, params=params)
+        URL_AC_GROUPS, headers=GENERAL_HEADER, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_getACUsers():
+def test_get_ac_users():
     """Tests the ability to get AC users"""
     params = {
         'org_id': ORG_ID
     }
 
     response = requests.get(
-        URL_AC_USERS, headers=GENERAL_HEADER, params=params)
+        URL_AC_USERS, headers=GENERAL_HEADER, params=params, timeout=5)
 
     assert response.status_code == 200
 
 
-def test_changeCards():
+def test_chage_cards():
     """Tests the ability to change credentials"""
     params = {
         'org_id': ORG_ID,
@@ -408,11 +425,10 @@ def test_changeCards():
     deactivate_url = URL_AC_CRED + '/deactivate'
 
     active_response = requests.put(
-        activate_url, headers=GENERAL_HEADER, params=params
-    )
+        activate_url, headers=GENERAL_HEADER, params=params, timeout=5)
 
     deactive_response = requests.put(
-        deactivate_url, headers=GENERAL_HEADER, params=params
+        deactivate_url, headers=GENERAL_HEADER, params=params, timeout=5
     )
 
     codes = int(active_response.status_code)\
@@ -420,7 +436,7 @@ def test_changeCards():
 
     assert codes == 400
 
-def test_changePlates():
+def test_change_plates():
     """Tests the ability to change access plates"""
     params = {
         'org_id': ORG_ID,
@@ -432,11 +448,11 @@ def test_changePlates():
     deactivate_url = URL_AC_PLATE + '/deactivate'
 
     active_response = requests.put(
-        activate_url, headers=GENERAL_HEADER, params=params
+        activate_url, headers=GENERAL_HEADER, params=params, timeout=5
     )
 
     deactive_response = requests.put(
-        deactivate_url, headers=GENERAL_HEADER, params=params
+        deactivate_url, headers=GENERAL_HEADER, params=params, timeout=5
     )
 
     codes = int(active_response.status_code)\
