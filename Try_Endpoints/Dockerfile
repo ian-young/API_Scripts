@@ -16,7 +16,7 @@ WORKDIR /usr/src/app
 RUN mkdir -p /var/log
 
 # Copy the current directory contents into the container
-COPY cleanGraph.py crontab docker.py endpointTests.py entrypoint.sh nginx.conf updateGraph.py webserver.py /usr/src/app/
+COPY clean_graph.py crontab docker.py endpoint_tests.py entrypoint.sh nginx.conf update_graph.py webserver.py /usr/src/app/
 COPY requirements.txt /usr/src/app/
 
 # Create and activate a virtual environment
