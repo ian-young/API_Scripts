@@ -1,6 +1,7 @@
 # API_Scripts
 
-This is a private repository where API scripts and projects may live before being published to a different repository. Scripts that are ready to be published are found within the `main` branch. These scripts may be shared as long as they are located on the `main` branch since the credentials are not hard-coded. When sharing scripts, it is important to rememeber to send over the [requirements.txt](/requirements.txt) file and the [.env-generic](/.env-generic) file to give the user a base to work from.
+This is a private repository where API scripts and projects may live before being published to a different repository. Scripts that are ready to be published are found within the `main` branch. These scripts may be shared as long as they are located on the `main` branch since the credentials are not hard-coded. When sharing scripts, it is important to rememeber to send over the [requirements.txt](/requirements.txt) file and the [.env-generic](/.env-generic) file to give the user a base to work from. For more detailed information, please visit this repository's [Wiki](https://github.com/ian-young/API_Scripts/blob/main/Wiki/Home.md)
+
 >[!IMPORTANT]
 >When sending the `.env-generic` file over, it is important to remember to mentino that the name needs to be changed to `.env` and the file must be in the same directory as the script for the code to function properly.
 

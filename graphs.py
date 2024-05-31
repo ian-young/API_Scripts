@@ -1,3 +1,7 @@
+"""
+Author: Ian Young
+Purpose: Practice creating graphs in Python.
+"""
 import matplotlib.pyplot as plt
 
 # Sample data

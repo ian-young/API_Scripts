@@ -1,37 +1,40 @@
-# Author: Ian Young
-# Credit: open-meteo for free weather forecasts
-# End game with this script is to check if there will be any snowfall today.
-# If there is a chance of snowfall, a message will be sent out to "subscribed"
-# users.
+"""
+Author: Ian Young
+Credit: open-meteo for free weather forecasts
+End game with this script is to check if there will be any snowfall today.
+If there is a chance of snowfall, a message will be sent out to "subscribed"
+users.
 
-# RULES:
-# - Please document any changes being made with comments and doc scripts.
-# - Make sure you are adding approriate values to log calls
-# - Please add debug log calls to help troubleshoot.
-# - We also need to keep emails down to 100/day
-#    - If you are running the script for testing, comment out the function
-# unless you are testing email functionality specifically.
-# - Do not hard-code any credentials
-
-# Import libraries
-import requests
+RULES:
+- Please document any changes being made with comments and doc scripts.
+- Make sure you are adding approriate values to log calls
+- Please add debug log calls to help troubleshoot.
+- We also need to keep emails down to 100/day
+   - If you are running the script for testing, comment out the function
+unless you are testing email functionality specifically.
+- Do not hard-code any credentials
+"""
+# Import essential libraries
 import logging
-import time
-import creds
 import os
 import subprocess
+import time
+from datetime import datetime, timezone
+from os import getenv
 
-# Cleanup the namespace a little
-from datetime import datetime
+import requests
+from dotenv import load_dotenv
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Attachment, Disposition
-from sendgrid.helpers.mail import FileContent, FileName, FileType
+from sendgrid.helpers.mail import (Attachment, Disposition, FileContent,
+                                   FileName, FileType, Mail)
+
+load_dotenv()  # Load credentials file
 
 # Set the logger
 log = logging.getLogger()
 logging.basicConfig(
-    level = logging.DEBUG,
-    format = "%(levelname)s: %(message)s"
+    level=logging.DEBUG,
+    format="%(levelname)s: %(message)s"
 )
 
 # Mute non-essential logging from requests library
@@ -40,11 +43,14 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # Set environment variables
 TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
-STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
-SENDGRID_API_KEY = creds.sendgrid_key
-VERKADA_API_KEY = creds.slc_stream_key
-ORG_ID = creds.slc_id
-CAMERA_ID = creds.slc_camera_id
+STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/\
+stream.m3u8"
+FOOTAGE_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/\
+stream.m3u8?camera_id="
+SENDGRID_API_KEY = getenv("")
+VERKADA_API_KEY = getenv("")
+ORG_ID = getenv("")
+CAMERA_ID = getenv("")
 
 # Set timeout responses
 MAX_RETRIES = 5  # Number of allowed attempts
@@ -57,6 +63,14 @@ RETRY_DELAY = 0.25  # How long to wait between attempts (in seconds)
 
 
 def get_mime(file: str):
+    """
+    Will determine the MIME of a given file
+
+    :param file: The file name to get the MIME from.
+    :type file: str
+    :return: The MIME value of the file
+    :rtype: str
+    """
     # (almost) All image MIME mappings
     mime_types = {
         ".bm": "image/bmp",
@@ -157,21 +171,21 @@ def send_snow(sender_email: str, sender_name: str, recipient_list: list,
 
                 if response.status_code == 504:
                     log.warning(
-                        f"Sending timeout. Retrying in {RETRY_DELAY}s.")
+                        "Sending timeout. Retrying in %ds.", RETRY_DELAY)
                     time.sleep(RETRY_DELAY)
 
                 else:
                     log.debug(
-                        f"Request received."
-                        f"Request status code: {response.status_code}."
+                        "Request received. Request status code: %d",
+                        response.status_code
                     )
 
                     break  # Stop retrying once request is received
 
             if response.status_code != 200:
-                log.error(f"Error sending email: {response.status_code}")
+                log.error("Error sending email: %d", response.status_code)
 
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         log.critical("Could not pull the image.")
 
 
@@ -206,11 +220,11 @@ def get_snowfall_data(latitude, longitude):
 
     for _ in range(MAX_RETRIES):
         log.debug("Sending weather request.")
-        response = requests.get(base_url, params=params)
-        log.debug(f"Request received: {response.status_code}")
+        response = requests.get(base_url, params=params, timeout=5)
+        log.debug("Request received: %d", response.status_code)
 
         if response.status_code == 504:
-            log.warning(f"Timeout. Retrying in: {RETRY_DELAY}s.")
+            log.warning("Timeout. Retrying in: %ds.", RETRY_DELAY)
             time.sleep(RETRY_DELAY)
 
         else:
@@ -223,8 +237,10 @@ def get_snowfall_data(latitude, longitude):
 
     else:
         log.critical(
-            f"Error {response.status_code}: "
-            f"{data.get('error', 'Unknown error')}")
+            "Error %d: %s",
+            response.status_code,
+            str(data.get('error', 'Unknown error'))
+        )
         return None
 
 
@@ -241,11 +257,15 @@ def get_snowfall(data):
     times = data['daily']['time']
     snowfall_values = data['daily']['snowfall_sum']
 
-    today = datetime.utcfromtimestamp(times[0]).strftime('%m-%d')
+    today = datetime.fromtimestamp(times[0], timezone.utc).strftime('%m-%d')
     snowfall_today = snowfall_values[0]
 
     if snowfall_today is not None:
-        log.info(f"{today} Chance of snowfall today: {snowfall_today} inches")
+        log.info(
+            "%s Chance of snowfall today: %s inches",
+            str(today),
+            str(snowfall_today)
+        )
         return int(snowfall_today)
 
     else:
@@ -258,7 +278,7 @@ def get_snowfall(data):
 ##############################################################################
 
 
-def getToken():
+def get_token():
     """
     Generates a JWT token for the streaming API. This token will be integrated
 inside of a link to grant access to footage.
@@ -278,7 +298,8 @@ inside of a link to grant access to footage.
     }
 
     # Send GET request to get the JWT
-    response = requests.get(TOKEN_URL, headers=headers, params=params)
+    response = requests.get(TOKEN_URL, headers=headers, params=params,
+                            timeout=5)
 
     if response.status_code == 200:
         # Parse the response
@@ -294,7 +315,7 @@ inside of a link to grant access to footage.
         return None
 
 
-def loadStream(image_name: str, jwt: str, camera_id: str):
+def load_stream(image_name: str, jwt: str, camera_id: str):
     """
     Loads the HLS video and saves a snapshot of the first frame of the clip.
 
@@ -306,8 +327,7 @@ def loadStream(image_name: str, jwt: str, camera_id: str):
     :rtype: None
     """
     # Format the links
-    live_link = 'https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8?camera_id=' + \
-        camera_id + '&org_id=' + ORG_ID + \
+    live_link = FOOTAGE_URL + camera_id + '&org_id=' + ORG_ID + \
         '&resolution=high_res&jwt=' + jwt + '&type=stream'
 
     # Set the commands to run that will save the images
@@ -315,7 +335,7 @@ def loadStream(image_name: str, jwt: str, camera_id: str):
                   '-frames:v', '1', f'./{image_name}', '-loglevel', 'quiet']
 
     # Output the file
-    subprocess.run(live_image)
+    subprocess.run(live_image, check=False)
 
 
 ##############################################################################
@@ -328,19 +348,16 @@ def main():
     recipients = ["ian.young@verkada.com"]
     image_name = "live_screenshot.jpg"
 
-    slc_latitude = 40.746216  # Replace with the desired latitude
-    slc_longitude = -111.90541  # Replace with the desired longitude
+    latitude = 40.746216  # Replace with the desired latitude
+    longitude = -111.90541  # Replace with the desired longitude
 
-    latitude = 61.45  # A snowy place
-    longitude = 5.82  # A snowy place
-
-    snowfall_data = get_snowfall_data(slc_latitude, slc_longitude)
+    snowfall_data = get_snowfall_data(latitude, longitude)
 
     if snowfall_data:
         snow_today = get_snowfall(snowfall_data)
 
         if snow_today > 0:
-            loadStream(image_name, getToken(), CAMERA_ID)
+            load_stream(image_name, get_token(), CAMERA_ID)
             send_snow("dnr-weather@dnr-verkada-api.com",
                       "dnr-weather", recipients, snow_today, image_name)
 
