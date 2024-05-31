@@ -125,7 +125,7 @@ def ask_time():
 
         hour = mil_time(hour, time_of_day)  # Convert to 24-hour
 
-    except (ValueError):
+    except ValueError:
         print("Invalid input. Please enter an integer")
         exit()
 
@@ -147,7 +147,7 @@ def check_month_days(month, year):
                                               and (year % 400 == 0)))):
         return 29
 
-    elif (month == 2):
+    elif month == 2:
         return 28
 
     elif (month == 1 or month == 3 or month == 5 or month == 7 or month == 8

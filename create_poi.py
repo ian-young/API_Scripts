@@ -13,8 +13,8 @@ load_dotenv()  # Load credentials file
 
 # Globally-defined Verkada PoI URL
 URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-API_KEY = getenv("")
-ORG_ID = getenv("")
+API_KEY = getenv("lab_key")
+ORG_ID = getenv("lab_id")
 
 
 def create_poi(name, image, download, org_id=ORG_ID, api_key=API_KEY):
@@ -26,7 +26,7 @@ def create_poi(name, image, download, org_id=ORG_ID, api_key=API_KEY):
     :param image: the link to the portrait image of the person of interest.
     :type image: str
     :param download: A 'y' or 'n' value indicating whether the image link
-needs to be downloaded.
+    needs to be downloaded.
     :type: str
     :param org_id: Organization ID. Defaults to ORG_ID.
     :type org_id: str, optional
