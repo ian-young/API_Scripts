@@ -19,8 +19,7 @@ The purpose of these scripts is:
 This repository has three branches:
 
 1. The [`main`](https://github.com/ian-young/API_Scripts) branch which is where working, production-level code is located.
-2. The [`wip`](https://github.com/ian-young/API_Scripts/tree/wip) branch is intended for code that is working but still has features that need to be developed or is in the debugging phase.
-3. The [`ideas`](https://github.com/ian-young/API_Scripts/tree/ideas) branch is for any experimental code; this will see a higher volume of commits and not all of the code located here will be working.
+2. The [`wip`](https://github.com/ian-young/API_Scripts/tree/wip) branch is intended for code that is working and ready to be public-facing but still has features that need to be developed or is in the debugging phase.
 
 >[!TIP]
 >The order of development should start at the lowest branch, `ideas` and work its way up to the prodcution branch, `main`.
