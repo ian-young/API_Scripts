@@ -2,6 +2,7 @@
 Author: Ian Young
 This script will create a POI when given a name and file path to an image
 """
+
 # Import essential libraries
 import logging
 import base64
@@ -20,10 +21,7 @@ load_dotenv()  # Load credentials file
 
 # Set logger
 log = logging.getLogger()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -42,7 +40,7 @@ PATH_LIST = "test.txt"
 
 
 ##############################################################################
-                            #  Misc  #
+##################################  Misc  ####################################
 ##############################################################################
 
 
@@ -99,17 +97,11 @@ class PurgeManager:
 
 
 ##############################################################################
-                            #  API Calls  #
+################################  API Calls  #################################
 ##############################################################################
 
 
-def create_poi(
-    manager,
-    name,
-    path=IMAGE_PATH,
-    org_id=ORG_ID,
-    api_key=API_KEY
-):
+def create_poi(manager, name, path=IMAGE_PATH, org_id=ORG_ID, api_key=API_KEY):
     """
     Will create a person of interest with a given URL to an image or path to
     a file.
@@ -135,34 +127,27 @@ def create_poi(
 
     except FileNotFoundError:
         logging.error(
-            "%sError:%s The path was not found.",
-            Fore.RED,
-            Style.RESET_ALL
+            "%sError:%s The path was not found.", Fore.RED, Style.RESET_ALL
         )
 
     if file_content is not None:
         log.debug("%sEncoding file...", Fore.LIGHTCYAN_EX)
 
         # Convert the binary content to base64
-        base64_image = base64.b64encode(file_content).decode('utf-8')
+        base64_image = base64.b64encode(file_content).decode("utf-8")
         log.debug("%sFile encoded!", Fore.LIGHTGREEN_EX)
 
         log.debug("%sCalling API endpoint...", Fore.LIGHTCYAN_EX)
 
         # Set payload
-        payload = {
-            "label": name,
-            "base64_image": base64_image
-        }
+        payload = {"label": name, "base64_image": base64_image}
         headers = {
             "accept": "application/json",
             "content-type": "application/json",
-            "x-api-key": api_key
+            "x-api-key": api_key,
         }
 
-        params = {
-            "org_id": org_id
-        }
+        params = {"org_id": org_id}
         while manager.should_stop():
             log.info("Call limit reached, waiting for 1 second.")
             time.sleep(1)
@@ -186,12 +171,12 @@ def create_poi(
                 "%sFailed:%s %s",
                 Fore.RED,
                 Style.RESET_ALL,
-                response.status_code
+                response.status_code,
             )
 
 
 ##############################################################################
-                            #  Main  #
+##################################  Main  ####################################
 ##############################################################################
 
 
@@ -202,18 +187,18 @@ if __name__ == "__main__":
 
     try:
         log.debug("%sReading file...", Fore.LIGHTCYAN_EX)
-        file = open(PATH_LIST, 'r', encoding="utf-8")
+        file = open(PATH_LIST, "r", encoding="utf-8")
         lines = file.readlines()
 
         for line in lines:
-            log.debug("%s %s", {line.split('.')[0]}, {line.strip()})
+            log.debug("%s %s", {line.split(".")[0]}, {line.strip()})
             new_thread = threading.Thread(
                 target=create_poi,
                 args=(
                     purge_manager,
-                    line.split('.')[0],
+                    line.split(".")[0],
                     line.strip(),
-                )
+                ),
             )
 
             threads.append(new_thread)
