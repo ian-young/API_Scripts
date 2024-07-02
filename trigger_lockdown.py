@@ -2,6 +2,7 @@
 Author: Ian Young
 Purpose: Opens lockdowns both literally and figuratively
 """
+
 # Import essential libraries
 import logging
 from os import getenv
@@ -14,10 +15,7 @@ from verkada_totp import generate_totp
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -38,7 +36,7 @@ LOCKDOWN_ID = "9884e9b2-1871-4aaf-86d7-0dc12b4ff024"  # String or list
 
 
 ##############################################################################
-                            #   Authentication   #
+#   Authentication   #
 ##############################################################################
 
 
@@ -64,7 +62,7 @@ def login_and_get_tokens(login_session, username, password, org_id):
         "email": username,
         "password": password,
         "otp": generate_totp(getenv("lab_totp")),
-        "org_id": org_id
+        "org_id": org_id,
     }
 
     try:
@@ -82,7 +80,9 @@ def login_and_get_tokens(login_session, username, password, org_id):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -102,12 +102,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-organization": org_id
+        "x-verkada-organization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -116,19 +114,22 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Logout"
+        ) from e
 
     finally:
         logout_session.close()
 
 
 ##############################################################################
-                                #   Requests   #
+#   Requests   #
 ##############################################################################
 
 
-def trigger_lockdown(lockdown_session, x_verkada_token, x_verkada_auth, usr,
-                     org_id, lockdown_id):
+def trigger_lockdown(
+    lockdown_session, x_verkada_token, x_verkada_auth, usr, org_id, lockdown_id
+):
     """
     Triggers the given lockdown(s) inside of Verkada Command with a valid Command
     user session. The lockdown trigger event will appear as a remote trigger in the
@@ -141,7 +142,7 @@ def trigger_lockdown(lockdown_session, x_verkada_token, x_verkada_auth, usr,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param org_id: The Verkada organization ID of the target org.
     :type org_id: str
@@ -152,7 +153,7 @@ def trigger_lockdown(lockdown_session, x_verkada_token, x_verkada_auth, usr,
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
     try:
         # Check to see if a list of lockdowns was given
@@ -163,16 +164,16 @@ def trigger_lockdown(lockdown_session, x_verkada_token, x_verkada_auth, usr,
 
             if hasattr(lockdown_id, "__iter__"):
                 log.debug(
-                    "List provided -> list is iterable -> attempting triggers.")
+                    "List provided -> list is iterable -> attempting triggers."
+                )
 
                 for target in lockdown_id:
-                    body = {
-                        "lockdownId": target
-                    }
+                    body = {"lockdownId": target}
 
                     log.debug("triggering lockdown: %s.", target)
                     response = lockdown_session.post(
-                        url, headers=headers, json=body)
+                        url, headers=headers, json=body
+                    )
                     response.raise_for_status()
 
             else:
@@ -180,9 +181,7 @@ def trigger_lockdown(lockdown_session, x_verkada_token, x_verkada_auth, usr,
 
         # Run for a single lockdown
         else:
-            body = {
-                "lockdownId": lockdown_id
-            }
+            body = {"lockdownId": lockdown_id}
 
             log.debug("triggering %s.", lockdown_id)
             response = lockdown_session.post(url, headers=headers, json=body)
@@ -190,24 +189,30 @@ def trigger_lockdown(lockdown_session, x_verkada_token, x_verkada_auth, usr,
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Lockdown")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Lockdown"
+        ) from e
 
 
 if __name__ == "__main__":
     try:
         with requests.Session() as session:
             log.debug("Retrieving credentials.")
-            csrf_token, user_token, user_id = login_and_get_tokens(session,
-                                                                   USERNAME,
-                                                                   PASSWORD,
-                                                                   ORG_ID)
+            csrf_token, user_token, user_id = login_and_get_tokens(
+                session, USERNAME, PASSWORD, ORG_ID
+            )
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
-                trigger_lockdown(session, csrf_token, user_token, user_id,
-                                 ORG_ID, LOCKDOWN_ID)
+                trigger_lockdown(
+                    session,
+                    csrf_token,
+                    user_token,
+                    user_id,
+                    ORG_ID,
+                    LOCKDOWN_ID,
+                )
                 log.debug("All lockdowns triggered.")
-
 
             else:
                 log.warning("Did not receive the necessary credentials.")

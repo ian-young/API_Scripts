@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 environ.clear()  # Clear any previously loaded variables
 load_dotenv()  # Load new variables
 
+
 def generate_totp(secret):
     """Generates a TOTP that from a given base32 secret
 
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     TOTP_SECRET = getenv("totp_secret")
     print(f"Secret: {TOTP_SECRET}")
     try:
-        for _ in range (2):
+        for _ in range(2):
             CURRENT_TOTP = generate_totp(TOTP_SECRET)
             print(f"Current TOTP: {CURRENT_TOTP}")
             # TOTP codes change every 30 seconds

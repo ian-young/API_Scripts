@@ -2,6 +2,7 @@
 Author: Ian Young
 Purpose: Opens doors both literally and figuratively.
 """
+
 # Import essential libraries
 import logging
 from os import getenv
@@ -16,10 +17,7 @@ load_dotenv()  # Load credentials file
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -59,7 +57,7 @@ def login_and_get_tokens(login_session, username, password, org_id):
         "email": username,
         "password": password,
         "otp": generate_totp(getenv("lab_totp")),
-        "org_id": org_id
+        "org_id": org_id,
     }
 
     try:
@@ -97,12 +95,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-orginization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -136,7 +132,7 @@ def unlock_door(unlock_session, x_verkada_token, x_verkada_auth, usr, door):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
     try:
         # Check to see if a list of doors was given
@@ -147,7 +143,8 @@ def unlock_door(unlock_session, x_verkada_token, x_verkada_auth, usr, door):
 
             if hasattr(door, "__iter__"):
                 log.debug(
-                    "List provided -> list is iterable -> attempting unlocks.")
+                    "List provided -> list is iterable -> attempting unlocks."
+                )
 
                 for target in door:
                     url = f"https://vcerberus.command.verkada.com/access/v2/\
@@ -178,12 +175,14 @@ if __name__ == "__main__":
         try:
             log.debug("Retrieving credentials.")
             csrf_token, user_token, user_id = login_and_get_tokens(
-                session, USERNAME, PASSWORD, ORG_ID)
+                session, USERNAME, PASSWORD, ORG_ID
+            )
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
-                unlock_door(session, csrf_token, user_token, user_id,
-                            VIRTUAL_DEVICE)
+                unlock_door(
+                    session, csrf_token, user_token, user_id, VIRTUAL_DEVICE
+                )
                 log.debug("All door(s) unlocked.")
 
             else:

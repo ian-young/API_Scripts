@@ -1,7 +1,8 @@
 """
 Author: Ian Young
-Purpose: Import into other files to use custom expections and save space.
+Purpose: Import into other files to use custom exceptions and save space.
 """
+
 # Import essential libraries
 import requests
 import colorama
@@ -43,13 +44,15 @@ class APIExceptionHandler(Exception):
 
     def handle_exception(self):
         """
-        Handles the passed excpetion to check for any HTTP errors.
+        Handles the passed exception to check for any HTTP errors.
         """
         if isinstance(self.exception, requests.exceptions.Timeout):
             self.message = f"{Fore.RED}Connection timed out.{Style.RESET_ALL}"
         elif isinstance(self.exception, requests.exceptions.TooManyRedirects):
-            self.message = (f"{Fore.RED}Too many redirects. Aborting..."
-                            f"{Style.RESET_ALL}")
+            self.message = (
+                f"{Fore.RED}Too many redirects. Aborting..."
+                f"{Style.RESET_ALL}"
+            )
         elif isinstance(self.exception, requests.exceptions.HTTPError):
             if self.response is not None:
                 self.message = (
@@ -62,11 +65,15 @@ class APIExceptionHandler(Exception):
                     f"{Fore.RED}HTTP error occurred.{Style.RESET_ALL}"
                 )
         elif isinstance(self.exception, requests.exceptions.ConnectionError):
-            self.message = (f"{Fore.RED}Error connecting to the server."
-                            f"{Style.RESET_ALL}")
+            self.message = (
+                f"{Fore.RED}Error connecting to the server."
+                f"{Style.RESET_ALL}"
+            )
         elif isinstance(self.exception, requests.exceptions.RequestException):
-            self.message = (f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} "
-                            f"{self.exception}")
+            self.message = (
+                f"{Fore.RED}Verkada API Error:{Style.RESET_ALL} "
+                f"{self.exception}"
+            )
         else:
             self.message = (
                 f"{Fore.RED}An unknown error occurred.{Style.RESET_ALL}"

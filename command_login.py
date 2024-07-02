@@ -4,6 +4,7 @@ Purpose: Practice authenticating into Command using user credentials in place
 of an API key. The script can also be used to practice extracting useful data
 from the response.
 """
+
 # Import essential libraries
 from os import getenv, environ
 
@@ -26,7 +27,7 @@ login_data = {
     "email": username,
     "password": password,
     "otp": generate_totp(getenv("")),
-    "org_id": org_id
+    "org_id": org_id,
 }
 
 try:
