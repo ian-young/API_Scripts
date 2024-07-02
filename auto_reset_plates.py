@@ -4,6 +4,7 @@ Purpose: Compare plates to a pre-defined array of names.
 These names will be "persistent plates/persons" which are to remain in
 Command. Any person or plate not marked thusly will be deleted from the org.
 """
+
 # Import essential libraries
 import datetime
 import logging
@@ -23,21 +24,16 @@ BACKOFF = 0.25
 # Set logger
 log = logging.getLogger()
 log.setLevel(logging.INFO)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-ORG_ID = os.environ.get('ORG_ID')
-if ORG_ID:
+if ORG_ID := os.environ.get("ORG_ID"):
     log.debug("ID retrieved.")
 
-API_KEY = os.environ.get('API_KEY')
-if API_KEY:
+if API_KEY := os.environ.get("API_KEY"):
     log.debug("Key retrieved.")
 
 try:
@@ -45,6 +41,7 @@ try:
 
     WORK_PIN = 7
     LPOI_PIN = 13
+    POI_PIN = 11
 
     try:
         GPIO.setwarnings(False)
@@ -52,22 +49,25 @@ try:
         GPIO.setup(WORK_PIN, GPIO.OUT)
     except RuntimeError:
         GPIO = None
-        log.debug("Runtime error while initializing GPIO boad.")
+        log.debug("Runtime error while initializing GPIO board.")
 except ImportError:
     GPIO = None
-    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+    log.debug("RPi.GPIO is not available. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = sorted([])  # Label of plate #!Not plate number!#
+PERSISTENT_PERSONS = sorted(["Parkour"])  # PoI label
+PERSISTENT_PID = sorted(["751e9607-4617-43e1-9e8c-1bd439c116b6"])  # PoI ID
 PERSISTENT_LID = sorted([])  # LPoI ID
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
 analytics/lpr/license_plate_of_interest"
+PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 
 ##############################################################################
-                                #  Misc  #
+##################################  Misc  ####################################
 ##############################################################################
 
 
@@ -77,9 +77,9 @@ class RateLimiter:
     created to prevent hitting the API limit.
     """
 
-    def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
+    def __init__(self, rate_limit, max_events_per_sec=5, pacing=1):
         """
-        Initilization of the rate limiter.
+        Initialization of the rate limiter.
 
         :param rate_limit: The value of how many threads may be made each sec.
         :type rate_limit: int
@@ -107,8 +107,8 @@ class RateLimiter:
         with self.lock:
             current_time = time.time()  # Define current time
 
-            if not hasattr(self, 'start_time'):
-                # Check if attribue 'start_time' exists, if not, make it.
+            if not hasattr(self, "start_time"):
+                # Check if attribute 'start_time' exists, if not, make it.
                 self.start_time = current_time
                 self.event_count = self.pacing
                 return True
@@ -118,26 +118,23 @@ class RateLimiter:
 
             # Check if it's been less than 1sec and less than 10 events have
             # been made.
-            if elapsed_since_start < self.pacing / self.rate_limit \
-                    and self.event_count < self.max_events_per_sec:
+            if (
+                elapsed_since_start < self.pacing / self.rate_limit
+                and self.event_count < self.max_events_per_sec
+            ):
                 self.event_count += 1
-                return True
-
-            # Check if it is the first wave of events
             elif elapsed_since_start >= self.pacing / self.rate_limit:
                 self.start_time = current_time
                 self.event_count = 2
-                return True
-
             else:
                 # Calculate the time left before next wave
-                remaining_time = self.pacing - \
-                    (current_time - self.start_time)
+                remaining_time = self.pacing - (current_time - self.start_time)
                 time.sleep(remaining_time)  # Wait before next wave
-                return True
+
+            return True
 
 
-def run_thread_with_rate_limit(threads, rate_limit=10):
+def run_thread_with_rate_limit(threads, rate_limit=5):
     """
     Run a thread with rate limiting.
 
@@ -153,7 +150,7 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
         log.debug(
             "Starting thread %s at time %s",
             thread.name,
-            datetime.datetime.now().strftime('%H:%M:%S')
+            datetime.datetime.now().strftime("%H:%M:%S"),
         )
         thread.start()
 
@@ -173,8 +170,7 @@ def clean_list(messy_list):
     :return: A new list with None values removed.
     :rtype: list
     """
-    cleaned_list = [value for value in messy_list if value is not None]
-    return cleaned_list
+    return [value for value in messy_list if value is not None]
 
 
 def flash_led(pin, local_stop_event, speed):
@@ -186,7 +182,7 @@ def flash_led(pin, local_stop_event, speed):
     :type pin: int
     :param local_stop_event: Thread-local event to indicate when the program's
     work is done and the LED can stop flashing.
-    :type local_stop_event: Bool 
+    :type local_stop_event: Bool
     :param speed: How long each flash should last in seconds.
     :type failed: int
     :return: None
@@ -200,7 +196,7 @@ def flash_led(pin, local_stop_event, speed):
 
 
 ##############################################################################
-                            #  All things plates  #
+############################  All things plates  #############################
 ##############################################################################
 
 
@@ -215,27 +211,21 @@ def get_plates(org_id=ORG_ID, api_key=API_KEY):
     :return: A List of dictionaries of license plates in an organization.
     :rtype: list
     """
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    headers = {"accept": "application/json", "x-api-key": api_key}
 
     params = {
         "org_id": org_id,
     }
 
     response = requests.get(
-        PLATE_URL,
-        headers=headers,
-        params=params,
-        timeout=5
+        PLATE_URL, headers=headers, params=params, timeout=5
     )
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
 
         # Extract as a list
-        plates = data.get('license_plate_of_interest')
+        plates = data.get("license_plate_of_interest")
 
         try:
             # Check if the list is iterable
@@ -248,7 +238,7 @@ def get_plates(org_id=ORG_ID, api_key=API_KEY):
     else:
         log.critical(
             "Plate - Error with retrieving plates. Status code %s",
-            response.status_code
+            response.status_code,
         )
         return
 
@@ -258,7 +248,7 @@ def get_plate_ids(plates=None):
     Returns an array of all LPoI labels in an organization.
 
     :param plates: A list of dictionaries representing LPoIs in an
-    organization. Each dictionary should have 'license_plate' key. 
+    organization. Each dictionary should have 'license_plate' key.
     Defaults to None.
     :type plates: list, optional
     :return: A list of IDs of the LPoIs in an organization.
@@ -267,12 +257,12 @@ def get_plate_ids(plates=None):
     plate_id = []
 
     for plate in plates:
-        if plate.get('license_plate'):
-            plate_id.append(plate.get('license_plate'))
+        if plate.get("license_plate"):
+            plate_id.append(plate.get("license_plate"))
         else:
             log.error(
                 "Plate - There has been an error with plate %s.",
-                plate.get('label')
+                plate.get("label"),
             )
 
     return plate_id
@@ -290,21 +280,17 @@ def get_plate_id(plate=PERSISTENT_PLATES, plates=None):
     :return: The plate ID of the given LPoI.
     :rtype: str
     """
-    plate_id = None  # Pre-define
-
-    for name in plates:
-        if name['description'] == plate:
-            plate_id = name['license_plate']
-            break  # No need to continue running once found
-
-    if plate_id:
+    if plate_id := next(
+        (
+            name["license_plate"]
+            for name in plates
+            if name["description"] == plate
+        ),
+        None,
+    ):
         return plate_id
-    else:
-        log.error(
-            "Plate %s was not found in the database...",
-            plate
-        )
-        return None
+    log.error("Plate %s was not found in the database...", plate)
+    return None
 
 
 def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
@@ -325,35 +311,23 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
     local_data = threading.local()
     local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    headers = {"accept": "application/json", "x-api-key": api_key}
 
-    log.info(
-        "Running for plate: %s",
-        print_plate_name(plate, plates)
-    )
+    log.info("Running for plate: %s", print_plate_name(plate, plates))
 
-    params = {
-        'org_id': org_id,
-        'license_plate': plate
-    }
+    params = {"org_id": org_id, "license_plate": plate}
 
     try:
         for _ in range(MAX_RETRIES):
             response = requests.delete(
-                PLATE_URL,
-                headers=headers,
-                params=params,
-                timeout=5
+                PLATE_URL, headers=headers, params=params, timeout=5
             )
 
             if response.status_code == 429:
                 log.info(
                     "%s response: 429. Retrying in %ss.",
                     print_plate_name(plate, plates),
-                    local_data.RETRY_DELAY
+                    local_data.RETRY_DELAY,
                 )
 
                 time.sleep(local_data.RETRY_DELAY)
@@ -368,8 +342,7 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
 
         elif response.status_code == 504:
             log.warning(
-                "Plate - %s Timed out.",
-                print_plate_name(plate, plates)
+                "Plate - %s Timed out.", print_plate_name(plate, plates)
             )
 
         elif response.status_code == 400:
@@ -377,13 +350,14 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
 
         elif response.status_code != 200:
             log.error(
-                "Plate - An error has occured. Status code %s",
-                response.status_code
+                "Plate - An error has occurred. Status code %s",
+                response.status_code,
             )
 
     except custom_exceptions.APIThrottleException:
         log.critical(
-            "Plate - Hit API request rate limit of 500 requests per minute.")
+            "Plate - Hit API request rate limit of 500 requests per minute."
+        )
 
 
 def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
@@ -401,7 +375,6 @@ def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     :return: Returns the value of 1 if completed successfully.
     :rtype: int
     """
-
     if not delete:
         log.warning("Plate - There's nothing here")
         return
@@ -410,7 +383,13 @@ def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
     if GPIO and LPOI_PIN:
         flash_thread = threading.Thread(
-            target=flash_led, args=(LPOI_PIN, local_stop_event, 0.5,))
+            target=flash_led,
+            args=(
+                LPOI_PIN,
+                local_stop_event,
+                0.5,
+            ),
+        )
         flash_thread.start()
 
     log.info("Plate - Purging...")
@@ -420,7 +399,13 @@ def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     for plate in delete:
         # Toss delete function into a new thread
         thread = threading.Thread(
-            target=delete_plate, args=(plate, plates, org_id, api_key,)
+            target=delete_plate,
+            args=(
+                plate,
+                plates,
+                org_id,
+                api_key,
+            ),
         )
         threads.append(thread)  # Add the thread to the pile
 
@@ -441,28 +426,26 @@ def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
 
 def print_plate_name(to_delete, plates):
     """
-    Returns the description of a LPoI with a given ID
+        Returns the description of a LPoI with a given ID
 
-    :param to_delete: The person ID whose name is being searched for in the
-dictionary.
-    :type to_delete: str
-    :param persons: A list of PoIs found inside of an organization.
-    :type persons: list
-    :return: Returns the name of the person searched for. Will return if there
-was no name found, as well.
-    :rtype: str
+        :param to_delete: The person ID whose name is being searched for in the
+    dictionary.
+        :type to_delete: str
+        :param persons: A list of PoIs found inside of an organization.
+        :type persons: list
+        :return: Returns the name of the person searched for. Will return if there
+    was no name found, as well.
+        :rtype: str
     """
-    plate_name = None  # Pre-define
-
-    for plate in plates:
-        if plate.get('license_plate') == to_delete:
-            plate_name = plate.get('description')
-            break  # No need to continue running once found
-
-    if plate_name:
-        return plate_name
-    else:
-        return "No name provided"
+    plate_name = next(
+        (
+            plate.get("description")
+            for plate in plates
+            if plate.get("license_plate") == to_delete
+        ),
+        None,
+    )
+    return plate_name or "No name provided"
 
 
 def run_plates():
@@ -476,51 +459,54 @@ def run_plates():
     plates = get_plates()
     log.info("Plates retrieved.")
 
-    # Sort the JSON dictionaries by plate id
-    plates = sorted(plates, key=lambda x: x['license_plate'])
-
-    # Run if plates were found
-    if plates:
-        log.info("Plate - Gather IDs")
-        all_plate_ids = get_plate_ids(plates)
-        all_plate_ids = clean_list(all_plate_ids)
-        log.info("Plate - IDs aquired.")
-
-        safe_plate_ids = []
-
-        log.info("Searching for safe plates.")
-        # Create the list of safe plates
-        for plate in PERSISTENT_PLATES:
-            safe_plate_ids.append(get_plate_id(plate, plates))
-        safe_plate_ids = clean_list(safe_plate_ids)
-
-        if PERSISTENT_LID:
-            for plate in PERSISTENT_LID:
-                safe_plate_ids.append(plate)
-        log.info("Safe plates found.")
-
-        # New list that filters plates that are safe
-        plates_to_delete = [
-            plate for plate in all_plate_ids if plate not in safe_plate_ids]
-
-        if plates_to_delete:
-            purge_plates(plates_to_delete, plates)
-            return 1  # Completed
-
-        else:
-            log.info(
-                "The organization has already been purged.\
-There are no more plates to delete.")
-
-            return 1  # Completed
+    if plates := sorted(plates, key=lambda x: x["license_plate"]):
+        handle_plates(plates)
     else:
         log.info("No plates were found.")
 
-        return 1  # Completed
+    return 1  # Completed
+
+
+def handle_plates(plates):
+    """
+    Handle the processing of plates by gathering IDs, searching for safe
+    plates, and deleting plates if needed.
+
+    Args:
+        plates: The list of plates to handle.
+
+    Returns:
+        None
+    """
+    log.info("Plate - Gather IDs")
+    all_plate_ids = get_plate_ids(plates)
+    all_plate_ids = clean_list(all_plate_ids)
+    log.info("Plate - IDs acquired.")
+
+    log.info("Searching for safe plates.")
+    safe_plate_ids = [
+        get_plate_id(plate, plates) for plate in PERSISTENT_PLATES
+    ]
+    safe_plate_ids = clean_list(safe_plate_ids)
+
+    if PERSISTENT_LID:
+        for plate in PERSISTENT_LID:
+            safe_plate_ids.append(plate)
+    log.info("Safe plates found.")
+
+    if plates_to_delete := [
+        plate for plate in all_plate_ids if plate not in safe_plate_ids
+    ]:
+        purge_plates(plates_to_delete, plates)
+    else:
+        log.info(
+            "The organization has already been purged.\
+There are no more plates to delete."
+        )
 
 
 ##############################################################################
-        #  Main  #
+###################################  Main  ###################################
 ##############################################################################
 
 
@@ -532,7 +518,7 @@ if __name__ == "__main__":
     start_time = time.time()
     LPoI = threading.Thread(target=run_plates)
 
-    # Start the threads running independantly
+    # Start the threads running independently
     LPoI.start()
 
     # Join the threads back to parent process

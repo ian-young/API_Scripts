@@ -7,13 +7,14 @@ users.
 
 RULES:
 - Please document any changes being made with comments and doc scripts.
-- Make sure you are adding approriate values to log calls
+- Make sure you are adding appropriate values to log calls
 - Please add debug log calls to help troubleshoot.
 - We also need to keep emails down to 100/day
-   - If you are running the script for testing, comment out the function
+- If you are running the script for testing, comment out the function
 unless you are testing email functionality specifically.
 - Do not hard-code any credentials
 """
+
 # Import essential libraries
 import logging
 import os
@@ -25,17 +26,20 @@ from os import getenv
 import requests
 from dotenv import load_dotenv
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import (Attachment, Disposition, FileContent,
-                                   FileName, FileType, Mail)
+from sendgrid.helpers.mail import (
+    Attachment,
+    Disposition,
+    FileContent,
+    FileName,
+    FileType,
+    Mail,
+)
 
 load_dotenv()  # Load credentials file
 
 # Set the logger
 log = logging.getLogger()
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -58,7 +62,7 @@ RETRY_DELAY = 0.25  # How long to wait between attempts (in seconds)
 
 
 ##############################################################################
-                                # Email #
+#################################  Email  ####################################
 ##############################################################################
 
 
@@ -116,8 +120,13 @@ def get_mime(file: str):
     return mime
 
 
-def send_snow(sender_email: str, sender_name: str, recipient_list: list,
-              snow, image_name: str):
+def send_snow(
+    sender_email: str,
+    sender_name: str,
+    recipient_list: list,
+    snow,
+    image_name: str,
+):
     """
     Sends an email with the expected amount of snow today.
 
@@ -140,14 +149,14 @@ def send_snow(sender_email: str, sender_name: str, recipient_list: list,
             for _ in range(MAX_RETRIES):
                 # Compile the message
                 message = Mail(
-                    from_email=f'{sender_name} <{sender_email}>',
+                    from_email=f"{sender_name} <{sender_email}>",
                     to_emails=recipient_email,
                     subject=subject,
-                    plain_text_content=body
+                    plain_text_content=body,
                 )
 
                 # Attach the image to the email
-                with open(image_name, 'rb') as file:
+                with open(image_name, "rb") as file:
                     data = file.read()
                     file_name = os.path.basename(image_name)
                     file_type = get_mime(image_name)
@@ -157,13 +166,14 @@ def send_snow(sender_email: str, sender_name: str, recipient_list: list,
                         FileContent(data),
                         FileName(file_name),
                         FileType(file_type),
-                        Disposition('attachment')
+                        Disposition("attachment"),
                     )
 
                 message.attachment = attachment  # Add the attachment
 
                 sendgrid = SendGridAPIClient(
-                    SENDGRID_API_KEY)  # Load the API client
+                    SENDGRID_API_KEY
+                )  # Load the API client
 
                 log.debug("Making email send request.")
                 response = sendgrid.send(message)
@@ -171,13 +181,14 @@ def send_snow(sender_email: str, sender_name: str, recipient_list: list,
 
                 if response.status_code == 504:
                     log.warning(
-                        "Sending timeout. Retrying in %ds.", RETRY_DELAY)
+                        "Sending timeout. Retrying in %ds.", RETRY_DELAY
+                    )
                     time.sleep(RETRY_DELAY)
 
                 else:
                     log.debug(
                         "Request received. Request status code: %d",
-                        response.status_code
+                        response.status_code,
                     )
 
                     break  # Stop retrying once request is received
@@ -190,7 +201,7 @@ def send_snow(sender_email: str, sender_name: str, recipient_list: list,
 
 
 ##############################################################################
-                                # Weather #
+################################  Weather  ###################################
 ##############################################################################
 
 
@@ -202,20 +213,20 @@ def get_snowfall_data(latitude, longitude):
     :type latitude: int
     :param longitude: Longitude of the target location.
     :type longitude: int
-    :return: Retuurns the JSON-formatted data
+    :return: Returns the JSON-formatted data
     :rtype: str
     """
     base_url = "https://api.open-meteo.com/v1/forecast"
 
     params = {
-        'latitude': latitude,
-        'longitude': longitude,
-        'daily': 'snowfall_sum',
-        'temperature_unit': 'fahrenheit',
-        'wind_speed_unit': 'mph',
-        'precipitation_unit': 'inch',
-        'timeformat': 'unixtime',
-        'timezone': 'America/Denver'
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": "snowfall_sum",
+        "temperature_unit": "fahrenheit",
+        "wind_speed_unit": "mph",
+        "precipitation_unit": "inch",
+        "timeformat": "unixtime",
+        "timezone": "America/Denver",
     }
 
     for _ in range(MAX_RETRIES):
@@ -223,25 +234,23 @@ def get_snowfall_data(latitude, longitude):
         response = requests.get(base_url, params=params, timeout=5)
         log.debug("Request received: %d", response.status_code)
 
-        if response.status_code == 504:
-            log.warning("Timeout. Retrying in: %ds.", RETRY_DELAY)
-            time.sleep(RETRY_DELAY)
-
-        else:
+        if response.status_code != 504:
             break  # Didn't time out, leave loop
+
+        log.warning("Timeout. Retrying in: %ds.", RETRY_DELAY)
+        time.sleep(RETRY_DELAY)
 
     data = response.json()  # Format the raw data to JSON
 
     if response.status_code == 200:
         return data
 
-    else:
-        log.critical(
-            "Error %d: %s",
-            response.status_code,
-            str(data.get('error', 'Unknown error'))
-        )
-        return None
+    log.critical(
+        "Error %d: %s",
+        response.status_code,
+        str(data.get("error", "Unknown error")),
+    )
+    return None
 
 
 def get_snowfall(data):
@@ -251,20 +260,20 @@ def get_snowfall(data):
     :param data: JSON-formatted weather data
     :type data: str
     :return: Returns how much snowfall is expected (inches) today.
-    :rtyoe: int
+    :rtype: int
     """
     # Extract snowfall information from the response
-    times = data['daily']['time']
-    snowfall_values = data['daily']['snowfall_sum']
+    times = data["daily"]["time"]
+    snowfall_values = data["daily"]["snowfall_sum"]
 
-    today = datetime.fromtimestamp(times[0], timezone.utc).strftime('%m-%d')
+    today = datetime.fromtimestamp(times[0], timezone.utc).strftime("%m-%d")
     snowfall_today = snowfall_values[0]
 
     if snowfall_today is not None:
         log.info(
             "%s Chance of snowfall today: %s inches",
             str(today),
-            str(snowfall_today)
+            str(snowfall_today),
         )
         return int(snowfall_today)
 
@@ -274,41 +283,34 @@ def get_snowfall(data):
 
 
 ##############################################################################
-                                # Stream #
+#################################  Stream  ###################################
 ##############################################################################
 
 
 def get_token():
     """
-    Generates a JWT token for the streaming API. This token will be integrated
-inside of a link to grant access to footage.
+        Generates a JWT token for the streaming API. This token will be integrated
+    inside of a link to grant access to footage.
 
-    :return: Returns the JWT token to allow access via a link to footage.
-    :rtype: str
+        :return: Returns the JWT token to allow access via a link to footage.
+        :rtype: str
     """
     # Define the request headers
-    headers = {
-        'x-api-key': VERKADA_API_KEY
-    }
+    headers = {"x-api-key": VERKADA_API_KEY}
 
     # Set the parameters of the request
-    params = {
-        'org_id': ORG_ID,
-        'expiration': 30
-    }
+    params = {"org_id": ORG_ID, "expiration": 30}
 
     # Send GET request to get the JWT
-    response = requests.get(TOKEN_URL, headers=headers, params=params,
-                            timeout=5)
+    response = requests.get(
+        TOKEN_URL, headers=headers, params=params, timeout=5
+    )
 
     if response.status_code == 200:
         # Parse the response
         data = response.json()
 
-        # Extract the token
-        jwt = data.get('jwt')
-
-        return jwt
+        return data.get("jwt")
     else:
         # In case the GET was not successful
         print(f"Failed to retrieve token. Status code: {response.status_code}")
@@ -327,39 +329,64 @@ def load_stream(image_name: str, jwt: str, camera_id: str):
     :rtype: None
     """
     # Format the links
-    live_link = FOOTAGE_URL + camera_id + '&org_id=' + ORG_ID + \
-        '&resolution=high_res&jwt=' + jwt + '&type=stream'
+    live_link = (
+        FOOTAGE_URL
+        + camera_id
+        + "&org_id="
+        + ORG_ID
+        + "&resolution=high_res&jwt="
+        + jwt
+        + "&type=stream"
+    )
 
     # Set the commands to run that will save the images
-    live_image = ['ffmpeg', '-y', '-i', live_link,
-                  '-frames:v', '1', f'./{image_name}', '-loglevel', 'quiet']
+    live_image = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        live_link,
+        "-frames:v",
+        "1",
+        f"./{image_name}",
+        "-loglevel",
+        "quiet",
+    ]
 
     # Output the file
     subprocess.run(live_image, check=False)
 
 
 ##############################################################################
-                                # Misc #
+##################################  Misc  ####################################
 ##############################################################################
 
 
 def main():
-    """Driving function."""
-    recipients = ["ian.young@verkada.com"]
-    image_name = "live_screenshot.jpg"
+    """
+    Perform weather-related actions based on the snowfall data at a
+    specified latitude and longitude.
 
+    Returns:
+        None
+    """
     latitude = 40.746216  # Replace with the desired latitude
     longitude = -111.90541  # Replace with the desired longitude
 
-    snowfall_data = get_snowfall_data(latitude, longitude)
-
-    if snowfall_data:
+    if snowfall_data := get_snowfall_data(latitude, longitude):
         snow_today = get_snowfall(snowfall_data)
 
         if snow_today > 0:
+            image_name = "live_screenshot.jpg"
+
             load_stream(image_name, get_token(), CAMERA_ID)
-            send_snow("dnr-weather@dnr-verkada-api.com",
-                      "dnr-weather", recipients, snow_today, image_name)
+            recipients = ["ian.young@verkada.com"]
+            send_snow(
+                "dnr-weather@dnr-verkada-api.com",
+                "dnr-weather",
+                recipients,
+                snow_today,
+                image_name,
+            )
 
 
 # Check if the file is being imported or ran directly

@@ -3,6 +3,7 @@ Author: Ian Young
 Purpose: To provide a link to a camera at a certain time
 to speed up the process of searching for footage.
 """
+
 # Import essential libraries
 import datetime
 
@@ -15,7 +16,7 @@ URL = "https://api.verkada.com/cameras/v1/footage/link"
 
 def month_to_text(month):
     """
-    Takes an integer and conver it to text for the correlated month
+    Takes an integer and convert it to text for the correlated month
 
     :param month: The integer value of a month.
     :type month: int
@@ -23,18 +24,18 @@ def month_to_text(month):
     :rtype: str
     """
     months = {
-        1: 'January',
-        2: 'February',
-        3: 'March',
-        4: 'April',
-        5: 'May',
-        6: 'June',
-        7: 'July',
-        8: 'August',
-        9: 'September',
-        10: 'October',
-        11: 'Novemner',
-        12: 'December'
+        1: "January",
+        2: "February",
+        3: "March",
+        4: "April",
+        5: "May",
+        6: "June",
+        7: "July",
+        8: "August",
+        9: "September",
+        10: "October",
+        11: "November",
+        12: "December",
     }
 
     return months[int(month)]
@@ -42,7 +43,7 @@ def month_to_text(month):
 
 def ask_time():
     """Asks the user for a date and returns an epoch timestamp"""
-    # Pre-define variables that may be autofilled
+    # Pre-define variables that may be auto-filled
     year = None
     month = None
     day = None
@@ -51,23 +52,23 @@ def ask_time():
     answer = None
 
     # Load current values
-    current_year = int(datetime.datetime.now().date().strftime('%Y'))
-    current_month = int(datetime.datetime.now().date().strftime('%m'))
+    current_year = int(datetime.datetime.now().date().strftime("%Y"))
+    current_month = int(datetime.datetime.now().date().strftime("%m"))
     month_text = month_to_text(current_month)
 
-    while answer not in ['y', 'n']:
+    while answer not in ["y", "n"]:
         print(f"Is the footage from {current_year}?")
         answer = input("(y/n) ").strip().lower()
 
-    if answer == 'y':
+    if answer == "y":
         year = current_year
         answer = None  # reset
 
-        while answer not in ['y', 'n']:
+        while answer not in ["y", "n"]:
             print(f"Is the footage from {month_text}?")
             answer = input("(y/n) ").strip().lower()
 
-        if answer == 'y':
+        if answer == "y":
             month = current_month
 
         else:
@@ -109,9 +110,9 @@ def ask_time():
         print("\nExample format: 6:05pm")
         time = input("Enter the time: ")
 
-        time = time.split(':')  # Creates an array
+        time = time.split(":")  # Creates an array
         hour = int(time[0])  # Isolate the hour
-        minute = int(time[1][0:2])  # Snag minutes
+        minute = int(time[1][:2])
         time_of_day = str(time[1][2:4])  # Grab time of day
 
         hour = mil_time(hour, time_of_day)  # Convert to 24-hour
@@ -125,15 +126,15 @@ def ask_time():
 
 def check_month_days(month, year):
     """Checks how many days are in the given month"""
-    if ((month == 2) and ((year % 4 == 0) or ((year % 100 == 0)
-                                              and (year % 400 == 0)))):
+    if (month == 2) and (
+        (year % 4 == 0) or ((year % 100 == 0) and (year % 400 == 0))
+    ):
         return 29
 
     elif month == 2:
         return 28
 
-    elif (month == 1 or month == 3 or month == 5 or month == 7 or month == 8
-          or month == 10):
+    elif month in [1, 3, 5, 7, 8, 10]:
         return 31
 
     else:
@@ -176,9 +177,7 @@ def time_to_epoch(year, month, day, hour, minute):
     """
     py_time = datetime.datetime(year, month, day, hour, minute)
 
-    unix_timestamp = int(py_time.timestamp())
-
-    return unix_timestamp
+    return int(py_time.timestamp())
 
 
 def get_link(timestamp, camera_id, org_id=ORG_ID, api_key=API_KEY):
@@ -194,15 +193,13 @@ def get_link(timestamp, camera_id, org_id=ORG_ID, api_key=API_KEY):
     :param api_key: The API key used to authenticate to the Verkada org.
     :type api_key: optional, str
     """
-    headers = {
-        'accept': 'application/json'
-    }
+    headers = {"accept": "application/json"}
 
     params = {
-        'org_id': org_id,
-        'camera_id': camera_id,
-        'timestamp': timestamp,
-        'x-api-key': api_key
+        "org_id": org_id,
+        "camera_id": camera_id,
+        "timestamp": timestamp,
+        "x-api-key": api_key,
     }
 
     response = requests.get(URL, headers=headers, params=params, timeout=5)

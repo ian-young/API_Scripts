@@ -5,19 +5,8 @@ them. This is ONLY to be used to keep a given org clean. Extreme caution is
 advised since the changes this script will make to the org cannot be undone
 once made.
 """
+
 # Import essential libraries
-<<<<<<< HEAD
-from re import search
-import requests
-import logging
-import threading
-import time
-import creds  # File with credentials
-import pytz
-import colorama
-from datetime import datetime, timedelta
-from tzlocal import get_localzone
-=======
 import logging
 import threading
 import time
@@ -27,26 +16,22 @@ from os import getenv
 import colorama
 import pytz
 import requests
->>>>>>> 522024f (Linted)
 from colorama import Fore, Style
 from dotenv import load_dotenv
 from tzlocal import get_localzone
 
 import avl_tree  # File to work with trees
 import custom_exceptions  # Import custom exceptions to save space
+from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
+load_dotenv()  # Load credentials file
+
 # Set final, global credential variables
-<<<<<<< HEAD
-USERNAME = creds.lab_username
-PASSWORD = creds.lab_password
-ORG_ID = creds.lab_id
-=======
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
->>>>>>> 522024f (Linted)
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -57,10 +42,7 @@ LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 # Set up the logger
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -83,21 +65,19 @@ d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
     "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683758763|1683758809|\
 d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
     "01664a7f-b1f3-42bd-b1c2-069d85e9a0bf|1683596280|1683596310|\
-d7a77639-e451-4d35-b18f-8fd8ae2cd0a6"
+d7a77639-e451-4d35-b18f-8fd8ae2cd0a6",
 ]
 
 log.info("Building search tree.")
 AVL_TREE = avl_tree.build_avl_tree(PERSISTENT_ARCHIVES)
-log.info(
-    "%sSearch tree built.%s",
-    Fore.GREEN,
-    Style.RESET_ALL
-)
+log.info("%sSearch tree built.%s", Fore.GREEN, Style.RESET_ALL)
 
 AGE_LIMIT = 14  # Delete anything older than 14 days
 
 
-def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID):
+def login_and_get_tokens(
+    login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
+):
     """
     Initiates a Command session with the given user credentials and Verkada
     organization ID.
@@ -118,6 +98,7 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
     login_data = {
         "email": username,
         "password": password,
+        "otp": generate_totp(getenv("lab_totp")),
         "org_id": org_id,
     }
 
@@ -140,7 +121,9 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -160,12 +143,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-organization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -174,14 +155,17 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Logout"
+        ) from e
 
     finally:
         logout_session.close()
 
 
-def read_verkada_camera_archives(archive_session, x_verkada_token,
-                                 x_verkada_auth, usr, org_id=ORG_ID):
+def read_verkada_camera_archives(
+    archive_session, x_verkada_token, x_verkada_auth, usr, org_id=ORG_ID
+):
     """
     Iterates through all Verkada archives that are visible to a given user.
 
@@ -192,7 +176,7 @@ def read_verkada_camera_archives(archive_session, x_verkada_token,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
@@ -203,20 +187,21 @@ def read_verkada_camera_archives(archive_session, x_verkada_token,
         "fetchOrganizationArchives": True,
         "fetchUserArchives": True,
         "pageSize": 1000000,
-        "organizationId": org_id
+        "organizationId": org_id,
     }
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting archives.")
         response = archive_session.post(
-            ARCHIVE_URL, json=body, headers=headers)
+            ARCHIVE_URL, json=body, headers=headers
+        )
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Archive IDs retrieved. Returning values.")
 
@@ -225,150 +210,135 @@ def read_verkada_camera_archives(archive_session, x_verkada_token,
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e, response, "Read archives")
+            e, response, "Read archives"
+        ) from e
 
 
-def check_archive_timestamp(archive_library, x_verkada_token, x_verkada_auth,
-                            usr, age_limit=AGE_LIMIT):
+def get_archive_name(archive):
     """
-    Will iterate through the archive library and call a delete for any clip
-    that is older than the given time limit. If the time limit is set to '0'
-    then this function is skipped completely.
+    Extracts the name of the archive based on its label, tags, or videoExportId.
 
-    :param archive_library: The JSON formatted list of all visible archives in
-    a Verkada organization.
-    :type archive_library: list
-    :param age_limit: The age limit set in days for the oldest archive to be
-    kept if it is not found in the persistent list.
+    :param archive: A dictionary representing an archive.
+    :type archive: dict
+    :return: The name of the archive.
+    :rtype: str
+    """
+    if archive.get("label"):
+        return archive.get("label")
+    elif archive.get("tags"):
+        return archive.get("tags")
+    else:
+        return archive.get("videoExportId")
+
+
+def localize_timestamp(epoch_timestamp, local_timezone):
+    """
+    Converts the epoch timestamp to the local timezone.
+
+    :param epoch_timestamp: The epoch timestamp of the archive.
+    :type epoch_timestamp: int
+    :param local_timezone: The local timezone to convert to.
+    :type local_timezone: datetime.tzinfo
+    :return: The localized datetime object.
+    :rtype: datetime
+    """
+    date_utc = datetime.fromtimestamp(epoch_timestamp, timezone.utc)
+    date_utc = pytz.utc.localize(date_utc)
+    return date_utc.astimezone(local_timezone)
+
+
+def check_age(archive_time, age_limit):
+    """
+    Determines if an archive is older than the given age limit.
+
+    :param archive_time: The time of the archive.
+    :type archive_time: datetime
+    :param age_limit: The age limit in days.
     :type age_limit: int
-    :return: A list of threads with individual archives to delete from 
-    Verkada Command.
+    :return: True if the archive should be deleted, False otherwise.
+    :rtype: bool
+    """
+    current_time = datetime.now()
+    time_difference = current_time - archive_time
+    return time_difference > timedelta(days=age_limit)
+
+
+def create_deletion_thread(
+    video_export_id, x_verkada_token, x_verkada_auth, usr, archive_name
+):
+    """
+    Creates a thread to delete an archive.
+
+    :param video_export_id: The ID of the video export.
+    :type video_export_id: str
+    :param x_verkada_token: The Verkada token.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The Verkada authentication.
+    :type x_verkada_auth: str
+    :param usr: The user initiating the deletion.
+    :type usr: str
+    :param archive_name: The name of the archive.
+    :type archive_name: str
+    :return: The thread created to delete the archive.
+    :rtype: threading.Thread
+    """
+    return threading.Thread(
+        target=remove_verkada_camera_archive,
+        args=(
+            video_export_id,
+            x_verkada_token,
+            x_verkada_auth,
+            usr,
+            archive_name,
+        ),
+    )
+
+
+def process_archive(archive, x_verkada_token, x_verkada_auth, usr, age_limit):
+    """
+    Processes an individual archive, checking its timestamp and creating a
+    deletion thread if necessary.
+
+    :param archive: A dictionary representing an archive.
+    :type archive: dict
+    :param x_verkada_token: The Verkada token.
+    :type x_verkada_token: str
+    :param x_verkada_auth: The Verkada authentication.
+    :type x_verkada_auth: str
+    :param usr: The user initiating the deletion.
+    :type usr: str
+    :param age_limit: The age limit in days.
+    :type age_limit: int
+    :return: A list of threads created for deletion.
     :rtype: list
     """
-    threads = []  # An array to be filled with threads with archives to delete
-    video_export_id, archive_name, result_node = '', '', None  # Initialize
+    threads = []
+    archive_name = get_archive_name(archive)
+    if epoch_timestamp := archive.get("timeExported"):
+        date_local = localize_timestamp(epoch_timestamp, get_localzone())
+        archive_time = date_local.replace(tzinfo=None)
 
-    log.debug("Getting local timezone.")
-    local_timezone = get_localzone()  # Load the local timezone for the device
-    log.debug("Timezone received.")
-
-    if archive_library:
-        log.debug("----------------------")  # Aesthetic dividing line
-        for archive in archive_library:
-            # Get the name of the archive
-            if archive.get('label') != '':
-                archive_name = archive.get('label')
-
-            elif archive.get('tags') != []:
-                archive_name = archive.get('tags')
-
-            else:
-                archive_name = archive.get('videoExportId')
-
-            # Get the time of the archived clip
-            epoch_timestamp = archive.get("timeExported")
-            log.debug(
-                "Retrieved archive epoch timestamp: %d",
-                epoch_timestamp
+        if check_age(archive_time, age_limit):
+            video_export_id = archive.get("videoExportId")
+            result_node = avl_tree.search_in_avl_tree(
+                AVL_TREE, video_export_id
             )
 
-            if epoch_timestamp:
-                # Take the epoch time and convert it to the local timezone
-                date_utc = datetime.fromtimestamp(epoch_timestamp,
-                                                  timezone.utc)
-                date_utc = pytz.utc.localize(date_utc)
-                date_local = date_utc.astimezone(local_timezone)
-
-                # Localize timestamp from Epoch to local timezone
-                log.debug("Localized archive time to %s", str(local_timezone))
-                date = date_local.strftime("%b %d, %Y %H:%M")  # Make string
-                log.debug("Exported time: %s", str(date))
-
-                # Change String object to datetime object to run comparisons
-                archive_time = datetime.strptime(date, "%b %d, %Y %H:%M")
-                log.debug("Converted to datetime object. Comparing times.")
-
-                # Get the time difference
-                current_time = datetime.now()
-                time_difference = current_time - archive_time
-                log.debug("Time difference: %s", str(time_difference))
-
-                # If the clip is older than the age limit, run in thread
-                if time_difference > timedelta(days=age_limit):
-                    video_export_id = archive.get("videoExportId")
-                    log.debug(
-                        "%s%s%s is older than %d days.",
-                        Fore.MAGENTA,
-                        archive_name,
-                        Style.RESET_ALL,
-                        age_limit
-                    )
-                    log.debug(
-                        "Checking if %s%s%s is persistent.",
-                        Fore.MAGENTA,
-                        archive_name,
-                        Style.RESET_ALL
-                    )
-
-                    log.debug("Searching AVL tree")
-                    result_node = avl_tree.search_in_avl_tree(AVL_TREE,
-                                                              video_export_id)
-
-                    if result_node is None:
-                        log.debug(
-                            "Creating thread for %s%s%s.",
-                            Fore.MAGENTA,
-                            archive_name,
-                            Style.RESET_ALL
-                        )
-                        thread = threading.Thread(
-                            target=remove_verkada_camera_archive,
-                            args=(video_export_id, x_verkada_token,
-                                  x_verkada_auth, usr, archive_name)
-                        )
-                        log.debug("Thread appended to list.")
-                        threads.append(thread)
-                        # Aesthetic dividing line
-                        log.debug("----------------------")
-                    else:
-                        log.info(
-                            "%s%s%s marked as persistent... Skipping.%s",
-                            Fore.MAGENTA,
-                            archive_name,
-                            Fore.CYAN,
-                            Style.RESET_ALL
-                        )
-                        # Aesthetic dividing line
-                        log.debug("----------------------")
-                else:
-                    if result_node is None:
-                        log.debug("Archive not marked as persistent.")
-                        video_export_id = archive.get("videoExportId")
-                        log.debug(
-                            "Creating thread for %s%s%s.",
-                            Fore.MAGENTA,
-                            archive_name,
-                            Style.RESET_ALL
-                        )
-
-                        thread = threading.Thread(
-                            target=remove_verkada_camera_archive,
-                            args=(video_export_id, x_verkada_token,
-                                  x_verkada_auth, usr, archive_name)
-                        )
-                        log.debug("Thread appended to list.")
-                        threads.append(thread)
-                        # Aesthetic dividing line
-                        log.debug("----------------------")
-
-    log.debug(
-        "%sThread array: %s%s.", Fore.LIGHTBLACK_EX, threads, Style.RESET_ALL)
-
+            if result_node is None:
+                thread = create_deletion_thread(
+                    video_export_id,
+                    x_verkada_token,
+                    x_verkada_auth,
+                    usr,
+                    archive_name,
+                )
+                threads.append(thread)
     return threads
 
 
-def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
-                                   usr, archive_library, age_limit=AGE_LIMIT):
+def remove_verkada_camera_archives(
+    x_verkada_token, x_verkada_auth, usr, archive_library, age_limit=AGE_LIMIT
+):
     """
     Will iterate through all Verkada archives visible to a given user and
     delete them permanently.
@@ -378,7 +348,7 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param archive_library: The JSON formatted list of all visible archives in
     a Verkada organization.
@@ -404,7 +374,7 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
         log.error(
             "%sError: Archives is not iterable or is None.%s",
             Fore.RED,
-            Style.RESET_ALL
+            Style.RESET_ALL,
         )
         return
     log.debug("%sTest complete. Continuing...%s", Fore.GREEN, Style.RESET_ALL)
@@ -416,8 +386,9 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
             video_export_id = archive.get("videoExportId")
 
             log.debug("Searching AVL tree.")
-            result_node = avl_tree.search_in_avl_tree(AVL_TREE,
-                                                      video_export_id)
+            result_node = avl_tree.search_in_avl_tree(
+                AVL_TREE, video_export_id
+            )
 
             # Check if the archive has been marked "persistent"
             if result_node is None:
@@ -426,7 +397,7 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
                     "\nRunning for %s%s%s.",
                     Fore.MAGENTA,
                     video_export_id,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
                 thread = threading.Thread(
@@ -435,29 +406,32 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
                         video_export_id,
                         x_verkada_token,
                         x_verkada_auth,
-                        usr
-                    ))
+                        usr,
+                    ),
+                )
                 # Add the thread to the array
                 threads.append(thread)
 
     else:
-        threads.extend(check_archive_timestamp(
-            archive_library,
-            x_verkada_token,
-            x_verkada_auth,
-            usr,
-            age_limit
-        ))
+        threads.extend(
+            process_archive(
+                x_verkada_token,
+                x_verkada_auth,
+                usr,
+                archive_library,
+                age_limit,
+            )
+        )
 
     if threads:
         try:
-            # Start in seperate thread to speed up runtime
+            # Start in separate thread to speed up runtime
             for thread in threads:
                 log.debug(
                     "Starting %s%s%s.",
                     Fore.LIGHTYELLOW_EX,
                     thread.name,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
                 thread.start()
 
@@ -467,30 +441,31 @@ def remove_verkada_camera_archives(x_verkada_token, x_verkada_auth,
                     "Joining thread %s%s%s back to main.",
                     Fore.LIGHTYELLOW_EX,
                     thread.name,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
                 thread.join()
 
         except threading.ThreadError as te:
             log.error(
-                "%sA thread error occured. %s%s",
+                "%sA thread error occurred. %s%s",
                 Fore.RED,
                 te,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
         except RuntimeWarning as rte:
             log.error(
-                "%sAn error occured during the runtime. %s%s",
+                "%sAn error occurred during the runtime. %s%s",
                 Fore.RED,
                 rte,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
 
-def remove_verkada_camera_archive(remove_session, video_export_id,
-                                  x_verkada_token, x_verkada_auth, usr, name):
+def remove_verkada_camera_archive(
+    remove_session, video_export_id, x_verkada_token, x_verkada_auth, usr, name
+):
     """
-    Removes a given Verkada archive that is visible to the given user and 
+    Removes a given Verkada archive that is visible to the given user and
     deletes it permanently.
 
     :param remove_session: The authenticated session to use to remove archives.
@@ -502,17 +477,15 @@ def remove_verkada_camera_archive(remove_session, video_export_id,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     """
-    body = {
-        "videoExportId": video_export_id
-    }
+    body = {"videoExportId": video_export_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     log.debug("Searching AVL tree.")
@@ -525,10 +498,11 @@ def remove_verkada_camera_archive(remove_session, video_export_id,
                 "Requesting deletion for %s%s%s.",
                 Fore.MAGENTA,
                 name,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
             response = remove_session.post(
-                DELETE_URL, json=body, headers=headers)
+                DELETE_URL, json=body, headers=headers
+            )
             response.raise_for_status()  # Raise an exception for HTTP errors
             log.info(
                 "%sDeletion for %s%s%s processed.%s",
@@ -536,29 +510,24 @@ def remove_verkada_camera_archive(remove_session, video_export_id,
                 Fore.MAGENTA,
                 name,
                 Fore.GREEN,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
-            # JSON response of updated value for the archive
-            removed_archive = response.json().get("videoExports", [])
-
-            # Communicate with the user which archive has been deleted
-            if removed_archive:
+            if removed_archive := response.json().get("videoExports", []):
                 for archive in removed_archive:
                     log.info("Removed Archive: %s", name)
                     log.debug("%s", archive)
                     log.debug("-------")
             else:
                 log.warning(
-                    "Failed to remove Archive with videoExportId: %s",
-                    name
+                    "Failed to remove Archive with videoExportId: %s", name
                 )
 
                 return removed_archive
 
-        # Handle exceptions
         except requests.exceptions.RequestException as e:
             raise custom_exceptions.APIExceptionHandler(
-                e, response, "Remove archives")
+                e, response, "Remove archives"
+            ) from e
     else:
         log.debug(
             "Skipping %s%s%s.%sThis archive is marked as persistent.%s.",
@@ -566,7 +535,7 @@ def remove_verkada_camera_archive(remove_session, video_export_id,
             name,
             Style.RESET_ALL,
             Fore.CYAN,
-            Style.RESET_ALL
+            Style.RESET_ALL,
         )
 
 
@@ -582,20 +551,22 @@ if __name__ == "__main__":
             if csrf_token and user_token and user_id:
                 log.debug("Retrieving archive library.")
                 archives = read_verkada_camera_archives(
-                    session, csrf_token, user_token, user_id, ORG_ID)
+                    session, csrf_token, user_token, user_id, ORG_ID
+                )
                 log.debug(
                     "%sArchive library retrieved.%s",
                     Fore.GREEN,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
                 log.debug("Entering remove archives method.")
                 remove_verkada_camera_archives(
-                    session, csrf_token, user_token, user_id, archives)
+                    session, csrf_token, user_token, user_id, archives
+                )
                 log.debug(
                     "%sProgram completed successfully.%s",
                     Fore.GREEN,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
             # Handles when the required credentials were not received
@@ -604,22 +575,16 @@ if __name__ == "__main__":
                     "%sNo credentials were provided during "
                     "the authentication process.%s",
                     Fore.RED,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
             # Calculate the time take to run and post it to the log
             elapsed_time = time.time() - start_time
             log.info("Total time to complete %.2f", elapsed_time)
 
-<<<<<<< HEAD
-    # Gracefully handle an interrupt
-    except KeyboardInterrupt:
-        print(f"\nKeyboard interrupt detected. Aborting...")
-=======
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
-            print("\nKeyboard interrupt detected. Aboting...")
->>>>>>> 522024f (Linted)
+            print("\nKeyboard interrupt detected. Aborting...")
 
         finally:
             session.close()

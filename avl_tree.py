@@ -3,11 +3,12 @@ Author: Ian Young
 Purpose: Serve as a module to import for creating, sorting, and manipulating
 AVL trees for code optimization.
 """
+
 # Import essential libraries
 from anytree import Node, RenderTree
 
 
-class TreeNode():
+class TreeNode:
     """
     Represents a node in an AVL tree.
 
@@ -52,8 +53,9 @@ def insert_avl(current_node, key):
         current_node.right = insert_avl(current_node.right, key)
 
     # Update the height of the current node
-    current_node.height = 1 + \
-        max(height(current_node.left), height(current_node.right))
+    current_node.height = 1 + max(
+        height(current_node.left), height(current_node.right)
+    )
 
     # Perform AVL tree rotations to maintain balance
     balance = balance_factor(current_node)
@@ -107,11 +109,13 @@ def insert_avl_from_dict(current_node, data, key):
         current_node.left = insert_avl_from_dict(current_node.left, data, key)
     else:
         current_node.right = insert_avl_from_dict(
-            current_node.right, data, key)
+            current_node.right, data, key
+        )
 
     # Update the height of the current node
-    current_node.height = 1 + \
-        max(height(current_node.left), height(current_node.right))
+    current_node.height = 1 + max(
+        height(current_node.left), height(current_node.right)
+    )
 
     # Perform AVL tree rotations to maintain balance
     balance = balance_factor(current_node)
@@ -182,8 +186,7 @@ def search_in_avl_tree(current_node, key):
     :return: The node containing the key or None if the key is not found.
     :rtype: TreeNode or None
     """
-    if current_node is None or current_node.value == \
-            key:
+    if current_node is None or current_node.value == key:
         return current_node
     if key < current_node.value:
         return search_in_avl_tree(current_node.left, key)
@@ -290,9 +293,13 @@ def remove_nodes_array(tree1, common_nodes):
         if tree1.left is None and tree1.right is None:
             return None  # Node found in common_nodes and has no children, remove it from tree1
         elif tree1.left is None:
-            return tree1.right  # Node found in common_nodes and has only a right child
+            return (
+                tree1.right
+            )  # Node found in common_nodes and has only a right child
         elif tree1.right is None:
-            return tree1.left  # Node found in common_nodes and has only a left child
+            return (
+                tree1.left
+            )  # Node found in common_nodes and has only a left child
 
         # Node found in common_nodes and has both left and right children
         # Replace the node with the maximum node in the left subtree
@@ -306,6 +313,7 @@ def remove_nodes_array(tree1, common_nodes):
     tree1.balance_factor = balance_factor(tree1)
 
     return tree1
+
 
 #! Stop
 
@@ -387,9 +395,13 @@ def remove_nodes_dict(tree1, common_nodes, key):
         if tree1.left is None and tree1.right is None:
             return None  # Node found in common_nodes and has no children, remove it from tree1
         elif tree1.left is None:
-            return tree1.right  # Node found in common_nodes and has only a right child
+            return (
+                tree1.right
+            )  # Node found in common_nodes and has only a right child
         elif tree1.right is None:
-            return tree1.left  # Node found in common_nodes and has only a left child
+            return (
+                tree1.left
+            )  # Node found in common_nodes and has only a left child
 
         # Node found in common_nodes and has both left and right children
         # Replace the node with the maximum node in the left subtree
@@ -469,9 +481,7 @@ def height(node):
     :return: The height of the node.
     :rtype: int
     """
-    if node is None:
-        return 0
-    return node.height
+    return 0 if node is None else node.height
 
 
 def update_height(node):
@@ -494,9 +504,7 @@ def balance_factor(node):
     :return: The balance factor of the node.
     :rtype: int
     """
-    if node is None:
-        return 0
-    return height(node.left) - height(node.right)
+    return 0 if node is None else height(node.left) - height(node.right)
 
 
 def rotate_right(y):
