@@ -6,18 +6,6 @@ advised since the changes this script will make to the org cannot be undone
 once made.
 """
 # Import essential libraries
-<<<<<<< HEAD
-from re import search
-import requests
-import logging
-import threading
-import time
-import creds  # File with credentials
-import pytz
-import colorama
-from datetime import datetime, timedelta
-from tzlocal import get_localzone
-=======
 import logging
 import threading
 import time
@@ -27,26 +15,22 @@ from os import getenv
 import colorama
 import pytz
 import requests
->>>>>>> 522024f (Linted)
 from colorama import Fore, Style
 from dotenv import load_dotenv
 from tzlocal import get_localzone
 
 import avl_tree  # File to work with trees
 import custom_exceptions  # Import custom exceptions to save space
+from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
+load_dotenv()  # Load credentials file
+
 # Set final, global credential variables
-<<<<<<< HEAD
-USERNAME = creds.lab_username
-PASSWORD = creds.lab_password
-ORG_ID = creds.lab_id
-=======
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
->>>>>>> 522024f (Linted)
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -118,6 +102,7 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
     login_data = {
         "email": username,
         "password": password,
+        "otp": generate_totp(getenv("lab_totp")),
         "org_id": org_id,
     }
 
@@ -611,15 +596,9 @@ if __name__ == "__main__":
             elapsed_time = time.time() - start_time
             log.info("Total time to complete %.2f", elapsed_time)
 
-<<<<<<< HEAD
-    # Gracefully handle an interrupt
-    except KeyboardInterrupt:
-        print(f"\nKeyboard interrupt detected. Aborting...")
-=======
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
             print("\nKeyboard interrupt detected. Aboting...")
->>>>>>> 522024f (Linted)
 
         finally:
             session.close()

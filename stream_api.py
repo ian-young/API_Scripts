@@ -35,8 +35,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 def get_token(org_id=ORG_ID, api_key=API_KEY):
     """
-    Generates a JWT token for the streaming API. This token will be integrated
-    inside of a link to grant access to footage.
+    Generates a JWT token for streaming API.
 
     :param org_id: The target organization ID.
     :type org_id: str, optional
@@ -93,9 +92,8 @@ def load_stream(jwt, camera_id, stream_start_time, org_id=ORG_ID):
     stream_end_time = stream_start_time + 1
 
     # Format the links
-    base_url = 'https://api.verkada.com/stream/cameras/v1/footage/stream/\
-stream.m3u8?camera_id='
-    live_link = base_url + camera_id + '&org_id=' + org_id + \
+    live_link = 'https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8?camera_id=' + \
+        camera_id + '&org_id=' + org_id + \
         '&resolution=high_res&jwt=' + jwt + '&type=stream'
     historical_link = live_link + '&start_time=' + \
         str(stream_start_time) + '&end_time=' + str(stream_end_time)
@@ -125,14 +123,7 @@ terminal\n%s", e)
 
 
 def print_image(file_name):
-    """
-    Will print a given image into the terminal in very low resolution.
-
-    :param file_name: The name of the image file to print into the terminal.
-    :type file_name: str
-    :return: None
-    :rtype: None
-    """
+    """Will print a given image into the terminal"""
 
     try:
         subprocess.run(['timg', file_name], check=True)
@@ -142,7 +133,6 @@ terminal\n%s", e)
 
     # --------------------------
     # If using Pillow and you want a higher-res image displayed
-    # NOTE: This won't be displayed in the terminal
     # Load the image
     image = Image.open(file_name)
 
@@ -174,7 +164,7 @@ def epoch(e_year, e_month, e_day, e_hour, e_minute):
     # Convert to epoch timestamp (seconds since Jan 1, 1970)
     epoch_timestamp = int(py_time.timestamp())
 
-    return epoch_timestamp
+    return int(epoch_timestamp)
 
 
 # Check if being ran directly or is imported by another program
@@ -193,39 +183,7 @@ if __name__ == "__main__":
     token = get_token()
 
     # Check if the token is null
-    if token and CAMERA is not "":
-        if isinstance(CAMERA, list):
-            log.debug("List provided -> Checking if list is iterable.")
-
-            if hasattr(CAMERA, "__iter__"):
-                log.debug(
-                    "List provided -> list is iterable -> attempting triggers.")
-
-                for target in CAMERA:
-                    load_stream(token, target, start_time)
-
-            else:
-                log.critical("List is not iterable.")
-
-        # Run for a single lockdown
-        else:
-            load_stream(token, CAMERA, start_time)
-    elif token:
-        if isinstance(CID, list):
-            log.debug("List provided -> Checking if list is iterable.")
-
-            if hasattr(CID, "__iter__"):
-                log.debug(
-                    "List provided -> list is iterable -> attempting triggers.")
-
-                for target in CID:
-                    load_stream(token, target, start_time)
-
-            else:
-                log.critical("List is not iterable.")
-
-        # Run for a single lockdown
-        else:
-            load_stream(token, CID, start_time)
+    if token:
+        load_stream(token, CID, start_time)
     else:
         print("Failed to get token, terminating application.")

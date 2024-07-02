@@ -4,6 +4,8 @@ Purpose: Compare plates to a pre-defined array of names.
 These names will be "persistent plates/persons" which are to remain in
 Command. Any person or plate not marked thusly will be deleted from the org.
 """
+
+
 # Import essential libraries
 import datetime
 import logging
@@ -32,12 +34,10 @@ logging.basicConfig(
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-ORG_ID = os.environ.get('ORG_ID')
-if ORG_ID:
+if ORG_ID := os.environ.get('ORG_ID'):
     log.debug("ID retrieved.")
 
-API_KEY = os.environ.get('API_KEY')
-if API_KEY:
+if API_KEY := os.environ.get('API_KEY'):
     log.debug("Key retrieved.")
 
 try:
@@ -53,10 +53,10 @@ try:
         GPIO.setup(WORK_PIN, GPIO.OUT)
     except RuntimeError:
         GPIO = None
-        log.debug("Runtime error while initializing GPIO boad.")
+        log.debug("Runtime error while initializing GPIO board.")
 except ImportError:
     GPIO = None
-    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+    log.debug("RPi.GPIO is not available. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
 PERSISTENT_PLATES = sorted([])  # Label of plate #!Not plate number!#

@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 import custom_exceptions
 import gather_devices
+from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
@@ -197,6 +198,7 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
     login_data = {
         "email": username,
         "password": password,
+        "otp": generate_totp(getenv("lab_totp")),
         "org_id": org_id
     }
 

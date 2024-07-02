@@ -81,6 +81,9 @@ URL_AC_USERS = "https://api.verkada.com/access/v1/access_users"
 URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
+URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
+
+load_dotenv()
 
 load_dotenv()  # Load credentials file
 
@@ -194,7 +197,7 @@ def run_thread_with_rate_limit(new_threads, rate_limit=5):
         log.debug(
             "Starting thread %s at time %s",
             thread.name,
-            datetime.datetime.now().strftime('%H:%M:%S')
+            datetime.now().strftime('%H:%M:%S')
         )
         thread.start()
 

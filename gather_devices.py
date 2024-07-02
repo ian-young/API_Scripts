@@ -13,6 +13,7 @@ import requests
 from dotenv import load_dotenv
 
 import custom_exceptions
+from verkada_totp import generate_totp
 
 load_dotenv()  # Load credentials file
 
@@ -126,7 +127,8 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
     login_data = {
         "email": username,
         "password": password,
-        "org_id": org_id,
+        "otp": generate_totp(getenv("lab_totp")),
+        "org_id": org_id
     }
 
     try:

@@ -10,6 +10,7 @@ import requests
 from dotenv import load_dotenv
 
 import custom_exceptions
+from verkada_totp import generate_totp
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
@@ -28,7 +29,7 @@ LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
 load_dotenv()  # Load credentials file
 
-# User loging credentials
+# User logging credentials
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
@@ -62,7 +63,8 @@ def login_and_get_tokens(login_session, username, password, org_id):
     login_data = {
         "email": username,
         "password": password,
-        "org_id": org_id,
+        "otp": generate_totp(getenv("lab_totp")),
+        "org_id": org_id
     }
 
     try:
@@ -100,7 +102,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-organization": org_id
     }
 
     body = {
