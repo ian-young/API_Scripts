@@ -2,6 +2,7 @@
 Author: Ian Young
 Purpose: Securely ask for credentials inside of code.
 """
+
 # Import essential libraries
 from getpass import getpass
 import logging

@@ -2,6 +2,7 @@
 Author: Ian Young
 Purpose: Refresh the graph being displayed in the NGINX server.
 """
+
 # Import essential libraries
 import datetime
 import logging
