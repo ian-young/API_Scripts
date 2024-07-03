@@ -3,6 +3,7 @@ Author: Ian Young
 NOTE: comment out the globally defined API_KEY and uncomment the other API lines if
 you'd like to enter it manually each time you run the script.
 """
+
 # Import essential libraries
 from os import getenv
 
@@ -59,6 +60,7 @@ def update_name(person_id, new_label, target_org_id, api_key=API_KEY):
     """
     Takes a person ID and a string and will change the label of the given
     PoI
+
     :param person_id: The id of the target Verkada PoI.
     :type person_id: str
     :param new_label: The new label name to update the PoI with.
@@ -95,13 +97,7 @@ if __name__ == "__main__":
     ORG_ID = str(input("Please enter the Org ID: "))
     SEARCH = str(input("What is the PoI label you'd like to change?\n "))
     NEWNAME = str(input("New label: "))
-    # api_key = str(input("Org API key: "))
-
-    pid = get_person_id(ORG_ID, SEARCH)
-    # pid = get_person_id(org_id, search, api_key)
-
-    if pid:
+    if pid := get_person_id(ORG_ID, SEARCH):
         update_name(ORG_ID, pid, NEWNAME)
-        # update_name(org_id, search, api_key)
     else:
         print("Could not retrieve pid for 'newName'")

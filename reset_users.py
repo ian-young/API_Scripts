@@ -4,6 +4,7 @@ Purpose: Compare users to a pre-defined array of names.
 These names will be "persistent users" which are to remain in Command.
 Any user not marked thusly will be deleted from the org.
 """
+
 # Import essential libraries
 import logging
 import os

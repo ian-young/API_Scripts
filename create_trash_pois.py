@@ -2,6 +2,7 @@
 Author: Ian Young
 This script will create a POI when given a name and uri to image
 """
+
 # Import essential libraries
 import base64
 import logging
@@ -119,6 +120,7 @@ def clean_list(messy_list):
 def create_poi(poi_name, poi_image, download, manager):
     """Will create a person of interest with a given URL to an image or path
     to a file
+
     :param name: Name of the person of interest to create
     :type name: str
     :param image: The image url to download and use.
@@ -175,6 +177,7 @@ def create_poi(poi_name, poi_image, download, manager):
 def create_plate(lpoi_name, plate_number, manager):
     """
     Create a LPoI with a given name and plate
+
     :param plate_name: The name of the license plate to identify what it is.
     :type plate_name: str
     :param plate_number: The value found on the license plate itself.

@@ -4,6 +4,7 @@ Purpose: Compare users to a pre-defined array of names.
 These names will be "persistent users" which are to remain in Command.
 Any user not marked thusly will be deleted from the org.
 """
+
 # Import essential libraries
 import logging
 import os
@@ -286,6 +287,7 @@ def purge(delete, users, manager, org_id=ORG_ID, api_key=API_KEY):
 def print_name(to_delete, users):
     """
     Returns the full name with a given ID
+
     :param to_delete: The list of users to delete.
     :type to_delete: list
     :param users: A complete list of all Command users.

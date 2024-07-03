@@ -4,6 +4,7 @@ Purpose: Compare plates to a pre-defined array of names.
 These names will be "persistent" which are to remain in Command.
 Anything not marked thusly will be deleted from the org.
 """
+
 import datetime
 import logging
 import threading
@@ -304,6 +305,7 @@ There are no more plates to delete."
 def run_users():
     """
     Allows the program to be ran if being imported as a module
+
     :return: Returns the value 1 if the program completed successfully.
     :rtype: int
     """

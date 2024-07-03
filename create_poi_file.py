@@ -2,6 +2,7 @@
 Author: Ian Young
 This script will create a POI when given a name and file path to an image
 """
+
 # Import essential libraries
 import logging
 import base64

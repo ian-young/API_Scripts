@@ -3,6 +3,7 @@ Author: Ian Young
 Purpose: Serve as a template for logging in a user, performing an action,
 and logging out.
 """
+
 # Import essential libraries
 import logging
 import time

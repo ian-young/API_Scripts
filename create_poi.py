@@ -2,6 +2,7 @@
 Author: Ian Young
 This script will create a POI when given a name and uri to image
 """
+
 # Import essential libraries
 import base64
 from os import getenv

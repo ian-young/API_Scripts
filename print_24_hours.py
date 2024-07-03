@@ -3,6 +3,7 @@ Author: Ian Young
 Purpose: Print the past 24 hour's worth of endpoint data. To be used by
 tryEndpoints.py.
 """
+
 # Import essential libraries
 import re
 from datetime import datetime, timedelta

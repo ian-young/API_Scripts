@@ -2,6 +2,7 @@
 Author: Ian Young
 Purpose: Opens lockdowns both literally and figuratively
 """
+
 # Import essential libraries
 import logging
 from os import getenv

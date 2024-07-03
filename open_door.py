@@ -2,6 +2,7 @@
 Author: Ian Young
 Purpose: Opens doors both literally and figuratively.
 """
+
 # Import essential libraries
 import logging
 from os import getenv
@@ -26,7 +27,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
-# User loging credentials
+# User logging credentials
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
@@ -74,7 +75,7 @@ def login_and_get_tokens(login_session, username, password, org_id):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(e, response, "Log in") from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -94,7 +95,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id,
+        "x-verkada-organization": org_id,
     }
 
     body = {"logoutCurrentEmailOnly": True}
@@ -106,7 +107,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(e, response, "Logout") from e
 
     finally:
         logout_session.close()
@@ -125,7 +126,7 @@ def unlock_door(unlock_session, x_verkada_token, x_verkada_auth, usr, door):
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     """
     headers = {
@@ -149,7 +150,7 @@ def unlock_door(unlock_session, x_verkada_token, x_verkada_auth, usr, door):
                     url = f"https://vcerberus.command.verkada.com/access/v2/\
 user/virtual_device/{target}/unlock"
 
-                    log.debug("Unlocking virutal device: %s.", target)
+                    log.debug("Unlocking virtual device: %s.", target)
                     response = unlock_session.post(url, headers=headers)
                     response.raise_for_status()
 
@@ -166,7 +167,7 @@ virtual_device/{door}/unlock"
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Unlock Door")
+        raise custom_exceptions.APIExceptionHandler(e, response, "Unlock Door") from e
 
 
 if __name__ == "__main__":

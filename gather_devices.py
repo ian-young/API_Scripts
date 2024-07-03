@@ -3,6 +3,7 @@ Author: Ian Young
 Purpose: Will return all devices in a Verkada Command organization.
 This is to be imported as a module and not ran directly.
 """
+
 # Import essential libraries
 import logging
 import threading

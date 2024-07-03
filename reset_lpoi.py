@@ -5,6 +5,7 @@ Compare plates to a pre-defined array of names.
 These names will be "persistent plates" which are to remain in Command.
 Any plate not marked thusly will be deleted from the org.
 """
+
 # Import essential libraries
 import logging
 import threading

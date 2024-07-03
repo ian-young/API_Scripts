@@ -3,6 +3,7 @@ Author: Ian Young
 Purpose: Graph how many public Verkada API endpoints return with a 200 and
 track how many 429s we receive to track endpoint load, too.
 """
+
 # Import essential libraries
 import datetime
 import logging

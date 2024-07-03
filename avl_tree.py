@@ -3,6 +3,7 @@ Author: Ian Young
 Purpose: Serve as a module to import for creating, sorting, and manipulating
 AVL trees for code optimization.
 """
+
 # Import essential libraries
 from anytree import Node, RenderTree
 
@@ -312,6 +313,7 @@ def remove_nodes_array(tree1, common_nodes):
     tree1.balance_factor = balance_factor(tree1)
 
     return tree1
+
 
 #! Stop
 

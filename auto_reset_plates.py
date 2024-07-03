@@ -4,6 +4,7 @@ Purpose: Compare plates to a pre-defined array of names.
 These names will be "persistent plates/persons" which are to remain in
 Command. Any person or plate not marked thusly will be deleted from the org.
 """
+
 # Import essential libraries
 import datetime
 import logging
