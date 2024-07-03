@@ -97,13 +97,7 @@ if __name__ == "__main__":
     ORG_ID = str(input("Please enter the Org ID: "))
     SEARCH = str(input("What is the PoI label you'd like to change?\n "))
     NEWNAME = str(input("New label: "))
-    # api_key = str(input("Org API key: "))
-
-    pid = get_person_id(ORG_ID, SEARCH)
-    # pid = get_person_id(org_id, search, api_key)
-
-    if pid:
+    if pid := get_person_id(ORG_ID, SEARCH):
         update_name(ORG_ID, pid, NEWNAME)
-        # update_name(org_id, search, api_key)
     else:
         print("Could not retrieve pid for 'newName'")
