@@ -889,7 +889,8 @@ def get_devices_removed_from_org(serials):
 
 def make_verbose(arg0, arg1):
     """
-    Perform weather-related actions based on the snowfall data at a specified latitude and longitude.
+    Perform weather-related actions based on the snowfall data at a
+    specified latitude and longitude.
 
     Returns:
         None
