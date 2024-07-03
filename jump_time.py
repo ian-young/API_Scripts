@@ -3,23 +3,20 @@ Author: Ian Young
 Purpose: To provide a link to a camera at a certain time
 to speed up the process of searching for footage.
 """
+
 # Import essential libraries
 import datetime
-from os import getenv
 
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()  # Import credentials file
-
-ORG_ID = getenv("lab_id")
-API_KEY = getenv("lab_key")
+ORG_ID = ""
+API_KEY = ""
 URL = "https://api.verkada.com/cameras/v1/footage/link"
 
 
 def month_to_text(month):
     """
-    Takes an integer and conver it to text for the correlated month.
+    Takes an integer and convert it to text for the correlated month
 
     :param month: The integer value of a month.
     :type month: int
@@ -27,18 +24,18 @@ def month_to_text(month):
     :rtype: str
     """
     months = {
-        1: 'January',
-        2: 'February',
-        3: 'March',
-        4: 'April',
-        5: 'May',
-        6: 'June',
-        7: 'July',
-        8: 'August',
-        9: 'September',
-        10: 'October',
-        11: 'Novemner',
-        12: 'December'
+        1: "January",
+        2: "February",
+        3: "March",
+        4: "April",
+        5: "May",
+        6: "June",
+        7: "July",
+        8: "August",
+        9: "September",
+        10: "October",
+        11: "November",
+        12: "December",
     }
 
     return months[int(month)]
@@ -46,12 +43,12 @@ def month_to_text(month):
 
 def ask_time():
     """
-    Asks the user for a date and returns an epoch timestamp.
+    Asks the user for a date and returns an epoch timestamp
     
     :return: Epoch timestamp of a prompted date.
     :rtype: int
     """
-    # Pre-define variables that may be autofilled
+    # Pre-define variables that may be auto-filled
     year = None
     month = None
     day = None
@@ -60,23 +57,23 @@ def ask_time():
     answer = None
 
     # Load current values
-    current_year = int(datetime.datetime.now().date().strftime('%Y'))
-    current_month = int(datetime.datetime.now().date().strftime('%m'))
+    current_year = int(datetime.datetime.now().date().strftime("%Y"))
+    current_month = int(datetime.datetime.now().date().strftime("%m"))
     month_text = month_to_text(current_month)
 
-    while answer not in ['y', 'n']:
+    while answer not in ["y", "n"]:
         print(f"Is the footage from {current_year}?")
         answer = input("(y/n) ").strip().lower()
 
-    if answer == 'y':
+    if answer == "y":
         year = current_year
         answer = None  # reset
 
-        while answer not in ['y', 'n']:
+        while answer not in ["y", "n"]:
             print(f"Is the footage from {month_text}?")
             answer = input("(y/n) ").strip().lower()
 
-        if answer == 'y':
+        if answer == "y":
             month = current_month
 
         else:
@@ -118,14 +115,14 @@ def ask_time():
         print("\nExample format: 6:05pm")
         time = input("Enter the time: ")
 
-        time = time.split(':')  # Creates an array
+        time = time.split(":")  # Creates an array
         hour = int(time[0])  # Isolate the hour
-        minute = int(time[1][0:2])  # Snag minutes
+        minute = int(time[1][:2])
         time_of_day = str(time[1][2:4])  # Grab time of day
 
         hour = mil_time(hour, time_of_day)  # Convert to 24-hour
 
-    except (ValueError):
+    except ValueError:
         print("Invalid input. Please enter an integer")
         exit()
 
@@ -134,24 +131,24 @@ def ask_time():
 
 def check_month_days(month, year):
     """
-    Checks how many days are in the given month.
+    Checks how many days are in the given month
     
-    :param month: The integer month of the year to check.
+    :param month: The month value to be checking.
     :type month: int
-    :param year: The year of the date that is being checked.
+    :param year: They year to check against.
     :type year: int
-    :return: Returns the amount of days in a month.
+    :return: Returns how many days are in the month.
     :rtype: int
     """
-    if ((month == 2) and ((year % 4 == 0) or ((year % 100 == 0)
-                                              and (year % 400 == 0)))):
+    if (month == 2) and (
+        (year % 4 == 0) or ((year % 100 == 0) and (year % 400 == 0))
+    ):
         return 29
 
-    elif (month == 2):
+    elif month == 2:
         return 28
 
-    elif (month == 1 or month == 3 or month == 5 or month == 7 or month == 8
-          or month == 10):
+    elif month in [1, 3, 5, 7, 8, 10]:
         return 31
 
     else:
@@ -160,54 +157,63 @@ def check_month_days(month, year):
 
 def mil_time(hour, time_of_day):
     """
-    Converts 12-hour time format to 24-hour format.
+    Converts 12-hour time to 24-hour
 
-    :param hour: The hour in 12-hour format to be converted to 24-hour.
+    :param hour: The 12-hour value to convert to 24-hours.
     :type hour: int
-    :param time_of_day: The time of day as either 'am' or 'pm'
+    :param time_of_day: whether the time is 'am' or 'pm'
     :type time_of_day: str
-    :return: Returns the hour in 24-hour time formatting
+    :return: The hour in 24-hour format.
     :rtype: int
     """
-    if (time_of_day == "pm"):
+    if time_of_day == "pm":
         hour += 12
 
     return hour
 
 
 def time_to_epoch(year, month, day, hour, minute):
-    """Converts given integers into a UNIX timestamp"""
+    """
+    Converts given integers into a UNIX timestamp
+
+    :param year: The year to to be converted to epoch time.
+    :type year: int
+    :param month: The month to to be converted to epoch time.
+    :type month: int
+    :param day: The day to to be converted to epoch time.
+    :type day: int
+    :param hour: The hour to to be converted to epoch time.
+    :type hour: int
+    :param minute: The minute to to be converted to epoch time.
+    :type minute: int
+    :return: An epoch timestamp in milliseconds.
+    :rtype: int
+    """
     py_time = datetime.datetime(year, month, day, hour, minute)
 
-    unix_timestamp = int(py_time.timestamp())
-
-    return unix_timestamp
+    return int(py_time.timestamp())
 
 
 def get_link(timestamp, camera_id, org_id=ORG_ID, api_key=API_KEY):
     """
     Prints a link to a given camera with footage to the given time.
-    
-    :param timestamp: The UNIX timestamp for the desired footage.
+
+    :param timestamp: An epoch timestamp formatted in milliseconds.
     :type timestamp: int
-    :param camera_id: The camera ID of the device to pull footage from.
+    :param camera_id: A Verkada camera device ID.
     :type camera_id: str
-    :param org_id: Organization ID. Defaults to ORG_ID.
-    :type org_id: str, optional
-    :param api_key: API key for authentication. Defaults to API_KEY.
-    :type api_key: str, optional
-    :return: None
-    :rtype: None
+    :param org_id: The organization ID of which the camera resides in.
+    :type org_id: optional, str
+    :param api_key: The API key used to authenticate to the Verkada org.
+    :type api_key: optional, str
     """
-    headers = {
-        'accept': 'application/json'
-    }
+    headers = {"accept": "application/json"}
 
     params = {
-        'org_id': org_id,
-        'camera_id': camera_id,
-        'timestamp': timestamp,
-        'x-api-key': api_key
+        "org_id": org_id,
+        "camera_id": camera_id,
+        "timestamp": timestamp,
+        "x-api-key": api_key,
     }
 
     response = requests.get(URL, headers=headers, params=params, timeout=5)
@@ -216,7 +222,12 @@ def get_link(timestamp, camera_id, org_id=ORG_ID, api_key=API_KEY):
 
 
 def run():
-    """Allows you to run the full program if being imported"""
+    """
+    Allows you to run the full program if being imported
+
+    Returns:
+        None
+    """
     get_link(ask_time, str(input("Camera ID: ")))
 
 

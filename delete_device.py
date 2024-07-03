@@ -5,6 +5,7 @@ valid user credentials are needed to run this script. Please use EXTREME
 caution when running because this will delete all devices from an org
 without any additional warnings.
 """
+
 # Import essential libraries
 import logging
 import threading
@@ -19,6 +20,7 @@ from dotenv import load_dotenv
 
 import custom_exceptions
 import gather_devices
+from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
@@ -26,10 +28,7 @@ load_dotenv()  # Load credentials file
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -47,12 +46,18 @@ SHARD = "?sharding=true"
 
 # Set final, global URLs
 # * POST
-ACCESS_DECOM = "https://vcerberus.command.verkada.com/access_device/decommission"
-AKEYPADS_DECOM = "https://alarms.command.verkada.com/device/keypad_hub/decommission"
+ACCESS_DECOM = (
+    "https://vcerberus.command.verkada.com/access_device/decommission"
+)
+AKEYPADS_DECOM = (
+    "https://alarms.command.verkada.com/device/keypad_hub/decommission"
+)
 APANEL_DECOM = "https://alarms.command.verkada.com/device/hub/decommission"
 ASENSORS_DECOM = "https://alarms.command.verkada.com/device/sensor/delete"
 CAMERA_DECOM = "https://vprovision.command.verkada.com/camera/decommission"
-ENVIRONMENTAL_DECOM = "https://vsensor.command.verkada.com/devices/decommission"
+ENVIRONMENTAL_DECOM = (
+    "https://vsensor.command.verkada.com/devices/decommission"
+)
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 # * DELETE
@@ -67,7 +72,7 @@ ACCESS_LEVEL_DECOM = f"https://vcerberus.command.verkada.com/organizations/\
 
 
 ##############################################################################
-                                #  Misc  #
+##################################  Misc  ####################################
 ##############################################################################
 
 
@@ -79,7 +84,7 @@ class RateLimiter:
 
     def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
         """
-        Initilization of the rate limiter.
+        Initialization of the rate limiter.
 
         :param rate_limit: The value of how many threads may be made each sec.
         :type rate_limit: int
@@ -107,8 +112,8 @@ class RateLimiter:
         with self.lock:
             current_time = time.time()  # Define current time
 
-            if not hasattr(self, 'start_time'):
-                # Check if attribue 'start_time' exists, if not, make it.
+            if not hasattr(self, "start_time"):
+                # Check if attribute 'start_time' exists, if not, make it.
                 self.start_time = current_time
                 self.event_count = self.pacing
                 return True
@@ -118,23 +123,20 @@ class RateLimiter:
 
             # Check if it's been less than 1sec and less than 10 events have
             # been made.
-            if elapsed_since_start < self.pacing / self.rate_limit \
-                    and self.event_count < self.max_events_per_sec:
+            if (
+                elapsed_since_start < self.pacing / self.rate_limit
+                and self.event_count < self.max_events_per_sec
+            ):
                 self.event_count += 1
-                return True
-
-            # Check if it is the first wave of events
             elif elapsed_since_start >= self.pacing / self.rate_limit:
                 self.start_time = current_time
                 self.event_count = 2
-                return True
-
             else:
                 # Calculate the time left before next wave
-                remaining_time = self.pacing - \
-                    (current_time - self.start_time)
+                remaining_time = self.pacing - (current_time - self.start_time)
                 time.sleep(remaining_time)  # Wait before next wave
-                return True
+
+            return True
 
 
 def run_thread_with_rate_limit(limited_threads, rate_limit=2):
@@ -148,10 +150,7 @@ def run_thread_with_rate_limit(limited_threads, rate_limit=2):
     :return: The thread that was created and ran.
     :rtype: thread
     """
-    limiter = RateLimiter(
-        rate_limit=rate_limit,
-        max_events_per_sec=rate_limit
-    )
+    limiter = RateLimiter(rate_limit=rate_limit, max_events_per_sec=rate_limit)
 
     def run_thread(thread):
         limiter.acquire()
@@ -159,9 +158,12 @@ def run_thread_with_rate_limit(limited_threads, rate_limit=2):
         log.debug(
             "%sStarting thread %s%s%s at time %s%s%s",
             Fore.LIGHTBLACK_EX,
-            Fore.LIGHTYELLOW_EX, thread.name, Style.RESET_ALL,
+            Fore.LIGHTYELLOW_EX,
+            thread.name,
+            Style.RESET_ALL,
             Fore.LIGHTBLACK_EX,
-            datetime.now().strftime('%H:%M:%S'), Style.RESET_ALL
+            datetime.now().strftime("%H:%M:%S"),
+            Style.RESET_ALL,
         )
 
         thread.start()
@@ -174,11 +176,13 @@ def run_thread_with_rate_limit(limited_threads, rate_limit=2):
 
 
 ##############################################################################
-                            #   Authentication   #
+#############################  Authentication  ###############################
 ##############################################################################
 
 
-def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID):
+def login_and_get_tokens(
+    login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
+):
     """
     Initiates a Command session with the given user credentials and Verkada
     organization ID.
@@ -197,7 +201,8 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
     login_data = {
         "email": username,
         "password": password,
-        "org_id": org_id
+        "otp": generate_totp(getenv("lab_totp")),
+        "org_id": org_id,
     }
 
     try:
@@ -219,7 +224,9 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -237,12 +244,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-organization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -251,14 +256,16 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Logout"
+        ) from e
 
     finally:
         logout_session.close()
 
 
 ##############################################################################
-                            #   Requests   #
+################################  Requests  ##################################
 ##############################################################################
 
 
@@ -278,42 +285,37 @@ def delete_cameras(camera_session, x_verkada_token, usr, org_id=ORG_ID):
     headers = {
         "x-verkada-organization-id": org_id,
         "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
+        "x-verkada-user-id": usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting cameras.")
-        cameras = gather_devices.list_cameras(API_KEY, camera_session)
-        if cameras:
+        if cameras := gather_devices.list_cameras(API_KEY, camera_session):
             for camera in cameras:
-                body = {
-                    "cameraId": camera
-                }
+                body = {"cameraId": camera}
 
                 response = camera_session.post(
-                    CAMERA_DECOM, headers=headers, json=body)
+                    CAMERA_DECOM, headers=headers, json=body
+                )
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
-            log.info("%sCameras deleted.%s",
-                     Fore.GREEN,
-                     Style.RESET_ALL
-                     )
+            log.info("%sCameras deleted.%s", Fore.GREEN, Style.RESET_ALL)
 
         else:
             log.warning(
-                "%sNo cameras were received.%s",
-                Fore.MAGENTA,
-                Style.RESET_ALL
+                "%sNo cameras were received.%s", Fore.MAGENTA, Style.RESET_ALL
             )
 
-    # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Cameras")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Cameras"
+        ) from e
 
 
-def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
-                   org_id=ORG_ID):
+def delete_sensors(
+    x_verkada_token, x_verkada_auth, usr, alarm_session, org_id=ORG_ID
+):
     """
     Deletes all alarm devices from a Verkada organization.
 
@@ -332,7 +334,7 @@ def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
         "User": usr,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     def delete_sensor(device_dict):
@@ -347,17 +349,17 @@ def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
             data = {
                 "deviceId": device.get("deviceId"),
                 "deviceType": device.get("deviceType"),
-                "organizationId": org_id
+                "organizationId": org_id,
             }
 
             try:
                 response = alarm_session.post(
-                    ASENSORS_DECOM, headers=headers, json=data)
+                    ASENSORS_DECOM, headers=headers, json=data
+                )
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
                 log.debug(
-                    "Deleted wireless sensor: %s",
-                    device.get('deviceType')
+                    "Deleted wireless sensor: %s", device.get("deviceType")
                 )
 
             # Handle exceptions
@@ -376,35 +378,31 @@ def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
         processed_ids = set()
         for device_id in device_ids:
             if device_id not in processed_ids:
-                data = {
-                    "deviceId": device_id,
-                    "organizationId": org_id
-                }
+                data = {"deviceId": device_id, "organizationId": org_id}
 
                 try:
                     log.debug("Running for %s", device_id)
                     response = alarm_session.post(
-                        APANEL_DECOM, headers=headers, json=data)
+                        APANEL_DECOM, headers=headers, json=data
+                    )
                     response.raise_for_status()  # Raise an exception for HTTP errors
 
                     processed_ids.add(device_id)
                     log.debug("Keypad deleted: %s", device_id)
 
-               # Handle exceptions
+                # Handle exceptions
                 except requests.exceptions.HTTPError:
                     if response.status_code == 400:
                         log.debug("Trying as keypad.")
                         response = alarm_session.post(
-                            APANEL_DECOM,
-                            headers=headers,
-                            json=data
+                            APANEL_DECOM, headers=headers, json=data
                         )
 
                         if response.status == 200:
                             log.debug(
                                 "%sKeypad deleted successfully%s",
                                 Fore.GREEN,
-                                Style.RESET_ALL
+                                Style.RESET_ALL,
                             )
 
                         else:
@@ -413,18 +411,18 @@ def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
                                 Fore.RED,
                                 device_id,
                                 Style.RESET_ALL,
-                                response.status_code
-
+                                response.status_code,
                             )
 
                 except requests.exceptions.RequestException as e:
                     ptype = "Alarm keypad/panel"
                     raise custom_exceptions.APIExceptionHandler(
-                        e, response, ptype)
+                        e, response, ptype
+                    )
 
     def convert_to_dict(array, device_type):
         """
-        Converts an array to a dictionary that containes the attribute
+        Converts an array to a dictionary that contains the attribute
         device type.
 
         :param array: The array to convert.
@@ -440,10 +438,7 @@ def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
             array = [array]  # Force the input to be an array
 
         for device in array:
-            device_dict_value = {
-                "deviceId": device,
-                "deviceType": device_type
-            }
+            device_dict_value = {"deviceId": device, "deviceType": device_type}
             device_dict.append(device_dict_value)
 
         return device_dict
@@ -451,35 +446,44 @@ def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
     # Request all alarm sensors
     log.debug("Requesting alarm sensors.")
     dcs, gbs, hub, ms, pb, ws, wr = gather_devices.list_alarms(
-        x_verkada_token, x_verkada_auth, usr, alarm_session, org_id)
+        x_verkada_token, x_verkada_auth, usr, alarm_session, org_id
+    )
 
     # Check if it is empty, if so, skip. If not, turn it into a dictionary.
     if dcs:
-        door_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(dcs, "doorContactSensor"),))
+        door_thread = threading.Thread(
+            target=delete_sensor,
+            args=(convert_to_dict(dcs, "doorContactSensor"),),
+        )
         alarm_threads.append(door_thread)
     if gbs:
-        glass_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(gbs, "glassBreakSensor"),))
+        glass_thread = threading.Thread(
+            target=delete_sensor,
+            args=(convert_to_dict(gbs, "glassBreakSensor"),),
+        )
         alarm_threads.append(glass_thread)
     if hub:
         keypad_thread = threading.Thread(target=delete_keypads, args=(hub,))
         alarm_threads.append(keypad_thread)
     if ms:
-        motion_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(ms, "motionSensor"),))
+        motion_thread = threading.Thread(
+            target=delete_sensor, args=(convert_to_dict(ms, "motionSensor"),)
+        )
         alarm_threads.append(motion_thread)
     if pb:
-        panic_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(pb, "panicButton"),))
+        panic_thread = threading.Thread(
+            target=delete_sensor, args=(convert_to_dict(pb, "panicButton"),)
+        )
         alarm_threads.append(panic_thread)
     if ws:
-        water_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(ws, "waterSensor"),))
+        water_thread = threading.Thread(
+            target=delete_sensor, args=(convert_to_dict(ws, "waterSensor"),)
+        )
         alarm_threads.append(water_thread)
     if wr:
-        relay_thread = threading.Thread(target=delete_sensor, args=(
-            convert_to_dict(wr, "wirelessRelay"),))
+        relay_thread = threading.Thread(
+            target=delete_sensor, args=(convert_to_dict(wr, "wirelessRelay"),)
+        )
         alarm_threads.append(relay_thread)
 
     # Check if there are threads waiting to be ran.
@@ -491,27 +495,25 @@ def delete_sensors(x_verkada_token, x_verkada_auth, usr, alarm_session,
         for thread in alarm_threads:
             thread.join()
 
-        log.info("%sAlarm sensors deleted.%s",
-                 Fore.GREEN,
-                 Style.RESET_ALL
-                 )
+        log.info("%sAlarm sensors deleted.%s", Fore.GREEN, Style.RESET_ALL)
 
     else:
         log.warning(
             "%sNo alarm sensors were received.%s",
             Fore.MAGENTA,
-            Style.RESET_ALL
+            Style.RESET_ALL,
         )
 
 
-def delete_panels(x_verkada_token, x_verkada_auth, usr, ac_session,
-                  org_id=ORG_ID):
+def delete_panels(
+    x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID
+):
     """
-    Deletes all acces control panels from a Verkada organization.
+    Deletes all access control panels from a Verkada organization.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     """
@@ -520,48 +522,46 @@ def delete_panels(x_verkada_token, x_verkada_auth, usr, ac_session,
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting Access control panels.")
-        panels = gather_devices.list_ac(x_verkada_token, x_verkada_auth,
-                                       usr, ac_session, org_id)
-        if panels:
+        if panels := gather_devices.list_ac(
+            x_verkada_token, x_verkada_auth, usr, ac_session, org_id
+        ):
             for panel in panels:
                 if panel not in exempt:
                     log.debug("Running for access control panel: %s", panel)
 
-                    data = {
-                        "deviceId": panel
-                    }
+                    data = {"deviceId": panel}
 
                     response = ac_session.post(
-                        ACCESS_DECOM, headers=headers, json=data)
+                        ACCESS_DECOM, headers=headers, json=data
+                    )
                     response.raise_for_status()  # Raise an exception for HTTP errors
 
             log.info(
                 "%sAccess control panels deleted.%s",
                 Fore.GREEN,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
         else:
             log.warning(
                 "%sNo Access control panels were received.%s",
                 Fore.MAGENTA,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
-    # Handle exceptions
     except requests.exceptions.HTTPError:
         if response.status_code == 400:
             log.debug(
                 "%sTrying %s as intercom.%s",
                 Fore.MAGENTA,
                 panel,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
             delete_intercom(x_verkada_token, usr, panel, ac_session)
         else:
@@ -569,29 +569,30 @@ def delete_panels(x_verkada_token, x_verkada_auth, usr, ac_session,
                 "%sAccess control panel returned with a non-200 code: %s%s",
                 Fore.RED,
                 response.status_code,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
     except requests.exceptions.RequestException as e:
         ptype = "Access control panel"
-        raise custom_exceptions.APIExceptionHandler(e, response, ptype)
+        raise custom_exceptions.APIExceptionHandler(e, response, ptype) from e
 
 
-def delete_intercom(x_verkada_token, usr, device_id, icom_session,
-                    org_id=ORG_ID):
+def delete_intercom(
+    x_verkada_token, usr, device_id, icom_session, org_id=ORG_ID
+):
     """
     Deletes all Intercoms from a Verkada organization.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     """
     headers = {
         "x-verkada-organization-id": org_id,
         "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
+        "x-verkada-user-id": usr,
     }
 
     try:
@@ -599,10 +600,7 @@ def delete_intercom(x_verkada_token, usr, device_id, icom_session,
 
         log.debug("Running for intercom: %s", device_id)
 
-        response = icom_session.delete(
-            url,
-            headers=headers
-        )
+        response = icom_session.delete(url, headers=headers)
         response.raise_for_status()  # Raise for HTTP errors
 
         log.info("%sIntercom deleted.%s", Fore.GREEN, Style.RESET_ALL)
@@ -610,40 +608,37 @@ def delete_intercom(x_verkada_token, usr, device_id, icom_session,
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         ptype = "Intercom"
-        raise custom_exceptions.APIExceptionHandler(e, response, ptype)
+        raise custom_exceptions.APIExceptionHandler(e, response, ptype) from e
 
 
-def delete_environmental(x_verkada_token, x_verkada_auth, usr, sv_session,
-                         org_id=ORG_ID):
+def delete_environmental(
+    x_verkada_token, x_verkada_auth, usr, sv_session, org_id=ORG_ID
+):
     """
     Deletes all environmental sensors from a Verkada organization.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     """
-    params = {
-        "organizationId": org_id
-    }
+    params = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting environmental sensors.")
-        sv_ids = gather_devices.list_sensors(x_verkada_token, x_verkada_auth,
-                                            usr, sv_session, org_id)
-        if sv_ids:
+        if sv_ids := gather_devices.list_sensors(
+            x_verkada_token, x_verkada_auth, usr, sv_session, org_id
+        ):
             for sensor in sv_ids:
-                data = {
-                    "deviceId": sensor
-                }
+                data = {"deviceId": sensor}
 
                 log.info("Running for environmental sensor %s", sensor)
 
@@ -651,60 +646,60 @@ def delete_environmental(x_verkada_token, x_verkada_auth, usr, sv_session,
                     ENVIRONMENTAL_DECOM,
                     json=data,
                     headers=headers,
-                    params=params
+                    params=params,
                 )
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
             log.info(
                 "%sEnvironmental sensors deleted.%s",
                 Fore.GREEN,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
         else:
             log.warning(
                 "%sNo environmental sensors were received.%s",
                 Fore.MAGENTA,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
-    # Handle exceptions
     except requests.exceptions.RequestException as e:
         ptype = "Environmental sensor"
-        raise custom_exceptions.APIExceptionHandler(e, response, ptype)
+        raise custom_exceptions.APIExceptionHandler(e, response, ptype) from e
 
 
-def delete_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
-                 org_id=ORG_ID):
+def delete_guest(
+    x_verkada_token, x_verkada_auth, usr, guest_session, org_id=ORG_ID
+):
     """
     Deletes all Guest devices from a Verkada organization.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     """
-    params = {
-        "organizationId": org_id
-    }
+    params = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
         # Request the JSON library for Sites
         log.debug("Initiating site request.")
         sites = gather_devices.get_sites(
-            x_verkada_token, x_verkada_auth, usr, guest_session, org_id)
+            x_verkada_token, x_verkada_auth, usr, guest_session, org_id
+        )
 
         # Request the JSON library for Guest
         log.debug("Initiating Guest requests.")
         ipad_ids, printer_ids = gather_devices.list_guest(
-            x_verkada_token, x_verkada_auth, usr, guest_session, org_id, sites)
+            x_verkada_token, x_verkada_auth, usr, guest_session, org_id, sites
+        )
 
         for site in sites:
             ipad_present = True
@@ -717,9 +712,7 @@ def delete_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
                     log.debug("Running for iPad: %s", ipad)
 
                     response = guest_session.delete(
-                        url,
-                        headers=headers,
-                        params=params
+                        url, headers=headers, params=params
                     )
                     response.raise_for_status()  # Raise for HTTP errors
 
@@ -727,7 +720,7 @@ def delete_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
                     "%siPads deleted for site %s%s",
                     Fore.GREEN,
                     site,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
             else:
@@ -741,9 +734,7 @@ def delete_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
                     log.debug("Running for printer: %s", printer)
 
                     response = guest_session.delete(
-                        url,
-                        headers=headers,
-                        params=params
+                        url, headers=headers, params=params
                     )
                     response.raise_for_status()  # Raise for HTTP errors
 
@@ -751,7 +742,7 @@ def delete_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
                     "%sPrinters deleted for site %s%s",
                     Fore.GREEN,
                     site,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
             else:
@@ -763,13 +754,13 @@ def delete_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
                     "%sNo Guest devices were received for site %s%s.",
                     Fore.MAGENTA,
                     site,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         ptype = "Guest"
-        raise custom_exceptions.APIExceptionHandler(e, response, ptype)
+        raise custom_exceptions.APIExceptionHandler(e, response, ptype) from e
 
 
 def delete_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
@@ -778,10 +769,11 @@ def delete_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     """
+
     def find_schedule_by_id(schedule_id, schedules):
         for schedule in schedules:
             if schedule["scheduleId"] == schedule_id:
@@ -791,43 +783,39 @@ def delete_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
     headers = {
         "x-verkada-organization-id": org_id,
         "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
+        "x-verkada-user-id": usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Initiating request for access control levels.")
-        acls, acl_ids = gather_devices.list_acls(x_verkada_token, usr, acl_session,
-                                                org_id)
+        acls, acl_ids = gather_devices.list_acls(
+            x_verkada_token, usr, acl_session, org_id
+        )
 
         if acls and acl_ids:
             for acl in acl_ids:
                 schedule = find_schedule_by_id(acl, acls)
                 log.info("Running for access control level %s", acl)
-                schedule['deleted'] = True
-                data = {
-                    'sitesEnabled': True,
-                    'schedules': [schedule]
-                }
+                schedule["deleted"] = True
+                data = {"sitesEnabled": True, "schedules": [schedule]}
 
                 response = acl_session.put(
-                    ACCESS_LEVEL_DECOM,
-                    json=data,
-                    headers=headers
+                    ACCESS_LEVEL_DECOM, json=data, headers=headers
                 )
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
             log.info(
                 "%sAccess control levels deleted.%s",
                 Fore.GREEN,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
         else:
             log.warning(
                 "%sNo access control levels were received.%s",
                 Fore.MAGENTA,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
     # Handle exceptions
@@ -842,23 +830,22 @@ def delete_desk_station(x_verkada_token, usr, ds_session, org_id=ORG_ID):
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada 
+    :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
     """
     headers = {
         "x-verkada-organization-id": org_id,
         "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
+        "x-verkada-user-id": usr,
     }
 
     try:
         # Request the JSON library for Desk Station
         log.debug("Initiating Desk Station requests.")
-        ds_ids = gather_devices.list_desk_stations(
-            x_verkada_token, usr, ds_session, org_id)
-
-        if ds_ids:
+        if ds_ids := gather_devices.list_desk_stations(
+            x_verkada_token, usr, ds_session, org_id
+        ):
             for desk_station in ds_ids:
                 url = DESK_DECOM + desk_station + SHARD
 
@@ -866,33 +853,27 @@ def delete_desk_station(x_verkada_token, usr, ds_session, org_id=ORG_ID):
                     "%sRunning for Desk Station: %s%s",
                     Fore.GREEN,
                     desk_station,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
-                response = ds_session.delete(
-                    url,
-                    headers=headers
-                )
+                response = ds_session.delete(url, headers=headers)
                 response.raise_for_status()  # Raise for HTTP errors
 
                 log.info(
-                    "%sDesk Stations deleted.%s",
-                    Fore.GREEN,
-                    Style.RESET_ALL
+                    "%sDesk Stations deleted.%s", Fore.GREEN, Style.RESET_ALL
                 )
 
-    # Handle exceptions
     except requests.exceptions.RequestException as e:
         ptype = "Desk Station"
-        raise custom_exceptions.APIExceptionHandler(e, response, ptype)
+        raise custom_exceptions.APIExceptionHandler(e, response, ptype) from e
 
 
 ##############################################################################
-                                #   Main   #
+##################################  Main  ####################################
 ##############################################################################
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_run_time = time.time()  # Start timing the script
     with requests.Session() as session:
         try:
@@ -904,35 +885,82 @@ if __name__ == '__main__':
                 # Place each element in their own thread to speed up runtime
                 camera_thread = threading.Thread(
                     target=delete_cameras,
-                    args=(csrf_token, user_token, session,))
+                    args=(
+                        csrf_token,
+                        user_token,
+                        session,
+                    ),
+                )
 
                 alarm_thread = threading.Thread(
                     target=delete_sensors,
-                    args=(csrf_token, user_token, user_id, session,))
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                    ),
+                )
 
                 ac_thread = threading.Thread(
                     target=delete_panels,
-                    args=(csrf_token, user_token, user_id, session,))
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                    ),
+                )
 
                 sv_thread = threading.Thread(
                     target=delete_environmental,
-                    args=(csrf_token, user_token, user_id, session,))
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                    ),
+                )
 
                 guest_thread = threading.Thread(
                     target=delete_guest,
-                    args=(csrf_token, user_token, user_id, session,))
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                    ),
+                )
 
                 acl_thread = threading.Thread(
                     target=delete_acls,
-                    args=(csrf_token, user_id, session,))
+                    args=(
+                        csrf_token,
+                        user_id,
+                        session,
+                    ),
+                )
 
                 desk_thread = threading.Thread(
                     target=delete_desk_station,
-                    args=(csrf_token, user_token, user_id, session,))
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                    ),
+                )
 
                 # # List all the threads to be ran
-                threads = [camera_thread, alarm_thread, ac_thread, sv_thread,
-                           guest_thread, acl_thread, desk_thread]
+                threads = [
+                    camera_thread,
+                    alarm_thread,
+                    ac_thread,
+                    sv_thread,
+                    guest_thread,
+                    acl_thread,
+                    desk_thread,
+                ]
 
                 # Start the clocked threads
                 run_thread_with_rate_limit(threads)
@@ -944,7 +972,7 @@ if __name__ == '__main__':
                     "the authentication process or audit log "
                     "could not be retrieved.%s",
                     Fore.MAGENTA,
-                    Style.RESET_ALL
+                    Style.RESET_ALL,
                 )
 
             # Calculate the time take to run and post it to the log
@@ -954,7 +982,7 @@ if __name__ == '__main__':
                 "Total time to complete %s%.2fs%s",
                 Fore.CYAN,
                 elapsed_time,
-                Style.RESET_ALL
+                Style.RESET_ALL,
             )
 
         # Gracefully handle an interrupt

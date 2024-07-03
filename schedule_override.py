@@ -11,15 +11,13 @@ import requests
 from dotenv import load_dotenv
 
 import custom_exceptions
+from verkada_totp import generate_totp
 
 load_dotenv()
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -29,7 +27,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
-# User loging credentials
+# User logging credentials
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
@@ -57,6 +55,7 @@ def login_and_get_tokens(login_session, username, password, org_id):
     login_data = {
         "email": username,
         "password": password,
+        "otp": generate_totp(getenv("lab_totp")),
         "org_id": org_id,
     }
 
@@ -75,7 +74,9 @@ def login_and_get_tokens(login_session, username, password, org_id):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -93,12 +94,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-organization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -107,17 +106,20 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Logout"
+        ) from e
 
     finally:
         logout_session.close()
 
 
-def schedule_override(schedule_session, x_verkada_token, x_verkada_auth, usr,
-                      org_id, door, time):
+def schedule_override(
+    schedule_session, x_verkada_token, x_verkada_auth, usr, org_id, door, time
+):
     """
-    Sets a schedule override for the given door(s) inside of Verkada Command 
-    with a valid Command user session. The schedule overrride event will 
+    Sets a schedule override for the given door(s) inside of Verkada Command
+    with a valid Command user session. The schedule override event will
     appear in the audit logs.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
@@ -125,7 +127,7 @@ def schedule_override(schedule_session, x_verkada_token, x_verkada_auth, usr,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param org_id: The Verkada organization ID of the target org.
     :type org_id: str
@@ -138,12 +140,13 @@ def schedule_override(schedule_session, x_verkada_token, x_verkada_auth, usr,
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     current_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    end_time = (datetime.now() + timedelta(minutes=time)
-                ).strftime("%Y-%m-%dT%H:%M:%S")
+    end_time = (datetime.now() + timedelta(minutes=time)).strftime(
+        "%Y-%m-%dT%H:%M:%S"
+    )
     try:
         # Check to see if a list of doors was given
         log.debug("Checking if a list was provided.")
@@ -153,7 +156,8 @@ def schedule_override(schedule_session, x_verkada_token, x_verkada_auth, usr,
 
             if hasattr(door, "__iter__"):
                 log.debug(
-                    "List provided -> list is iterable -> attempting unlocks.")
+                    "List provided -> list is iterable -> attempting unlocks."
+                )
 
                 data = {
                     "sitesEnabled": True,
@@ -167,13 +171,15 @@ def schedule_override(schedule_session, x_verkada_token, x_verkada_auth, usr,
                             "type": "DOOR",
                             "doors": door,
                             "events": [],
-                            "defaultDoorLockState": "UNLOCKED"
+                            "defaultDoorLockState": "UNLOCKED",
                         }
-                    ]
+                    ],
                 }
 
-                log.debug("Unlocking virutal devices: %s.", door)
-                response = schedule_session.post(url, headers=headers, json=data)
+                log.debug("Unlocking virtual devices: %s.", door)
+                response = schedule_session.post(
+                    url, headers=headers, json=data
+                )
                 response.raise_for_status()
 
             else:
@@ -193,9 +199,9 @@ def schedule_override(schedule_session, x_verkada_token, x_verkada_auth, usr,
                         "type": "DOOR",
                         "doors": [str(door)],
                         "events": [],
-                        "defaultDoorLockState": "UNLOCKED"
+                        "defaultDoorLockState": "UNLOCKED",
                     }
-                ]
+                ],
             }
             log.debug("Unlocking %s.", door)
             response = schedule_session.post(url, headers=headers, json=data)
@@ -203,7 +209,9 @@ def schedule_override(schedule_session, x_verkada_token, x_verkada_auth, usr,
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "schedule override")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "schedule override"
+        ) from e
 
 
 if __name__ == "__main__":
@@ -211,12 +219,20 @@ if __name__ == "__main__":
         try:
             log.debug("Retrieving credentials.")
             csrf_token, user_token, user_id = login_and_get_tokens(
-                session, USERNAME, PASSWORD, ORG_ID)
+                session, USERNAME, PASSWORD, ORG_ID
+            )
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
-                schedule_override(session, csrf_token, user_token, user_id,
-                                  ORG_ID, VIRTUAL_DEVICE, UNLOCK_PERIOD)
+                schedule_override(
+                    session,
+                    csrf_token,
+                    user_token,
+                    user_id,
+                    ORG_ID,
+                    VIRTUAL_DEVICE,
+                    UNLOCK_PERIOD,
+                )
                 log.debug("All door(s) unlocked.")
 
                 logout(session, csrf_token, user_token)

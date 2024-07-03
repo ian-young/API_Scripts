@@ -5,6 +5,7 @@ them. This is ONLY to be used to keep a given org clean. Extreme caution is
 advised since the changes this script will make to the org cannot be undone
 once made.
 """
+
 # Import essential libraries
 import json
 import logging
@@ -17,10 +18,11 @@ from dotenv import load_dotenv
 from tinydb import TinyDB, Query
 
 import custom_exceptions
+from verkada_totp import generate_totp
 
 load_dotenv()  # Load credentials file
 
-DB_PATH = 'devices.json'
+DB_PATH = "devices.json"
 Device = Query()
 db = TinyDB(DB_PATH)
 
@@ -52,10 +54,7 @@ ACCESS_LEVELS = f"https://vcerberus.command.verkada.com/organizations/\
 # Set up the logger
 log = logging.getLogger()
 log.setLevel(logging.INFO)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -66,11 +65,13 @@ ARRAY_LOCK = threading.Lock()
 
 
 ##############################################################################
-                            #   Authentication   #
+###########################   Authentication   ###############################
 ##############################################################################
 
 
-def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID):
+def login_and_get_tokens(
+    login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
+):
     """
     Initiates a Command session with the given user credentials and Verkada
     organization ID.
@@ -91,6 +92,7 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
     login_data = {
         "email": username,
         "password": password,
+        "otp": generate_totp(getenv("lab_totp")),
         "org_id": org_id,
     }
 
@@ -114,10 +116,8 @@ def login_and_get_tokens(login_session, username=USERNAME, password=PASSWORD, or
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Login"
-        )
+            e, response, "Login"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -137,12 +137,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-organization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -152,10 +150,8 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Logout"
-        )
+            e, response, "Logout"
+        ) from e
 
     except KeyboardInterrupt:
         log.warning("Keyboard interrupt detected. Exiting...")
@@ -165,7 +161,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
 
 ##############################################################################
-                            #   Requests   #
+#################################   Requests   ###############################
 ##############################################################################
 
 
@@ -183,8 +179,8 @@ def get_audit_log(audit_session, audit_start, audit_end):
     :rtype: list
     """
     headers = {
-        'x-api-key': getenv("LAB_KEY"),
-        'Content-Type': 'application/json'
+        "x-api-key": getenv("LAB_KEY"),
+        "Content-Type": "application/json",
     }
     url = f"{AUDIT_URL}?start_time={audit_start}&end_time={audit_end}"
     log.debug("Requesting logs.")
@@ -194,15 +190,13 @@ def get_audit_log(audit_session, audit_start, audit_end):
         response.raise_for_status()
         log.debug("Logs retrieved.")
 
-        return response.json()['audit_logs']
+        return response.json()["audit_logs"]
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Audit Log"
-        )
+            e, response, "Audit Log"
+        ) from e
 
 
 def list_cameras(api_key, camera_session):
@@ -217,10 +211,7 @@ def list_cameras(api_key, camera_session):
     organization.
     :rtype: list
     """
-    headers = {
-        'x-api-key': api_key,
-        'Content-Type': 'application/json'
-    }
+    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
     log.debug("Requesting camera data")
 
@@ -230,29 +221,28 @@ def list_cameras(api_key, camera_session):
         log.debug("-------")
         log.debug("Camera data retrieved.")
 
-        cameras = response.json()['cameras']
+        cameras = response.json()["cameras"]
 
         log.debug("-------")
         log.debug("Cameras:")
         for camera in cameras:
-            log.debug(camera['serial'])
+            log.debug(camera["serial"])
             with ARRAY_LOCK:
-                devices_serials.append(camera['serial'])
-                build_db(camera['serial'], 'camera')
+                devices_serials.append(camera["serial"])
+                build_db(camera["serial"], "camera")
 
         return cameras
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Cameras"
-        )
+            e, response, "Cameras"
+        ) from e
 
 
-def get_sites(x_verkada_token, x_verkada_auth, usr, site_session,
-              org_id=ORG_ID):
+def get_sites(
+    x_verkada_token, x_verkada_auth, usr, site_session, org_id=ORG_ID
+):
     """
     Lists all Verkada Guest sites.
 
@@ -261,7 +251,7 @@ def get_sites(x_verkada_token, x_verkada_auth, usr, site_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param site_session: The user session to use when making API calls.
     :type site_session: requests.Session
@@ -273,7 +263,7 @@ def get_sites(x_verkada_token, x_verkada_auth, usr, site_session,
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     url = SITES + org_id
@@ -286,29 +276,26 @@ def get_sites(x_verkada_token, x_verkada_auth, usr, site_session,
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Sites JSON retrieved. Parsing and logging.")
 
-        sites = response.json()['sites']
+        sites = response.json()["sites"]
 
         log.debug("-------")
         log.debug("Sites:")
         for site in sites:
-            log.debug("Retrieved %s: %s", site['siteId'], site['siteName'])
+            log.debug("Retrieved %s: %s", site["siteId"], site["siteName"])
             with ARRAY_LOCK:
-                devices_serials.append(sites['siteId'])
-                build_db(sites['siteId'], 'site')
+                devices_serials.append(sites["siteId"])
+                build_db(sites["siteId"], "site")
 
         return sites
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Sites"
-        )
+            e, response, "Sites"
+        ) from e
 
 
-def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session,
-            org_id=ORG_ID):
+def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID):
     """
     Lists all access control devices.
 
@@ -317,7 +304,7 @@ def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param ac_session: The user session to use when making API calls.
     :type ac_session: requests.Session
@@ -326,14 +313,12 @@ def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session,
     :return: An array of door controller device IDs.
     :rtype: list
     """
-    body = {
-        "organizationId": org_id
-    }
+    body = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
@@ -343,33 +328,56 @@ def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session,
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Access control JSON retrieved. Parsing and logging.")
 
-        access_devices = response.json()['accessControllers']
+        access_devices = response.json()["accessControllers"]
 
         log.debug("-------")
         log.debug("Access Controllers:")
         for controller in access_devices:
             log.debug(
                 "Retrieved controller %s: %s",
-                controller['name'],
-                controller['deviceId']
+                controller["name"],
+                controller["deviceId"],
             )
             with ARRAY_LOCK:
-                devices_serials.append(controller['serialNumber'])
-                build_db(controller['serialNumber'], 'controllers')
+                devices_serials.append(controller["serialNumber"])
+                build_db(controller["serialNumber"], "controllers")
 
         return access_devices
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Access Control"
-        )
+            e, response, "Access Control"
+        ) from e
 
 
-def list_alarms(x_verkada_token, x_verkada_auth, usr, alarms_session,
-                org_id=ORG_ID):
+def build_device(device_name, device_type, serial, key, devices):
+    """
+    Build a device in the system.
+
+    Args:
+        device_name (str): The name of the device.
+        device_type (str): The type of the device.
+        serial (str): The serial number of the device.
+        key (str): The key of the device.
+        devices (dict): Dictionary of devices to search for the
+        device type.
+
+    Returns:
+        None
+    """
+    log.debug("-------")
+    log.debug("%s:", device_name)
+    for dev in devices[device_type]:
+        log.debug(dev[serial])
+        with ARRAY_LOCK:
+            devices_serials.append(dev[serial])
+            build_db(dev[serial], key)
+
+
+def list_alarms(
+    x_verkada_token, x_verkada_auth, usr, alarms_session, org_id=ORG_ID
+):
     """
     Lists all alarm devices.
 
@@ -378,7 +386,7 @@ def list_alarms(x_verkada_token, x_verkada_auth, usr, alarms_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param alarms_session: The user session to use when making API calls.
     :type alarms_session: requests.Session
@@ -387,14 +395,12 @@ def list_alarms(x_verkada_token, x_verkada_auth, usr, alarms_session,
     :return: Arrays of each wireless alarm sensor type device IDs.
     :rtype: lists
     """
-    body = {
-        "organizationId": org_id
-    }
+    body = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
@@ -405,77 +411,75 @@ def list_alarms(x_verkada_token, x_verkada_auth, usr, alarms_session,
         log.debug("Alarm JSON retrieved. Parsing and logging.")
 
         alarm_devices = response.json()
-
-        log.debug("-------")
-        log.debug("Door contacts:")
-        for dcs in alarm_devices['doorContactSensor']:
-            log.debug(dcs['serialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(dcs['serialNumber'])
-                build_db(dcs['serialNumber'], 'door_contact')
-        log.debug("-------")
-        log.debug("Glass break:")
-        for gbs in alarm_devices['glassBreakSensor']:
-            log.debug(gbs['serialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(gbs['serialNumber'])
-                build_db(gbs['serialNumber'], 'glass_break')
-        log.debug("-------")
-        log.debug("Hub devices:")
-        for hub in alarm_devices['hubDevice']:
-            log.debug(hub['claimedSerialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(hub['claimedSerialNumber'])
-                build_db(hub['claimedSerialNumber'], 'hub_device')
-        log.debug("-------")
-        log.debug("Keypads:")
-        for keypad in alarm_devices['keypadHub']:
-            log.debug(keypad['claimedSerialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(keypad['claimedSerialNumber'])
-                build_db(keypad['claimedSerialNumber'], 'keypad')
-        log.debug("-------")
-        log.debug("Motion sensors:")
-        for ms in alarm_devices['motionSensor']:
-            log.debug(ms['serialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(ms['serialNumber'])
-                build_db(ms['serialNumber'], 'motion_sensor')
-        log.debug("-------")
-        log.debug("Panic buttons:")
-        for pb in alarm_devices['panicButton']:
-            log.debug(pb['serialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(pb['serialNumber'])
-                build_db(pb['serialNumber'], 'panic_button')
-        log.debug("-------")
-        log.debug("Water sensors:")
-        for ws in alarm_devices['waterSensor']:
-            log.debug(ws['serialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(ws['serialNumber'])
-                build_db(ws['serialNumber'], 'water_Sensor')
-        log.debug("-------")
-        log.debug("Wireless Relays:")
-        for wr in alarm_devices['wirelessRelay']:
-            log.debug(wr['serialNumber'])
-            with ARRAY_LOCK:
-                devices_serials.append(wr['serialNumber'])
-                build_db(wr['serialNumber'], 'wireless_relay')
+        build_device(
+            "Door Contacts",
+            "doorContactSensor",
+            "serialNumber",
+            "door_contact",
+            alarm_devices,
+        )
+        build_device(
+            "Glass Break",
+            "glassBreakSensor",
+            "serialNumber",
+            "glass_break",
+            alarm_devices,
+        )
+        build_device(
+            "Hub devices",
+            "hubDevice",
+            "claimedSerialNumber",
+            "hub_device",
+            alarm_devices,
+        )
+        build_device(
+            "Keypads",
+            "keypadHub",
+            "claimedSerialNumber",
+            "keypad",
+            alarm_devices,
+        )
+        build_device(
+            "Motion Sensors",
+            "motionSensor",
+            "serialNumber",
+            "motion_sensor",
+            alarm_devices,
+        )
+        build_device(
+            "Panic Buttons",
+            "panicButton",
+            "serialNumber",
+            "panic_button",
+            alarm_devices,
+        )
+        build_device(
+            "Water Sensors",
+            "waterSensor",
+            "serialNumber",
+            "water_sensor",
+            alarm_devices,
+        )
+        build_device(
+            "Wireless Relays",
+            "wirelessRelay",
+            "serialNumber",
+            "wireless_relay",
+            alarm_devices,
+        )
 
         return alarm_devices
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Alarms"
-        )
+            e, response, "Alarms"
+        ) from e
 
 
-def list_viewing_stations(x_verkada_token, x_verkada_auth, usr, vx_session,
-                          org_id=ORG_ID):
+def list_viewing_stations(
+    x_verkada_token, x_verkada_auth, usr, vx_session, org_id=ORG_ID
+):
     """
     Lists all viewing stations.
 
@@ -484,7 +488,7 @@ def list_viewing_stations(x_verkada_token, x_verkada_auth, usr, vx_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param vx_session: The user session to use when making API calls.
     :type vx_session: requests.Session
@@ -493,14 +497,12 @@ def list_viewing_stations(x_verkada_token, x_verkada_auth, usr, vx_session,
     :return: An array of archived viewing station device IDs.
     :rtype: list
     """
-    body = {
-        "organizationId": org_id
-    }
+    body = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
@@ -510,29 +512,28 @@ def list_viewing_stations(x_verkada_token, x_verkada_auth, usr, vx_session,
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Viewing station JSON retrieved. Parsing and logging.")
 
-        vx_devices = response.json()['viewingStations']
+        vx_devices = response.json()["viewingStations"]
 
         log.debug("-------")
         log.debug("Viewing stations:")
         for vx in vx_devices:
-            log.debug(vx['claimedSerialNumber'])
+            log.debug(vx["claimedSerialNumber"])
             with ARRAY_LOCK:
-                devices_serials.append(vx['claimedSerialNumber'])
-                build_db(vx['claimedSerialNumber'], 'viewing_station')
+                devices_serials.append(vx["claimedSerialNumber"])
+                build_db(vx["claimedSerialNumber"], "viewing_station")
 
         return vx_devices
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Viewing Station"
-        )
+            e, response, "Viewing Station"
+        ) from e
 
 
-def list_gateways(x_verkada_token, x_verkada_auth, usr, gc_session,
-                  org_id=ORG_ID):
+def list_gateways(
+    x_verkada_token, x_verkada_auth, usr, gc_session, org_id=ORG_ID
+):
     """
     Lists all cellular gateways.
 
@@ -541,7 +542,7 @@ def list_gateways(x_verkada_token, x_verkada_auth, usr, gc_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param gc_session: The user session to use when making API calls.
     :type gc_session: requests.Session
@@ -550,14 +551,12 @@ def list_gateways(x_verkada_token, x_verkada_auth, usr, gc_session,
     :return: An array of gateway device IDs.
     :rtype: list
     """
-    body = {
-        "organizationId": org_id
-    }
+    body = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
@@ -572,23 +571,23 @@ def list_gateways(x_verkada_token, x_verkada_auth, usr, gc_session,
         log.debug("-------")
         log.debug("Gateways:")
         for gc in gc_devices:
-            log.debug(gc['claimed_serial_number'])
+            log.debug(gc["claimed_serial_number"])
             with ARRAY_LOCK:
-                devices_serials.append(gc['claimed_serial_number'])
-                build_db(gc['claimed_serial_number'], 'gateway')
+                devices_serials.append(gc["claimed_serial_number"])
+                build_db(gc["claimed_serial_number"], "gateway")
 
         return gc_devices
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Cellular Gateways")
+            e, response, "Cellular Gateways"
+        ) from e
 
 
-def list_sensors(x_verkada_token, x_verkada_auth, usr, sv_session,
-                 org_id=ORG_ID):
+def list_sensors(
+    x_verkada_token, x_verkada_auth, usr, sv_session, org_id=ORG_ID
+):
     """
     Lists all environmental sensors.
 
@@ -597,7 +596,7 @@ def list_sensors(x_verkada_token, x_verkada_auth, usr, sv_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param sv_session: The user session to use when making API calls.
     :type sv_session: requests.Session
@@ -606,14 +605,12 @@ def list_sensors(x_verkada_token, x_verkada_auth, usr, sv_session,
     :return: An array of environmental sensor device IDs.
     :rtype: list
     """
-    body = {
-        "organizationId": org_id
-    }
+    body = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
@@ -623,29 +620,28 @@ def list_sensors(x_verkada_token, x_verkada_auth, usr, sv_session,
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Environmental Sensor JSON retrieved. Parsing and logging.")
 
-        sv_devices = response.json()['sensorDevice']
+        sv_devices = response.json()["sensorDevice"]
 
         log.debug("-------")
         log.debug("Environmental sensors:")
         for sv in sv_devices:
-            log.debug(sv['claimedSerialNumber'])
+            log.debug(sv["claimedSerialNumber"])
             with ARRAY_LOCK:
-                devices_serials.append(sv['claimedSerialNumber'])
-                build_db(sv['claimedSerialNumber'],
-                         'environmental_sensor')
+                devices_serials.append(sv["claimedSerialNumber"])
+                build_db(sv["claimedSerialNumber"], "environmental_sensor")
 
         return sv_devices
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Environmental Sesnors ")
+            e, response, "Environmental Sensors "
+        ) from e
 
 
-def list_horns(x_verkada_token, x_verkada_auth, usr, bz_session,
-               org_id=ORG_ID):
+def list_horns(
+    x_verkada_token, x_verkada_auth, usr, bz_session, org_id=ORG_ID
+):
     """
     Lists all BZ horn speakers.
 
@@ -654,7 +650,7 @@ def list_horns(x_verkada_token, x_verkada_auth, usr, bz_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param bz_session: The user session to use when making API calls.
     :type bz_session: requests.Session
@@ -663,14 +659,12 @@ def list_horns(x_verkada_token, x_verkada_auth, usr, bz_session,
     :return: An array of BZ11 device IDs.
     :rtype: list
     """
-    body = {
-        "organizationId": org_id
-    }
+    body = {"organizationId": org_id}
 
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     try:
@@ -680,35 +674,32 @@ def list_horns(x_verkada_token, x_verkada_auth, usr, bz_session,
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Horn speakers JSON retrieved. Parsing and logging.")
 
-        bz_devices = response.json()['garfunkel']
+        bz_devices = response.json()["garfunkel"]
 
         log.debug("-------")
         log.debug("Horn speakers (BZ11):")
         for bz in bz_devices:
-            log.debug(bz['serialNumber'])
+            log.debug(bz["serialNumber"])
             with ARRAY_LOCK:
-                devices_serials.append(bz['serialNumber'])
-                build_db(bz['serialNumber'], 'horn_speaker')
+                devices_serials.append(bz["serialNumber"])
+                build_db(bz["serialNumber"], "horn_speaker")
 
         return bz_devices
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "BZ11 Horn Speakers"
-        )
+            e, response, "BZ11 Horn Speakers"
+        ) from e
 
 
-def list_desk_stations(x_verkada_token, usr, ds_session,
-                       org_id=ORG_ID):
+def list_desk_stations(x_verkada_token, usr, ds_session, org_id=ORG_ID):
     """
     Lists all desk stations.
 
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param ds_session: The user session to use when making API calls.
     :type ads_session: requests.Session
@@ -720,7 +711,7 @@ def list_desk_stations(x_verkada_token, usr, ds_session,
     headers = {
         "x-verkada-organization-id": org_id,
         "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
+        "x-verkada-user-id": usr,
     }
 
     desk_ids = []
@@ -737,27 +728,29 @@ def list_desk_stations(x_verkada_token, usr, ds_session,
         log.debug("-------")
         for ds in desk_stations:
             log.debug(
-                "Retrieved Desk Station %s: %s",
-                ds['name'],
-                ds['deviceId']
+                "Retrieved Desk Station %s: %s", ds["name"], ds["deviceId"]
             )
             with ARRAY_LOCK:
-                devices_serials.append(ds['serialNumber'])
-                build_db(ds['serialNumber'], 'desk_station')
+                devices_serials.append(ds["serialNumber"])
+                build_db(ds["serialNumber"], "desk_station")
 
         return desk_ids
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Desk Stations"
-        )
+            e, response, "Desk Stations"
+        ) from e
 
 
-def list_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
-               org_id=ORG_ID, sites=None):
+def list_guest(
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    guest_session,
+    org_id=ORG_ID,
+    sites=None,
+):
     """
     Lists all guest printers and iPads.
 
@@ -766,7 +759,7 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param guest_session: The user session to use when making API calls.
     :type guest_session: requests.Session
@@ -782,14 +775,15 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
     headers = {
         "x-verkada-organization-id": org_id,
         "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr
+        "x-verkada-user-id": usr,
     }
 
     ipad_ids, printer_ids = [], []
 
     if not sites:
-        sites = get_sites(x_verkada_token, x_verkada_auth,
-                          usr, guest_session, org_id)
+        sites = get_sites(
+            x_verkada_token, x_verkada_auth, usr, guest_session, org_id
+        )
 
     try:
         # Request the JSON archive library
@@ -804,43 +798,41 @@ def list_guest(x_verkada_token, x_verkada_auth, usr, guest_session,
 
             log.debug("-------")
             log.debug("Retrieving iPads for site %s.", site)
-            for ipad in guest_devices['devices']:
+            for ipad in guest_devices["devices"]:
                 log.debug(
                     "Retrieved Guest iPad %s: %s",
-                    ipad['name'],
-                    ipad['deviceId']
+                    ipad["name"],
+                    ipad["deviceId"],
                 )
                 with ARRAY_LOCK:
-                    devices_serials.append(ipad['serialNumber'])
-                    build_db(ipad['serialNumber'], 'guest_ipad')
+                    devices_serials.append(ipad["serialNumber"])
+                    build_db(ipad["serialNumber"], "guest_ipad")
             log.debug("IPads retrieved.")
 
             log.debug("-------")
             log.debug("Retrieving printers for site %s.", site)
-            for printer in guest_devices['printers']:
+            for printer in guest_devices["printers"]:
                 log.debug(
                     "Retrieved guest printer %s: %s",
-                    printer['name'],
-                    printer['printerId']
+                    printer["name"],
+                    printer["printerId"],
                 )
                 with ARRAY_LOCK:
-                    devices_serials.append(printer['serialNumber'])
-                    build_db(printer['serialNumber'], 'guest_printer')
-            log.debug("Pritners retrieved.")
+                    devices_serials.append(printer["serialNumber"])
+                    build_db(printer["serialNumber"], "guest_printer")
+            log.debug("Printers retrieved.")
 
         return ipad_ids, printer_ids
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise custom_exceptions.APIExceptionHandler(
-            e,
-            response,
-            "Sites"
-        )
+            e, response, "Sites"
+        ) from e
 
 
 ##############################################################################
-                            #   Database   #
+###############################   Database   #################################
 ##############################################################################
 
 
@@ -854,11 +846,13 @@ def build_db(serial, device_type):
     :type device_type: str
     """
     log.debug("Adding table")
-    device_info = {'serial': serial, 'product_line': device_type,
-              'time_removed': '', 'who_removed': ''}
-    existing_deivce = db.get(Device.serial == str(serial))
-
-    if existing_deivce:
+    device_info = {
+        "serial": serial,
+        "product_line": device_type,
+        "time_removed": "",
+        "who_removed": "",
+    }
+    if db.get(Device.serial == str(serial)):
         log.debug("Found existing device.")
         db.update(device_info, Device.serial == str(serial))
     else:
@@ -868,45 +862,48 @@ def build_db(serial, device_type):
 
 def get_devices_removed_from_org(serials):
     """
-    Checks against the table created by TinyDB to see which cameras have been 
+    Checks against the table created by TinyDB to see which cameras have been
     removed since the last time the script was ran.
 
     :param serial: The serial number of a particular device in a Command org.
     :type serial: str
     """
 
-    log.info("--------------------")  # Aesthetic dividing line
-    log.info("Serials Currently in Org")
-    log.info(serials)
-
+    make_verbose("Serials Currently in Org", serials)
     stored_devices = db.search(Device.serial.exists())
-    stored_serials = [device['serial'] for device in stored_devices]
+    stored_serials = [device["serial"] for device in stored_devices]
 
-    log.info("--------------------")  # Aesthetic dividing line
-    log.info("Stored Serials")
-    log.info(stored_serials)
-    devices_not_in_sweep = db.search(
-        ~Device.serial.one_of(serials))
+    make_verbose("Stored Serials", stored_serials)
+    devices_not_in_sweep = db.search(~Device.serial.one_of(serials))
 
-    log.info("--------------------")  # Aesthetic dividing line
-    log.info("Devices not in sweep")
-    log.info(devices_not_in_sweep)
-
+    make_verbose("Devices not in sweep", devices_not_in_sweep)
     for camera in devices_not_in_sweep:
-        if camera['time_removed'] == "":
-            camera['time_removed'] = int(time.time())
-            db.update(camera,
-                      Device.serial == str(camera['serial']))
+        if camera["time_removed"] == "":
+            camera["time_removed"] = int(time.time())
+            db.update(camera, Device.serial == str(camera["serial"]))
             log.debug("--------------------")  # Aesthetic dividing line
             log.debug(json.dumps(camera, indent=2))
 
     return devices_not_in_sweep
 
 
+def make_verbose(arg0, arg1):
+    """
+    Perform weather-related actions based on the snowfall data at a
+    specified latitude and longitude.
+
+    Returns:
+        None
+    """
+    log.info("--------------------")  # Aesthetic dividing line
+    log.info(arg0)
+    log.info(arg1)
+
+
 def get_device_removed_user(serial, audit_log_events):
     """
     Will retrieve the user who removed a device from a Verkada Command
-    orginazation.
+    organization.
 
     :param serial: The serial number of the Verkada device that was removed.
     :type serial: str
@@ -915,6 +912,7 @@ def get_device_removed_user(serial, audit_log_events):
     :return: Will return the user who removed a device from Verkada Command.
     :rtype: str
     """
+
     def is_correct_event(device_id):
         """
         Checks if the found event matches the device serial number in the
@@ -925,8 +923,7 @@ def get_device_removed_user(serial, audit_log_events):
         :return: The email of the user that removed the Verkada Camera.
         :rtype: str
         """
-        device_results = db.search(
-            Device.camera_id == device_id)
+        device_results = db.search(Device.camera_id == device_id)
 
         if len(device_results) > 0:
             device_details = device_results[0]
@@ -934,20 +931,24 @@ def get_device_removed_user(serial, audit_log_events):
             return None
 
         log.debug(device_details)
-        if device_details['serial'] == serial:
-            user_email = event['user_email']
+        if device_details["serial"] == serial:
+            user_email = event["user_email"]
             return user_email
         else:
             return None
+
     log.info("--------------------")  # Aesthetic dividing line
     log.info("Finding who removed %s.", {serial})
 
-    devices_uninstalled = list(filter(
-        lambda log: log['event_name'] == 'Devices Uninstalled',
-        audit_log_events))
+    devices_uninstalled = list(
+        filter(
+            lambda log: log["event_name"] == "Devices Uninstalled",
+            audit_log_events,
+        )
+    )
 
     for event in devices_uninstalled:
-        event_devices = event['devices']
+        event_devices = event["devices"]
         if len(event_devices) < 1:
             return None
         for dvc in event_devices:
@@ -960,7 +961,7 @@ def get_device_removed_user(serial, audit_log_events):
 
 
 ##############################################################################
-                                #   Main   #
+#################################   Main   ###################################
 ##############################################################################
 
 
@@ -978,8 +979,11 @@ if __name__ == "__main__":
             start_time = timestamp - TIME_FRAME
             # If the device was removed within the past hour, make sure the function
             # doesn't try to search for a log in the future.
-            end_time = timestamp + TIME_FRAME if timestamp + TIME_FRAME < \
-                int(time.time()) else int(time.time())
+            end_time = (
+                timestamp + TIME_FRAME
+                if timestamp + TIME_FRAME < int(time.time())
+                else int(time.time())
+            )
             audit_log = get_audit_log(session, start_time, end_time)
 
             # Continue if the required information has been received
@@ -992,47 +996,90 @@ if __name__ == "__main__":
                 log.debug("Retrieving Access controllers.")
                 ac_thread = threading.Thread(
                     target=list_ac,
-                    args=(csrf_token, user_token, user_id, session, ORG_ID,)
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                        ORG_ID,
+                    ),
                 )
                 log.debug("Controllers retrieved.")
 
                 log.debug("Retrieving Alarm devices.")
                 br_thread = threading.Thread(
                     target=list_alarms,
-                    args=(csrf_token, user_token, user_id, session, ORG_ID,)
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                        ORG_ID,
+                    ),
                 )
                 log.debug("Alarm devices retrieved.")
 
                 log.debug("Retrieving viewing stations.")
                 vx_thread = threading.Thread(
                     target=list_viewing_stations,
-                    args=(csrf_token, user_token, user_id, session, ORG_ID,)
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                        ORG_ID,
+                    ),
                 )
                 log.debug("Viewing stations retrieved.")
 
                 log.debug("Retrieving cellular gateways.")
                 gc_thread = threading.Thread(
                     target=list_gateways,
-                    args=(csrf_token, user_token, user_id, session, ORG_ID,)
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                        ORG_ID,
+                    ),
                 )
                 log.debug("Cellular gateways retrieved.")
 
                 log.debug("Retrieving environmental sensors.")
                 sv_thread = threading.Thread(
                     target=list_sensors,
-                    args=(csrf_token, user_token, user_id, session, ORG_ID,)
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                        ORG_ID,
+                    ),
                 )
                 log.debug("Environmental sensors retrieved.")
 
                 log.debug("Retrieving horn speakers.")
                 bz_thread = threading.Thread(
                     target=list_horns,
-                    args=(csrf_token, user_token, user_id, session, ORG_ID,)
+                    args=(
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        session,
+                        ORG_ID,
+                    ),
                 )
                 log.debug("Horn speakers retrieved.")
 
-                threads = [c_thread, ac_thread, br_thread, vx_thread,
-                           gc_thread, sv_thread, bz_thread]
+                threads = [
+                    c_thread,
+                    ac_thread,
+                    br_thread,
+                    vx_thread,
+                    gc_thread,
+                    sv_thread,
+                    bz_thread,
+                ]
 
                 for thread in threads:
                     thread.start()
@@ -1055,22 +1102,22 @@ if __name__ == "__main__":
                 log.info("Got Audit log")
                 removed_devices = get_devices_removed_from_org(devices_serials)
                 for device in removed_devices:
-                    user = get_device_removed_user(device['serial'],
-                                                   audit_log)
+                    user = get_device_removed_user(device["serial"], audit_log)
                     if user is not None:
                         # Aesthetic dividing line
                         log.info("--------------------")
-                        log.info("%s deleted %s", user, device['serial'])
-                        device['time_removed'] = int(time.time())
-                        device['who_removed'] = user
-                        db.update(device,
-                                  Device.serial == str(device['serial']))
+                        log.info("%s deleted %s", user, device["serial"])
+                        device["time_removed"] = int(time.time())
+                        device["who_removed"] = user
+                        db.update(
+                            device, Device.serial == str(device["serial"])
+                        )
                         log.debug("Reminder to add device.")
                     else:
                         # Aesthetic dividing line
                         log.info("--------------------")
                         log.info(
-                            "No user found for deleted %s." ,device['serial']
+                            "No user found for deleted %s.", device["serial"]
                         )
                         log.debug("Error email sent.")
 
@@ -1080,7 +1127,9 @@ if __name__ == "__main__":
 
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
-            log.debug("\nKeyboard interrupt detected. Logging out & aborting...")
+            log.debug(
+                "\nKeyboard interrupt detected. Logging out & aborting..."
+            )
 
         finally:
             if csrf_token and user_token:

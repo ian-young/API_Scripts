@@ -4,24 +4,29 @@ Purpose: Practice authenticating into Command using user credentials in place
 of an API key. The script can also be used to practice extracting useful data
 from the response.
 """
+
 # Import essential libraries
-from os import getenv
+from os import getenv, environ
 
 import requests
 from dotenv import load_dotenv
 
+from verkada_totp import generate_totp
+
+environ.clear()
 load_dotenv()  # Load credentials file
 
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 DASHBOARD_URL = "https://command.verkada.com/dashboard"
-username = getenv("")
-password = getenv("")
-org_id = getenv("")
+username = getenv("lab_username")
+password = getenv("lab_password")
+org_id = getenv("lab_id")
 
 # Step 1: Send a POST request with login data
 login_data = {
     "email": username,
     "password": password,
+    "otp": generate_totp(getenv("")),
     "org_id": org_id,
 }
 

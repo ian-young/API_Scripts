@@ -2,6 +2,7 @@
 Author: Ian Young
 Purpose: Opens doors both literally and figuratively.
 """
+
 # Import essential libraries
 import logging
 from os import getenv
@@ -10,15 +11,13 @@ import requests
 from dotenv import load_dotenv
 
 import custom_exceptions
+from verkada_totp import generate_totp
 
 load_dotenv()  # Load credentials file
 
 log = logging.getLogger()
 log.setLevel(logging.WARNING)
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -28,7 +27,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
 LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
-# User loging credentials
+# User logging credentials
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
@@ -57,6 +56,7 @@ def login_and_get_tokens(login_session, username, password, org_id):
     login_data = {
         "email": username,
         "password": password,
+        "otp": generate_totp(getenv("lab_totp")),
         "org_id": org_id,
     }
 
@@ -75,7 +75,9 @@ def login_and_get_tokens(login_session, username, password, org_id):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -95,12 +97,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-organization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -109,7 +109,9 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Logout"
+        ) from e
 
     finally:
         logout_session.close()
@@ -128,13 +130,13 @@ def unlock_door(unlock_session, x_verkada_token, x_verkada_auth, usr, door):
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     """
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
     try:
         # Check to see if a list of doors was given
@@ -145,13 +147,14 @@ def unlock_door(unlock_session, x_verkada_token, x_verkada_auth, usr, door):
 
             if hasattr(door, "__iter__"):
                 log.debug(
-                    "List provided -> list is iterable -> attempting unlocks.")
+                    "List provided -> list is iterable -> attempting unlocks."
+                )
 
                 for target in door:
                     url = f"https://vcerberus.command.verkada.com/access/v2/\
 user/virtual_device/{target}/unlock"
 
-                    log.debug("Unlocking virutal device: %s.", target)
+                    log.debug("Unlocking virtual device: %s.", target)
                     response = unlock_session.post(url, headers=headers)
                     response.raise_for_status()
 
@@ -168,7 +171,9 @@ virtual_device/{door}/unlock"
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Unlock Door")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Unlock Door"
+        ) from e
 
 
 if __name__ == "__main__":
@@ -176,12 +181,14 @@ if __name__ == "__main__":
         try:
             log.debug("Retrieving credentials.")
             csrf_token, user_token, user_id = login_and_get_tokens(
-                session, USERNAME, PASSWORD, ORG_ID)
+                session, USERNAME, PASSWORD, ORG_ID
+            )
 
             if csrf_token and user_token and user_id:
                 log.debug("Credentials retrieved.")
-                unlock_door(session, csrf_token, user_token, user_id,
-                            VIRTUAL_DEVICE)
+                unlock_door(
+                    session, csrf_token, user_token, user_id, VIRTUAL_DEVICE
+                )
                 log.debug("All door(s) unlocked.")
 
             else:

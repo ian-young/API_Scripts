@@ -3,11 +3,14 @@ Author: Ian Young
 Purpose: Remove entries from a data file that are older than 24 hours. This
 will help keep data relevant.
 """
+
 # Import essential libraries
 import re
 from datetime import datetime, timedelta
 
-LOG_FILE_PATH = "/Users/ian.young/Documents/.scripts/Python/API_Scripts/endpoint_data.log"
+LOG_FILE_PATH = (
+    "/Users/ian.young/Documents/.scripts/Python/API_Scripts/endpoint_data.log"
+)
 
 
 def parse_entry(entry):
@@ -19,13 +22,13 @@ def parse_entry(entry):
     :return: The formatted time for the entry file.
     :rtype: datetime
     """
-    # Use regular expression to extract the time string in the entry
-    time_match = re.search(r"(\d{2}/\d{2} \d{2}:\d{2}:\d{2})", entry)
-    if time_match:
-        time_str = time_match.group(1)
+    if time_match := re.search(r"(\d{2}/\d{2} \d{2}:\d{2}:\d{2})", entry):
+        time_str = time_match[1]
         # Set the year to the current year
         current_year = datetime.now().year
-        return datetime.strptime(f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S")
+        return datetime.strptime(
+            f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S"
+        )
 
 
 def filter_entries(old_entries):
@@ -43,8 +46,7 @@ def filter_entries(old_entries):
     include_entry = False
 
     for entry in old_entries:
-        execution_time = parse_entry(entry)
-        if execution_time:
+        if execution_time := parse_entry(entry):
             time_difference = current_time - execution_time
 
             # Check if the entry is within the last 24 hours
