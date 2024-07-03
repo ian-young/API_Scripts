@@ -658,9 +658,7 @@ def create_plate():
         if response.status_code != 429:
             break
 
-        log.info(
-            "create_plate retrying in %ds. Response: 429", RETRY_DELAY
-        )
+        log.info("create_plate retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
             RETRY_COUNT += 1
@@ -742,9 +740,7 @@ def update_plate():
         if response.status_code != 429:
             break
 
-        log.info(
-            "update_plate retrying in %ds. Response: 429", RETRY_DELAY
-        )
+        log.info("update_plate retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
             RETRY_COUNT += 1
@@ -780,9 +776,7 @@ def delete_plate():
         if response.status_code != 429:
             break
 
-        log.info(
-            "delete_plate retrying in %ds. Response: 429", RETRY_DELAY
-        )
+        log.info("delete_plate retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
             RETRY_COUNT += 1
@@ -1442,6 +1436,7 @@ Response: 429",
                 f"deactivatePlate: \
 {deactive_response.status_code}"
             )
+
 
 ##############################################################################
 ##################################  Main  ####################################
