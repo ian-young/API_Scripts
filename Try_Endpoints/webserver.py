@@ -9,11 +9,11 @@ from update_graph import image_path as image
 app = Flask(__name__)
 
 
-@app.route('/')
+@app.route("/")
 def index():
     """Sends the file to the webserver to create the webpage."""
-    return send_file(image, mimetype='image/png')
+    return send_file(image, mimetype="image/png")
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)  # Run on local host
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)  # Run on local host

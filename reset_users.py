@@ -20,20 +20,23 @@ API_KEY = os.getenv("")
 
 # Set logger
 log = logging.getLogger()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Set the full name for which users are to be persistent
-PERSISTENT_USERS = sorted(["Ian Young", "Bruce Banner",
-                           "Jane Doe", "Tony Stark", "Ray Raymond",
-                           "John Doe"]
-                          )
+PERSISTENT_USERS = sorted(
+    [
+        "Ian Young",
+        "Bruce Banner",
+        "Jane Doe",
+        "Tony Stark",
+        "Ray Raymond",
+        "John Doe",
+    ]
+)
 
 # Set URLS
 USER_INFO_URL = "https://api.verkada.com/access/v1/access_users"
@@ -41,7 +44,7 @@ USER_CONTROL_URL = "https://api.verkada.com/core/v1/user"
 
 
 ##############################################################################
-                                #  Misc  #
+##################################  Misc  ####################################
 ##############################################################################
 
 
@@ -63,15 +66,17 @@ def check(safe, to_delete, users, manager):
     trust_level = None  # Pre-define
     ok = None  # Pre-define
 
-    while trust_level not in ['1', '2', '3']:
-        print("1. Check marked persistent users against what the \
-application found.")
+    while trust_level not in ["1", "2", "3"]:
+        print(
+            "1. Check marked persistent users against what the \
+application found."
+        )
         print("2. Check what is marked for deletion by the application.")
         print("3. Trust the process and blindly move forward.")
 
-        trust_level = str(input('- ')).strip()
+        trust_level = str(input("- ")).strip()
 
-        if trust_level == '1':
+        if trust_level == "1":
             print("-------------------------------")
             print("Please check that the two lists match: ")
 
@@ -82,43 +87,43 @@ application found.")
             print(", ".join(PERSISTENT_USERS))
             print("-------------------------------")
 
-            while ok not in ['y', 'n']:
+            while ok not in ["y", "n"]:
                 ok = str(input("Do they match?(y/n) ")).strip().lower()
 
-                if ok == 'y':
+                if ok == "y":
                     purge(to_delete, users, manager)
 
-                elif ok == 'n':
+                elif ok == "n":
                     print("Please check the input values")
                     print("Exiting...")
 
                 else:
                     print("Invalid input. Please enter 'y' or 'n'.")
 
-        elif trust_level == '2':
+        elif trust_level == "2":
             print("-------------------------------")
             print("Here are the users being purged: ")
 
-            delete_names = \
-                [print_name(user_id, users) for user_id in to_delete]
+            delete_names = [
+                print_name(user_id, users) for user_id in to_delete
+            ]
             print(", ".join(delete_names))
             print("-------------------------------")
 
-            while ok not in ['y', 'n']:
-                ok = \
-                    str(input("Is this list accurate?(y/n) ")).strip().lower()
+            while ok not in ["y", "n"]:
+                ok = str(input("Is this list accurate?(y/n) ")).strip().lower()
 
-                if ok == 'y':
+                if ok == "y":
                     purge(to_delete, users, manager)
 
-                elif ok == 'n':
+                elif ok == "n":
                     print("Please check the input values.")
                     print("Exiting...")
 
                 else:
-                    print("Invalud input. Please enter 'y' or 'n'.")
+                    print("Invalid input. Please enter 'y' or 'n'.")
 
-        elif trust_level == '3':
+        elif trust_level == "3":
             print("Good luck!")
             purge(to_delete, users, manager)
 
@@ -187,13 +192,11 @@ def clean_list(messy_list):
     :return: A new list with None values removed.
     :rtype: list
     """
-    cleaned_list = [value for value in messy_list if value is not None]
-
-    return cleaned_list
+    return [value for value in messy_list if value is not None]
 
 
 ##############################################################################
-                            #  All things Users  #
+############################  All things Users  #############################
 ##############################################################################
 
 
@@ -208,32 +211,23 @@ def get_users(org_id=ORG_ID, api_key=API_KEY):
     :return: A List of dictionaries of users in an organization.
     :rtype: list
     """
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    headers = {"accept": "application/json", "x-api-key": api_key}
 
     params = {
         "org_id": org_id,
     }
 
     response = requests.get(
-        USER_INFO_URL,
-        headers=headers,
-        params=params,
-        timeout=5
+        USER_INFO_URL, headers=headers, params=params, timeout=5
     )
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
 
-        # Extract as a list
-        users = data.get('access_members')
-        return users
+        return data.get("access_members")
     else:
         log.critical(
-            "Error with retrieving users. Status code %s",
-            response.status_code
+            "Error with retrieving users. Status code %s", response.status_code
         )
         return None
 
@@ -252,12 +246,11 @@ def get_ids(users=None):
     user_id = []
 
     for user in users:
-        if user.get('user_id'):
-            user_id.append(user.get('user_id'))
+        if user.get("user_id"):
+            user_id.append(user.get("user_id"))
         else:
             log.error(
-                "There has been an error with user %s.",
-                user.get('full_name')
+                "There has been an error with user %s.", user.get("full_name")
             )
 
     return user_id
@@ -267,7 +260,7 @@ def get_user_id(user=PERSISTENT_USERS, users=None):
     """
     Returns the Verkada user_id for a given user
 
-    :param user: The name of the userwhose ID is being searched for.
+    :param user: The name of the user whose ID is being searched for.
     :type user: str
     :param users: A list of PoI IDs found inside of an organization.
     Each dictionary should have the 'user_id' key. Defaults to None.
@@ -275,18 +268,12 @@ def get_user_id(user=PERSISTENT_USERS, users=None):
     :return: The user ID of the given user.
     :rtype: str
     """
-    user_id = None  # Pre-define
-
-    for name in users:
-        if name['full_name'] == user:
-            user_id = name['user_id']
-            break  # No need to continue running once found
-
-    if user_id:
+    if user_id := next(
+        (name["user_id"] for name in users if name["full_name"] == user), None
+    ):
         return user_id
-    else:
-        log.error("User %s was not found in the database...", user)
-        return None
+    log.error("User %s was not found in the database...", user)
+    return None
 
 
 def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
@@ -305,12 +292,9 @@ def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
     :rtype: None
     """
     # Format the URL
-    url = USER_CONTROL_URL + "?user_id=" + user + "&org_id=" + org_id
+    url = f"{USER_CONTROL_URL}?user_id={user}&org_id={org_id}"
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    headers = {"accept": "application/json", "x-api-key": api_key}
 
     log.info("Running for user: %s", print_name(user, users))
 
@@ -318,8 +302,9 @@ def delete_user(user, users, org_id=ORG_ID, api_key=API_KEY):
 
     if response.status_code != 200:
         log.error(
-            "An error has occured. Status code %s", response.status_code)
-        return 2  # Completed unsuccesfully
+            "An error has occurred. Status code %s", response.status_code
+        )
+        return 2  # Completed unsuccessfully
 
 
 def purge(delete, users, manager, org_id=ORG_ID, api_key=API_KEY):
@@ -356,7 +341,13 @@ def purge(delete, users, manager, org_id=ORG_ID, api_key=API_KEY):
             manager.reset_call_count()
 
         thread = threading.Thread(
-            target=delete_user, args=(user, users, org_id, api_key,)
+            target=delete_user,
+            args=(
+                user,
+                users,
+                org_id,
+                api_key,
+            ),
         )
         thread.start()
         threads.append(thread)
@@ -386,21 +377,17 @@ def print_name(to_delete, users):
     :return: The name of the user
     :rtype: str
     """
-    user_name = None  # Pre-define
-
-    for user in users:
-        if user.get('user_id') == to_delete:
-            user_name = user.get('full_name')
-            break  # No need to continue running once found
-
-    if user_name:
+    if user_name := next(
+        (
+            user.get("full_name")
+            for user in users
+            if user.get("user_id") == to_delete
+        ),
+        None,
+    ):
         return user_name
-    else:
-        log.warning(
-            "User %s was not found in the database...",
-            to_delete
-        )
-        return "Error finding name"
+    log.warning("User %s was not found in the database...", to_delete)
+    return "Error finding name"
 
 
 def run():
@@ -411,47 +398,52 @@ def run():
 
     # Run if users were found
     if users:
-        log.info("Gather IDs")
-        all_user_ids = get_ids(users)
-        all_user_ids = clean_list(all_user_ids)
-        log.info("IDs aquired.\n")
-
-        safe_user_ids = []
-
-        # Create the list of safe users
-        log.info("Searching for safe users.")
-        for user in PERSISTENT_USERS:
-            safe_user_ids.append(get_user_id(user, users))
-        safe_user_ids = clean_list(safe_user_ids)
-        log.info("Safe users found.\n")
-
-        # New list that filters users that are safe
-        users_to_delete = [
-            user for user in all_user_ids if user not in safe_user_ids]
-
-        if users_to_delete:
-            purge_manager = PurgeManager(call_count_limit=300)
-            check(safe_user_ids, users_to_delete, users, purge_manager)
-            return 1  # Completed
-
-        else:
-            print("-------------------------------")
-            print(
-                "The organization has already been purged.\
-                      There are no more users to delete.")
-            print("-------------------------------")
-
-            return 1  # Completed
+        handle_users(users)
     else:
         print("No users were found.")
 
-        return 1  # Copmleted
+    return 1  # Completed
+
+
+def handle_users(users):
+    """
+    Handle the processing of users by gathering IDs, searching for safe
+    users, and deleting users if needed.
+
+    Args:
+        users: The list of users to handle.
+
+    Returns:
+        None
+    """
+    log.info("Gather IDs")
+    all_user_ids = get_ids(users)
+    all_user_ids = clean_list(all_user_ids)
+    log.info("IDs acquired.\n")
+
+    # Create the list of safe users
+    log.info("Searching for safe users.")
+    safe_user_ids = [get_user_id(user, users) for user in PERSISTENT_USERS]
+    safe_user_ids = clean_list(safe_user_ids)
+    log.info("Safe users found.\n")
+
+    if users_to_delete := [
+        user for user in all_user_ids if user not in safe_user_ids
+    ]:
+        purge_manager = PurgeManager(call_count_limit=300)
+        check(safe_user_ids, users_to_delete, users, purge_manager)
+    else:
+        print("-------------------------------")
+        print(
+            "The organization has already been purged.\
+                    There are no more users to delete."
+        )
+        print("-------------------------------")
 
 
 ##############################################################################
-                                #  Main  #
+##################################  Main  ####################################
 ##############################################################################
-
 
 # If the code is being ran directly and not imported.
 if __name__ == "__main__":

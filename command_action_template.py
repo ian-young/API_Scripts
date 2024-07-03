@@ -28,10 +28,7 @@ ACTION_URL = ""  # Put the endpoint here
 # Set up the logger
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -39,7 +36,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 ##############################################################################
-                        #   Authentication   #
+#############################  Authentication  ###############################
 ##############################################################################
 
 
@@ -82,7 +79,9 @@ def login_and_get_tokens(login_session, username, password, org_id):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -102,12 +101,10 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id
+        "x-verkada-organization": org_id,
     }
 
-    body = {
-        "logoutCurrentEmailOnly": True
-    }
+    body = {"logoutCurrentEmailOnly": True}
     try:
         response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
         response.raise_for_status()
@@ -116,19 +113,22 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Logout"
+        ) from e
 
     finally:
         logout_session.close()
 
 
 ##############################################################################
-                            #   Requests   #
+################################  Requests  ##################################
 ##############################################################################
 
 
-def command_action(action_session, x_verkada_token, x_verkada_auth,
-                   usr, org_id=ORG_ID):
+def command_action(
+    action_session, x_verkada_token, x_verkada_auth, usr, org_id=ORG_ID
+):
     """
     Perform an action in Command.
 
@@ -137,7 +137,7 @@ def command_action(action_session, x_verkada_token, x_verkada_auth,
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
@@ -145,15 +145,13 @@ def command_action(action_session, x_verkada_token, x_verkada_auth,
     :rtype: list
     """
     # NOTE: Not all endpoints require a body.
-    body = {
-        "organizationId": org_id
-    }
+    body = {"organizationId": org_id}
 
     # IMPORTANT: All endpoints will need this if not using apidocs.verkada.com
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "User": usr
+        "User": usr,
     }
 
     log.debug("Requesting camera data")
@@ -168,11 +166,13 @@ def command_action(action_session, x_verkada_token, x_verkada_auth,
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 ##############################################################################
-                                #   Main   #
+##################################  Main  ####################################
 ##############################################################################
 
 
@@ -184,11 +184,8 @@ if __name__ == "__main__":
         try:
             # Initialize the user session.
             csrf_token, user_token, user_id = login_and_get_tokens(
-                session,
-                USERNAME,
-                PASSWORD,
-                ORG_ID
-                )
+                session, USERNAME, PASSWORD, ORG_ID
+            )
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
@@ -200,8 +197,7 @@ if __name__ == "__main__":
             # Handles when the required credentials were not received
             else:
                 log.critical(
-                    "No credentials or incorrect credentials "
-                    "were provided."
+                    "No credentials or incorrect credentials " "were provided."
                 )
 
             # Calculate the time take to run and post it to the log

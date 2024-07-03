@@ -23,27 +23,23 @@ BACKOFF = 0.25
 # Set logger
 log = logging.getLogger()
 log.setLevel(logging.INFO)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-ORG_ID = os.environ.get('ORG_ID')
-if ORG_ID:
+if ORG_ID := os.environ.get("ORG_ID"):
     log.debug("ID retrieved.")
 
-API_KEY = os.environ.get('API_KEY')
-if API_KEY:
+if API_KEY := os.environ.get("API_KEY"):
     log.debug("Key retrieved.")
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
 
     WORK_PIN = 7
+    LPOI_PIN = 13
     POI_PIN = 11
 
     try:
@@ -52,20 +48,25 @@ try:
         GPIO.setup(WORK_PIN, GPIO.OUT)
     except RuntimeError:
         GPIO = None
-        log.debug("Runtime error while initializing GPIO boad.")
+        log.debug("Runtime error while initializing GPIO board.")
 except ImportError:
     GPIO = None
-    log.debug("RPi.GPIO is not availbale. Running on a non-Pi platform")
+    log.debug("RPi.GPIO is not available. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PERSONS = sorted([])  # PoI Label
-PERSISTENT_PID = sorted([])  # PoI ID
+PERSISTENT_PLATES = sorted([])  # Label of plate #!Not plate number!#
+PERSISTENT_PERSONS = sorted(["Parkour"])  # PoI label
+PERSISTENT_PID = sorted(["751e9607-4617-43e1-9e8c-1bd439c116b6"])  # PoI ID
+PERSISTENT_LID = sorted([])  # LPoI ID
 
 # Set API endpoint URLs
+PLATE_URL = "https://api.verkada.com/cameras/v1/\
+analytics/lpr/license_plate_of_interest"
 PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
+
 ##############################################################################
-                                #  Misc  #
+##################################  Misc  ####################################
 ##############################################################################
 
 
@@ -75,9 +76,9 @@ class RateLimiter:
     created to prevent hitting the API limit.
     """
 
-    def __init__(self, rate_limit, max_events_per_sec=10, pacing=1):
+    def __init__(self, rate_limit, max_events_per_sec=5, pacing=1):
         """
-        Initilization of the rate limiter.
+        Initialization of the rate limiter.
 
         :param rate_limit: The value of how many threads may be made each sec.
         :type rate_limit: int
@@ -105,8 +106,8 @@ class RateLimiter:
         with self.lock:
             current_time = time.time()  # Define current time
 
-            if not hasattr(self, 'start_time'):
-                # Check if attribue 'start_time' exists, if not, make it.
+            if not hasattr(self, "start_time"):
+                # Check if attribute 'start_time' exists, if not, make it.
                 self.start_time = current_time
                 self.event_count = self.pacing
                 return True
@@ -116,26 +117,23 @@ class RateLimiter:
 
             # Check if it's been less than 1sec and less than 10 events have
             # been made.
-            if elapsed_since_start < self.pacing / self.rate_limit \
-                    and self.event_count < self.max_events_per_sec:
+            if (
+                elapsed_since_start < self.pacing / self.rate_limit
+                and self.event_count < self.max_events_per_sec
+            ):
                 self.event_count += 1
-                return True
-
-            # Check if it is the first wave of events
             elif elapsed_since_start >= self.pacing / self.rate_limit:
                 self.start_time = current_time
                 self.event_count = 2
-                return True
-
             else:
                 # Calculate the time left before next wave
-                remaining_time = self.pacing - \
-                    (current_time - self.start_time)
+                remaining_time = self.pacing - (current_time - self.start_time)
                 time.sleep(remaining_time)  # Wait before next wave
-                return True
+
+            return True
 
 
-def run_thread_with_rate_limit(threads, rate_limit=10):
+def run_thread_with_rate_limit(threads, rate_limit=5):
     """
     Run a thread with rate limiting.
 
@@ -151,7 +149,7 @@ def run_thread_with_rate_limit(threads, rate_limit=10):
         log.debug(
             "Starting thread %s at time %s",
             thread.name,
-            datetime.datetime.now().strftime('%H:%M:%S')
+            datetime.datetime.now().strftime("%H:%M:%S"),
         )
         thread.start()
 
@@ -171,8 +169,7 @@ def clean_list(messy_list):
     :return: A new list with None values removed.
     :rtype: list
     """
-    cleaned_list = [value for value in messy_list if value is not None]
-    return cleaned_list
+    return [value for value in messy_list if value is not None]
 
 
 def flash_led(pin, local_stop_event, speed):
@@ -184,7 +181,7 @@ def flash_led(pin, local_stop_event, speed):
     :type pin: int
     :param local_stop_event: Thread-local event to indicate when the program's
     work is done and the LED can stop flashing.
-    :type local_stop_event: Bool 
+    :type local_stop_event: Bool
     :param speed: How long each flash should last in seconds.
     :type failed: int
     :return: None
@@ -198,7 +195,7 @@ def flash_led(pin, local_stop_event, speed):
 
 
 ##############################################################################
-                            #  All things people  #
+############################  All things people  #############################
 ##############################################################################
 
 
@@ -213,27 +210,21 @@ def get_people(org_id=ORG_ID, api_key=API_KEY):
     :return: A List of dictionaries of people in an organization.
     :rtype: list
     """
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    headers = {"accept": "application/json", "x-api-key": api_key}
 
     params = {
         "org_id": org_id,
     }
 
     response = requests.get(
-        PERSON_URL,
-        headers=headers,
-        params=params,
-        timeout=5
+        PERSON_URL, headers=headers, params=params, timeout=5
     )
 
     if response.status_code == 200:
         data = response.json()  # Parse the response
 
         # Extract as a list
-        persons = data.get('persons_of_interest')
+        persons = data.get("persons_of_interest")
 
         try:
             iter(persons)
@@ -245,7 +236,7 @@ def get_people(org_id=ORG_ID, api_key=API_KEY):
     else:
         log.critical(
             "Person - Error with retrieving persons. Status code %s",
-            {response.status_code}
+            {response.status_code},
         )
         return None
 
@@ -264,40 +255,34 @@ def get_people_ids(persons=None):
     person_id = []
 
     for person in persons:
-        if person.get('person_id'):
-            person_id.append(person.get('person_id'))
+        if person.get("person_id"):
+            person_id.append(person.get("person_id"))
         else:
             log.error(
-                "There has been an error with person %s.",
-                person.get('label')
+                "There has been an error with person %s.", person.get("label")
             )
     return person_id
 
 
 def get_person_id(person=PERSISTENT_PERSONS, persons=None):
     """
-    Returns the Verkada ID for a given PoI.
+        Returns the Verkada ID for a given PoI.
 
-    :param person: The label of a PoI whose ID is being searched for.
-    :type person: str
-    :param persons: A list of PoI IDs found inside of an organization.
+        :param person: The label of a PoI whose ID is being searched for.
+        :type person: str
+        :param persons: A list of PoI IDs found inside of an organization.
     Each dictionary should have the 'person_id' key. Defaults to None.
-    :type persons: list, optional
-    :return: The person ID of the given PoI.
-    :rtype: str
+        :type persons: list, optional
+        :return: The person ID of the given PoI.
+        :rtype: str
     """
-    person_id = None  # Pre-define
-
-    for name in persons:
-        if name['label'] == person:
-            person_id = name['person_id']
-            break  # No need to continue running once found
-
-    if person_id:
+    if person_id := next(
+        (name["person_id"] for name in persons if name["label"] == person),
+        None,
+    ):
         return person_id
-    else:
-        log.warning("Person %s was not found in the database...", person)
-        return None
+    log.warning("Person %s was not found in the database...", person)
+    return None
 
 
 def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
@@ -318,32 +303,23 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     local_data = threading.local()
     local_data.RETRY_DELAY = DEFAULT_RETRY_DELAY
 
-    headers = {
-        "accept": "application/json",
-        "x-api-key": api_key
-    }
+    headers = {"accept": "application/json", "x-api-key": api_key}
 
     log.info("Running for person: %s", print_person_name(person, persons))
 
-    params = {
-        'org_id': org_id,
-        'person_id': person
-    }
+    params = {"org_id": org_id, "person_id": person}
 
     try:
         for _ in range(MAX_RETRIES):
             response = requests.delete(
-                PERSON_URL,
-                headers=headers,
-                params=params,
-                timeout=5
+                PERSON_URL, headers=headers, params=params, timeout=5
             )
 
             if response.status_code == 429:
                 log.info(
                     "%s response: 429. Retrying in %ss.",
                     print_person_name(person, persons),
-                    local_data.RETRY_DELAY
+                    local_data.RETRY_DELAY,
                 )
 
                 time.sleep(local_data.RETRY_DELAY)
@@ -359,10 +335,13 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
     # Handle exceptions
     except custom_exceptions.APIThrottleException:
         log.critical(
-            "Person - Hit API request rate limit of 500 requests per minute.")
+            "Person - Hit API request rate limit of 500 requests per minute."
+        )
 
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Person -")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Person -"
+        ) from e
 
 
 def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
@@ -388,7 +367,13 @@ def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
 
     if GPIO and POI_PIN:
         flash_thread = threading.Thread(
-            target=flash_led, args=(POI_PIN, local_stop_event, 0.5,))
+            target=flash_led,
+            args=(
+                POI_PIN,
+                local_stop_event,
+                0.5,
+            ),
+        )
         flash_thread.start()
 
     log.info("Person - Purging...")
@@ -398,7 +383,13 @@ def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     for person in delete:
         # Toss delete function into a new thread
         thread = threading.Thread(
-            target=delete_person, args=(person, persons, org_id, api_key,)
+            target=delete_person,
+            args=(
+                person,
+                persons,
+                org_id,
+                api_key,
+            ),
         )
         threads.append(thread)  # Add the thread to the pile
 
@@ -408,10 +399,7 @@ def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     person_elapsed_time = person_end_time - person_start_time
 
     log.info("Person - Purge complete.")
-    log.info(
-        "Person - Time to complete: %.2f",
-        person_elapsed_time
-    )
+    log.info("Person - Time to complete: %.2f", person_elapsed_time)
 
     if GPIO and POI_PIN:
         local_stop_event.set()
@@ -433,17 +421,15 @@ def print_person_name(to_delete, persons):
     was no name found, as well.
     :rtype: str
     """
-    person_name = None  # Pre-define
-
-    for person in persons:
-        if person.get('person_id') == to_delete:
-            person_name = person.get('label')
-            break  # No need to continue running once found
-
-    if person_name:
-        return person_name
-    else:
-        return "No name provided"
+    person_name = next(
+        (
+            person.get("label")
+            for person in persons
+            if person.get("person_id") == to_delete
+        ),
+        None,
+    )
+    return person_name or "No name provided"
 
 
 def run_people():
@@ -457,52 +443,54 @@ def run_people():
     persons = get_people()
     log.info("persons retrieved.")
 
-    # Sort JSON dictionaries by person id
-    persons = sorted(persons, key=lambda x: x['person_id'])
-
-    # Run if persons were found
-    if persons:
-        log.info("Person - Gather IDs")
-        all_person_ids = get_people_ids(persons)
-        all_person_ids = clean_list(all_person_ids)
-        log.info("Person - IDs aquired.")
-
-        safe_person_ids = []
-
-        log.info("Searching for safe persons.")
-        # Create the list of safe persons
-        for person in PERSISTENT_PERSONS:
-            safe_person_ids.append(get_person_id(person, persons))
-        safe_person_ids = clean_list(safe_person_ids)
-
-        if PERSISTENT_PID:
-            for person in PERSISTENT_PID:
-                safe_person_ids.append(person)
-        log.info("Safe persons found.")
-
-        # New list that filters persons that are safe
-        persons_to_delete = [
-            person for person in all_person_ids
-            if person not in safe_person_ids]
-
-        if persons_to_delete:
-            purge_people(persons_to_delete, persons)
-            return 1  # Completed
-
-        else:
-            log.info(
-                "Person - The organization has already been purged.\
-There are no more persons to delete.")
-
-            return 1  # Completed
+    if persons := sorted(persons, key=lambda x: x["person_id"]):
+        handle_people(persons)
     else:
         log.warning("No persons were found.")
 
-        return 1  # Copmleted
+    return 1  # Completed
+
+
+def handle_people(persons):
+    """
+    Handle the processing of people by gathering IDs, searching for
+    safe people, and deleting people if needed.
+
+    Args:
+        persons: The list of people to handle.
+
+    Returns:
+        None
+    """
+    log.info("Person - Gather IDs")
+    all_person_ids = get_people_ids(persons)
+    all_person_ids = clean_list(all_person_ids)
+    log.info("Person - IDs acquired.")
+
+    log.info("Searching for safe persons.")
+    safe_person_ids = [
+        get_person_id(person, persons) for person in PERSISTENT_PERSONS
+    ]
+    safe_person_ids = clean_list(safe_person_ids)
+
+    if PERSISTENT_PID:
+        for person in PERSISTENT_PID:
+            safe_person_ids.append(person)
+    log.info("Safe persons found.")
+
+    if persons_to_delete := [
+        person for person in all_person_ids if person not in safe_person_ids
+    ]:
+        purge_people(persons_to_delete, persons)
+    else:
+        log.info(
+            "Person - The organization has already been purged.\
+There are no more persons to delete."
+        )
 
 
 ##############################################################################
-                                #  Main  #
+###################################  Main  ###################################
 ##############################################################################
 
 
@@ -514,7 +502,7 @@ if __name__ == "__main__":
     start_time = time.time()
     LPoI = threading.Thread(target=run_people)
 
-    # Start the threads running independantly
+    # Start the threads running independently
     LPoI.start()
 
     # Join the threads back to parent process

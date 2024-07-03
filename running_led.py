@@ -6,10 +6,7 @@ import time
 import logging
 
 log = logging.getLogger()
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -30,13 +27,13 @@ try:
         log.debug("Runtime error")
 except ImportError:
     GPIO = None
-    log.critical("RPi.GPIO is not availbale. Running on a non-Pi platform")
+    log.critical("RPi.GPIO is not available. Running on a non-Pi platform")
 
 
 def work():
     """Simulates work being done."""
     log.debug("Running work function")
-    for _ in range(0, 9):
+    for _ in range(9):
         time.sleep(1)
     flash_led(GPIO_PIN, 5)
 
@@ -53,14 +50,28 @@ def flash_led(pin, count):
     try:
         for _ in range(count):
             while True:
-                log.debug("Flash on")
-                GPIO.output(pin, True)
-                time.sleep(0.5)
-                GPIO.output(pin, False)
-                time.sleep(0.5)
-                log.debug("Flash off")
+                flash(pin)
     except KeyboardInterrupt:
         print("\nExiting.")
+
+
+def flash(pin):
+    """
+    Flash the LED connected to the specified GPIO pin by turning it on and
+    off in 0.5-second intervals.
+
+    Args:
+        pin: The GPIO pin number to control the LED.
+
+    Returns:
+        None
+    """
+    log.debug("Flash on")
+    GPIO.output(pin, True)
+    time.sleep(0.5)
+    GPIO.output(pin, False)
+    time.sleep(0.5)
+    log.debug("Flash off")
 
 
 if GPIO:

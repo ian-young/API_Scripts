@@ -18,9 +18,9 @@ URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 
 def get_person_id(target_org_id, label_to_search, api_key=API_KEY):
     """
-    Accepts a string as a search value and returns the person id 
+    Accepts a string as a search value and returns the person id
     associated with it
-    
+
     :param target_org_id: The id of the target Verkada organization.
     :type target_org_id: str
     :param label_to_search: The label of the person to search for.
@@ -32,16 +32,10 @@ def get_person_id(target_org_id, label_to_search, api_key=API_KEY):
     """
 
     # Define request headers
-    headers = {
-        'accept': 'application/json',
-        'x-api-key': api_key
-    }
+    headers = {"accept": "application/json", "x-api-key": api_key}
 
     # Define query parameters for the request
-    params = {
-        'org_id': target_org_id,
-        'label': label_to_search
-    }
+    params = {"org_id": target_org_id, "label": label_to_search}
 
     # Send a GET request to search for persons of interest
     response = requests.get(URL, headers=headers, params=params, timeout=5)
@@ -51,26 +45,20 @@ def get_person_id(target_org_id, label_to_search, api_key=API_KEY):
         # Parse the JSON response
         data = response.json()
 
-        # Extract the list of persons of interest
-        persons_of_interest = data.get('persons_of_interest', [])
-
-        if persons_of_interest:
-            # Extract the person_id from the first (and only) result
-            person_id = persons_of_interest[0].get('person_id')
-            return person_id
-            # print(f"Person ID for label '{label_to_search}': {person_id}")
+        if persons_of_interest := data.get("persons_of_interest", []):
+            return persons_of_interest[0].get("person_id")
         else:
             print(f"No person was found with the label '{label_to_search}'.")
     else:
         print(
-            f"Failed to retrieve persons of interest. Status code: {response.status_code}")
+            f"Failed to retrieve persons of interest. Status code: {response.status_code}"
+        )
 
 
 def update_name(person_id, new_label, target_org_id, api_key=API_KEY):
     """
     Takes a person ID and a string and will change the label of the given
     PoI
-    
     :param person_id: The id of the target Verkada PoI.
     :type person_id: str
     :param new_label: The new label name to update the PoI with.
@@ -85,17 +73,15 @@ def update_name(person_id, new_label, target_org_id, api_key=API_KEY):
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
-        "x-api-key": api_key
+        "x-api-key": api_key,
     }
 
     # Define query parameters for the request
-    params = {
-        'org_id': target_org_id,
-        'person_id': person_id
-    }
+    params = {"org_id": target_org_id, "person_id": person_id}
 
     response = requests.patch(
-        URL, json=payload, headers=headers, params=params, timeout=5)
+        URL, json=payload, headers=headers, params=params, timeout=5
+    )
 
     if response.status_code == 200:
         print(f"Changed name to '{new_label}'")

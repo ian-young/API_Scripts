@@ -7,7 +7,9 @@ will help keep data relevant.
 import re
 from datetime import datetime, timedelta
 
-LOG_FILE_PATH = "/Users/ian.young/Documents/.scripts/Python/API_Scripts/endpoint_data.log"
+LOG_FILE_PATH = (
+    "/Users/ian.young/Documents/.scripts/Python/API_Scripts/endpoint_data.log"
+)
 
 
 def parse_entry(entry):
@@ -25,7 +27,9 @@ def parse_entry(entry):
         time_str = time_match.group(1)
         # Set the year to the current year
         current_year = datetime.now().year
-        return datetime.strptime(f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S")
+        return datetime.strptime(
+            f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S"
+        )
 
 
 def filter_entries(old_entries):

@@ -26,10 +26,7 @@ API_KEY = getenv("")
 
 # Set logger
 log = logging.getLogger()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -39,16 +36,14 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 HEADERS = {
     "accept": "application/json",
     "content-type": "application/json",
-    "x-api-key": API_KEY
+    "x-api-key": API_KEY,
 }
 
-PARAMS = {
-    "org_id": ORG_ID
-}
+PARAMS = {"org_id": ORG_ID}
 
 
 ##############################################################################
-                            #  Misc  #
+##################################  Misc  ####################################
 ##############################################################################
 
 
@@ -113,20 +108,17 @@ def clean_list(messy_list):
     :return: A new list with None values removed.
     :rtype: list
     """
-    cleaned_list = [value for value in messy_list if value is not None]
-
-    return cleaned_list
+    return [value for value in messy_list if value is not None]
 
 
 ##############################################################################
-                            #  All things API  #
+#############################  All Things API  ###############################
 ##############################################################################
 
 
 def create_poi(poi_name, poi_image, download, manager):
     """Will create a person of interest with a given URL to an image or path
     to a file
-    
     :param name: Name of the person of interest to create
     :type name: str
     :param image: The image url to download and use.
@@ -144,7 +136,7 @@ def create_poi(poi_name, poi_image, download, manager):
         time.sleep(1)
         manager.reset_call_count()
 
-    if download == 'y':
+    if download == "y":
         # Download the JPG file from the URL
         img_response = requests.get(poi_image, timeout=5)
 
@@ -158,26 +150,22 @@ def create_poi(poi_name, poi_image, download, manager):
         file_content = poi_image  # No need to parse the file
 
     # Convert the binary content to base64
-    base64_image = base64.b64encode(file_content).decode('utf-8')
+    base64_image = base64.b64encode(file_content).decode("utf-8")
 
     # Set payload
-    payload = {
-        "label": poi_name,
-        "base64_image": base64_image
-    }
+    payload = {"label": poi_name, "base64_image": base64_image}
 
     try:
         response = requests.post(
-            URL_POI, json=payload, headers=HEADERS, params=PARAMS, timeout=5)
+            URL_POI, json=payload, headers=HEADERS, params=PARAMS, timeout=5
+        )
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
 
         elif response.status_code != 200:
             log.warning(
-                "%s: Could not create %s.",
-                response.status_code,
-                poi_name
+                "%s: Could not create %s.", response.status_code, poi_name
             )
 
     except APIThrottleException:
@@ -187,7 +175,6 @@ def create_poi(poi_name, poi_image, download, manager):
 def create_plate(lpoi_name, plate_number, manager):
     """
     Create a LPoI with a given name and plate
-    
     :param plate_name: The name of the license plate to identify what it is.
     :type plate_name: str
     :param plate_number: The value found on the license plate itself.
@@ -195,10 +182,7 @@ def create_plate(lpoi_name, plate_number, manager):
     :param manager: The API Throttle manager to prevent hitting the API limit.
     :type manager: PurgeManager
     """
-    payload = {
-        "description": lpoi_name,
-        "license_plate": plate_number
-    }
+    payload = {"description": lpoi_name, "license_plate": plate_number}
 
     while manager.should_stop():
         log.info("Call limit reached, waiting for 1 second.")
@@ -207,15 +191,14 @@ def create_plate(lpoi_name, plate_number, manager):
 
     try:
         response = requests.post(
-            URL_LPR, json=payload, headers=HEADERS, params=PARAMS, timeout=5)
+            URL_LPR, json=payload, headers=HEADERS, params=PARAMS, timeout=5
+        )
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
         elif response.status_code != 200:
             log.warning(
-                "%s Could not create %s.",
-                response.status_code,
-                lpoi_name
+                "%s Could not create %s.", response.status_code, lpoi_name
             )
             log.warning("Response content: %s", response.status_code)
 
@@ -225,28 +208,39 @@ def create_plate(lpoi_name, plate_number, manager):
 
 # Check if the code is being ran directly or imported
 if __name__ == "__main__":
-    IMAGE = 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.\
+    IMAGE = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.\
 pinimg.com%2F736x%2F87%2Fea%2F33%2F87ea336233db8ad468405db8f94da050--human-\
 faces-photos-of.jpg&f=1&nofb=1&ipt=6af7ecf6cd0e15496e7197f3b6cb1527beaa8718\
-c58609d4feca744209047e57&ipo=images'
+c58609d4feca744209047e57&ipo=images"
     purge_manager = PurgeManager(call_count_limit=300)
 
     start_time = time.time()
     threads = []
     for i in range(1, 11):
-        name = f'PoI{i}'
-        plate = f'PLATE{i}'
-        plate_name = f'Plate{i}'
+        name = f"PoI{i}"
+        plate = f"PLATE{i}"
+        plate_name = f"Plate{i}"
 
         log.info("Running for %s & %s", name, plate_name)
         thread_poi = threading.Thread(
-            target=create_poi, args=(name, IMAGE, 'y', purge_manager,)
+            target=create_poi,
+            args=(
+                name,
+                IMAGE,
+                "y",
+                purge_manager,
+            ),
         )
         thread_poi.start()
         threads.append(thread_poi)
 
         thread_lpoi = threading.Thread(
-            target=create_plate, args=(plate_name, plate, purge_manager,)
+            target=create_plate,
+            args=(
+                plate_name,
+                plate,
+                purge_manager,
+            ),
         )
         thread_lpoi.start()
 
