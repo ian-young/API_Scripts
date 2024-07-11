@@ -42,7 +42,12 @@ def month_to_text(month):
 
 
 def ask_time():
-    """Asks the user for a date and returns an epoch timestamp"""
+    """
+    Asks the user for a date and returns an epoch timestamp
+    
+    :return: Epoch timestamp of a prompted date.
+    :rtype: int
+    """
     # Pre-define variables that may be auto-filled
     year = None
     month = None
@@ -125,7 +130,16 @@ def ask_time():
 
 
 def check_month_days(month, year):
-    """Checks how many days are in the given month"""
+    """
+    Checks how many days are in the given month
+    
+    :param month: The month value to be checking.
+    :type month: int
+    :param year: They year to check against.
+    :type year: int
+    :return: Returns how many days are in the month.
+    :rtype: int
+    """
     if (month == 2) and (
         (year % 4 == 0) or ((year % 100 == 0) and (year % 400 == 0))
     ):
@@ -208,7 +222,12 @@ def get_link(timestamp, camera_id, org_id=ORG_ID, api_key=API_KEY):
 
 
 def run():
-    """Allows you to run the full program if being imported"""
+    """
+    Allows you to run the full program if being imported
+
+    Returns:
+        None
+    """
     get_link(ask_time, str(input("Camera ID: ")))
 
 
