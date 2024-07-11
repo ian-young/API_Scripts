@@ -30,9 +30,4 @@ Scripts that will have a larger impact will have an associated project where iss
 
 Current running projects in the repository are:
 
-1. [Delete Devices](https://github.com/users/ian-young/projects/3)
-   * This project is to aid with running VCE
-   * Finished with phase 1
-   * Beginning phase 2 soon
-      * Need to find endpoints to list Guest sites, Desk Stations, Guest iPads, and Guest Printers.
-      * Phase 2 is the finally phase for this script and is expected to take longer
+1. All projects are complete
