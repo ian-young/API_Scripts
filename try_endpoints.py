@@ -79,9 +79,6 @@ URL_AC_USERS = "https://api.verkada.com/access/v1/access_users"
 URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
 URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
 URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
-URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
-
-load_dotenv()
 
 load_dotenv()  # Load credentials file
 
