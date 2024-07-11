@@ -76,7 +76,9 @@ def login_and_get_tokens(login_session, username, password, org_id):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Log in")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Log in"
+        ) from e
 
 
 def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
@@ -94,7 +96,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
     headers = {
         "X-CSRF-Token": x_verkada_token,
         "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-orginization": org_id,
+        "x-verkada-organization": org_id,
     }
 
     body = {"logoutCurrentEmailOnly": True}
@@ -106,7 +108,9 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "Logout")
+        raise custom_exceptions.APIExceptionHandler(
+            e, response, "Logout"
+        ) from e
 
     finally:
         logout_session.close()
@@ -123,7 +127,7 @@ def read_verkada_camera_archives(
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkad organization.
+    :param usr: The user ID for a valid user in the Verkada organization.
     :type usr: str
     :param org_id: The organization ID for the targeted Verkada org.
     :type org_id: str, optional
@@ -156,7 +160,7 @@ def read_verkada_camera_archives(
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         text = "Reading archives"
-        raise custom_exceptions.APIExceptionHandler(e, response, text)
+        raise custom_exceptions.APIExceptionHandler(e, response, text) from e
 
 
 def count_archives(archive_library):
@@ -166,9 +170,7 @@ def count_archives(archive_library):
     :param archive_library: A list of all Verkada archives
     :type archive_library: list
     """
-    count = 0
-    for _ in archive_library:
-        count += 1
+    count = sum(1 for _ in archive_library)
     print(f"This org contains {count} archives.")
 
 

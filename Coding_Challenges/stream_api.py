@@ -94,7 +94,8 @@ def load_stream(jwt, camera_id, stream_start_time, org_id=ORG_ID):
         + jwt
         + "&type=stream"
     )
-    historical_link = f"{live_link}&start_time={str(stream_start_time)}&end_time={str(stream_end_time)}"
+    historical_link = f"{live_link}&start_time={str(stream_start_time)}\
+&end_time={str(stream_end_time)}"
 
     # Set the commands to run that will save the images
     still_image_live = [

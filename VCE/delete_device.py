@@ -19,7 +19,7 @@ from colorama import Fore, Style
 from dotenv import load_dotenv
 
 import custom_exceptions
-import gather_devices
+import VCE.gather_devices as gather_devices
 from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
