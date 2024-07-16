@@ -23,7 +23,6 @@ def format_string(input_string):
     # Calculate padding needed
     padding_length = (total_width - len(input_string) - 8) // 2
     # Create the centered line with '#' padding
-
     centered_string = (
         "#" * padding_length
         + "  "
