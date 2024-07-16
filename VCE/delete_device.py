@@ -17,10 +17,10 @@ import colorama
 import requests
 from colorama import Fore, Style
 from dotenv import load_dotenv
+from QoL.verkada_totp import generate_totp
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 import VCE.gather_devices as gather_devices
-from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 

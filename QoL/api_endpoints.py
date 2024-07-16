@@ -179,3 +179,8 @@ VX_URL = "https://vvx.command.verkada.com/device/list"
 GC_URL = "https://vnet.command.verkada.com/devices/list"
 SV_URL = "https://vsensor.command.verkada.com/devices/list"
 BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
+
+## Management
+PROMOTE_ORG_ADMIN = (
+    "https://vprovision.command.verkada.com/org/set_user_permissions"
+)
