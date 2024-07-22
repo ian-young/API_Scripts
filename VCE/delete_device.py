@@ -181,7 +181,10 @@ def run_thread_with_rate_limit(limited_threads, rate_limit=2):
 
 
 def login_and_get_tokens(
-    login_session: requests.Session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
+    login_session: requests.Session,
+    username=USERNAME,
+    password=PASSWORD,
+    org_id=ORG_ID,
 ):
     """
     Initiates a Command session with the given user credentials and Verkada
@@ -231,7 +234,12 @@ def login_and_get_tokens(
         ) from e
 
 
-def logout(logout_session: requests.Session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
+def logout(
+    logout_session: requests.Session,
+    x_verkada_token,
+    x_verkada_auth,
+    org_id=ORG_ID,
+):
     """
     Logs the Python script out of Command to prevent orphaned sessions.
 
@@ -273,7 +281,9 @@ def logout(logout_session: requests.Session, x_verkada_token, x_verkada_auth, or
 ##############################################################################
 
 
-def delete_cameras(camera_session: requests.Session, x_verkada_token, usr, org_id=ORG_ID):
+def delete_cameras(
+    camera_session: requests.Session, x_verkada_token, usr, org_id=ORG_ID
+):
     """
     Deletes all cameras from a Verkada organization.
 
@@ -518,7 +528,11 @@ def delete_sensors(
 
 
 def delete_panels(
-    x_verkada_token, x_verkada_auth, usr, ac_session: requests.Session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    ac_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all access control panels from a Verkada organization.
@@ -594,7 +608,11 @@ def delete_panels(
 
 
 def delete_intercom(
-    x_verkada_token, usr, device_id, icom_session: requests.Session, org_id=ORG_ID
+    x_verkada_token,
+    usr,
+    device_id,
+    icom_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all Intercoms from a Verkada organization.
@@ -632,7 +650,11 @@ def delete_intercom(
 
 
 def delete_environmental(
-    x_verkada_token, x_verkada_auth, usr, sv_session: requests.Session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    sv_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all environmental sensors from a Verkada organization.
@@ -693,7 +715,11 @@ def delete_environmental(
 
 
 def delete_guest(
-    x_verkada_token, x_verkada_auth, usr, guest_session: requests.Session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    guest_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all Guest devices from a Verkada organization.
@@ -791,7 +817,9 @@ def delete_guest(
         raise custom_exceptions.APIExceptionHandler(e, response, ptype) from e
 
 
-def delete_acls(x_verkada_token, usr, acl_session: requests.Session, org_id=ORG_ID):
+def delete_acls(
+    x_verkada_token, usr, acl_session: requests.Session, org_id=ORG_ID
+):
     """
     Deletes all access control levels from a Verkada organization.
 
@@ -856,7 +884,9 @@ def delete_acls(x_verkada_token, usr, acl_session: requests.Session, org_id=ORG_
         raise custom_exceptions.APIExceptionHandler(e, response, ptype)
 
 
-def delete_desk_station(x_verkada_token, usr, ds_session: requests.Session, org_id=ORG_ID):
+def delete_desk_station(
+    x_verkada_token, usr, ds_session: requests.Session, org_id=ORG_ID
+):
     """
     Deletes all Guest devices from a Verkada organization.
 
