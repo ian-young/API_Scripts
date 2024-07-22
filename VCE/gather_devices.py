@@ -211,7 +211,7 @@ def list_cameras(api_key, camera_session: requests.Session):
     :param api_key: The API key generated from the organization to target.
     :type api_key: str
     :param camera_session: The request session to use to make the call with.
-    :type camera_session: object
+    :type camera_session: requests.Session
     :return: Returns a list of all camera device IDs found inside of a Verkada
     organization.
     :rtype: list
