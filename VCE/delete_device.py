@@ -206,7 +206,7 @@ def login_and_get_tokens(
     login_data = {
         "email": username,
         "password": password,
-        "otp": generate_totp(getenv("boi_totp")),
+        "otp": generate_totp(getenv("")),
         "org_id": org_id,
     }
 
