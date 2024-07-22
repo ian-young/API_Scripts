@@ -13,8 +13,8 @@ from os import getenv
 import requests
 from dotenv import load_dotenv
 
-import custom_exceptions
-from verkada_totp import generate_totp
+from QoL.custom_exceptions import APIExceptionHandler
+from QoL.verkada_totp import generate_totp
 
 load_dotenv()  # Load credentials file
 
@@ -105,7 +105,10 @@ def create_thread_with_args(target, args):
 
 
 def login_and_get_tokens(
-    login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
+    login_session: requests.Session,
+    username=USERNAME,
+    password=PASSWORD,
+    org_id=ORG_ID,
 ):
     """
     Initiates a Command session with the given user credentials and Verkada
@@ -150,12 +153,15 @@ def login_and_get_tokens(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Login"
-        ) from e
+        raise APIExceptionHandler(e, response, "Login") from e
 
 
-def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
+def logout(
+    logout_session: requests.Session,
+    x_verkada_token,
+    x_verkada_auth,
+    org_id=ORG_ID,
+):
     """
     Logs the Python script out of Command to prevent orphaned sessions.
 
@@ -184,9 +190,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Logout"
-        ) from e
+        raise APIExceptionHandler(e, response, "Logout") from e
 
     except KeyboardInterrupt:
         log.warning("Keyboard interrupt detected. Exiting...")
@@ -200,7 +204,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-def list_cameras(api_key, camera_session):
+def list_cameras(api_key, camera_session: requests.Session):
     """
     Will list all cameras inside of a Verkada organization.
 
@@ -234,13 +238,15 @@ def list_cameras(api_key, camera_session):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Cameras"
-        ) from e
+        raise APIExceptionHandler(e, response, "Cameras") from e
 
 
 def get_sites(
-    x_verkada_token, x_verkada_auth, usr, site_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    site_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Lists all Verkada Guest sites.
@@ -287,12 +293,16 @@ def get_sites(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Sites"
-        ) from e
+        raise APIExceptionHandler(e, response, "Sites") from e
 
 
-def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID):
+def list_ac(
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    ac_session: requests.Session,
+    org_id=ORG_ID,
+):
     """
     Lists all access control devices.
 
@@ -343,13 +353,15 @@ def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Access Control"
-        ) from e
+        raise APIExceptionHandler(e, response, "Access Control") from e
 
 
 def list_alarms(
-    x_verkada_token, x_verkada_auth, usr, alarms_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    alarms_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Lists all alarm devices.
@@ -469,13 +481,15 @@ def list_alarms(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Alarms"
-        ) from e
+        raise APIExceptionHandler(e, response, "Alarms") from e
 
 
 def list_viewing_stations(
-    x_verkada_token, x_verkada_auth, usr, vx_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    vx_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Lists all viewing stations.
@@ -527,13 +541,15 @@ def list_viewing_stations(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Viewing Stations"
-        ) from e
+        raise APIExceptionHandler(e, response, "Viewing Stations") from e
 
 
 def list_gateways(
-    x_verkada_token, x_verkada_auth, usr, gc_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    gc_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Lists all cellular gateways.
@@ -584,13 +600,15 @@ def list_gateways(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Cellular Gateways"
-        ) from e
+        raise APIExceptionHandler(e, response, "Cellular Gateways") from e
 
 
 def list_sensors(
-    x_verkada_token, x_verkada_auth, usr, sv_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    sv_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Lists all environmental sensors.
@@ -641,13 +659,15 @@ def list_sensors(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Environmental Sensors"
-        ) from e
+        raise APIExceptionHandler(e, response, "Environmental Sensors") from e
 
 
 def list_horns(
-    x_verkada_token, x_verkada_auth, usr, bz_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    bz_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Lists all BZ horn speakers.
@@ -696,12 +716,12 @@ def list_horns(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "BZ11 Horn Speakers"
-        ) from e
+        raise APIExceptionHandler(e, response, "BZ11 Horn Speakers") from e
 
 
-def list_desk_stations(x_verkada_token, usr, ds_session, org_id=ORG_ID):
+def list_desk_stations(
+    x_verkada_token, usr, ds_session: requests.Session, org_id=ORG_ID
+):
     """
     Lists all desk stations.
 
@@ -744,16 +764,14 @@ def list_desk_stations(x_verkada_token, usr, ds_session, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Desk Stations"
-        ) from e
+        raise APIExceptionHandler(e, response, "Desk Stations") from e
 
 
 def list_guest(
     x_verkada_token,
     x_verkada_auth,
     usr,
-    guest_session,
+    guest_session: requests.Session,
     org_id=ORG_ID,
     sites=None,
 ):
@@ -828,12 +846,12 @@ def list_guest(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Sites"
-        ) from e
+        raise APIExceptionHandler(e, response, "Sites") from e
 
 
-def list_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
+def list_acls(
+    x_verkada_token, usr, acl_session: requests.Session, org_id=ORG_ID
+):
     """
     Lists all access control levels.
 
@@ -874,9 +892,7 @@ def list_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Sites"
-        ) from e
+        raise APIExceptionHandler(e, response, "Sites") from e
 
 
 ##############################################################################
