@@ -17,10 +17,10 @@ import colorama
 import requests
 from colorama import Fore, Style
 from dotenv import load_dotenv
+from QoL.verkada_totp import generate_totp
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 import VCE.gather_devices as gather_devices
-from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
@@ -181,12 +181,17 @@ def run_thread_with_rate_limit(limited_threads, rate_limit=2):
 
 
 def login_and_get_tokens(
-    login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
+    login_session: requests.Session,
+    username=USERNAME,
+    password=PASSWORD,
+    org_id=ORG_ID,
 ):
     """
     Initiates a Command session with the given user credentials and Verkada
     organization ID.
 
+    :param login_session: The request session to use to make the call with.
+    :type login_session: requests.Session
     :param username: A Verkada user's username to be used during the login.
     :type username: str, optional
     :param password: A Verkada user's password used during the login process.
@@ -201,7 +206,7 @@ def login_and_get_tokens(
     login_data = {
         "email": username,
         "password": password,
-        "otp": generate_totp(getenv("lab_totp")),
+        "otp": generate_totp(getenv("")),
         "org_id": org_id,
     }
 
@@ -229,10 +234,17 @@ def login_and_get_tokens(
         ) from e
 
 
-def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
+def logout(
+    logout_session: requests.Session,
+    x_verkada_token,
+    x_verkada_auth,
+    org_id=ORG_ID,
+):
     """
     Logs the Python script out of Command to prevent orphaned sessions.
 
+    :param logout_session: The request session to use to make the call with.
+    :type logout_session: requests.Session
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
     :param x_verkada_auth: The authenticated user token for a valid Verkada
@@ -269,10 +281,14 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-def delete_cameras(camera_session, x_verkada_token, usr, org_id=ORG_ID):
+def delete_cameras(
+    camera_session: requests.Session, x_verkada_token, usr, org_id=ORG_ID
+):
     """
     Deletes all cameras from a Verkada organization.
 
+    :param camera_session: The request session to use to make the call with.
+    :type camera_session: requests.Session
     :param x_verkada_token: The csrf token for a valid, authenticated session.
     :type x_verkada_token: str
     :param x_verkada_auth: The authenticated user token for a valid Verkada
@@ -281,6 +297,8 @@ def delete_cameras(camera_session, x_verkada_token, usr, org_id=ORG_ID):
     :param usr: The user ID of the authenticated user for a valid Verkada
     Command session.
     :type usr: str
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
     headers = {
         "x-verkada-organization-id": org_id,
@@ -327,6 +345,10 @@ def delete_sensors(
     :param usr: The user ID of the authenticated user for a valid Verkada
     Command session.
     :type usr: str
+    :param alarm_session: The request session to use to make the call with.
+    :type alarm_session: requests.Session
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
     alarm_threads = []
 
@@ -398,7 +420,7 @@ def delete_sensors(
                             APANEL_DECOM, headers=headers, json=data
                         )
 
-                        if response.status == 200:
+                        if response.status_code == 200:
                             log.debug(
                                 "%sKeypad deleted successfully%s",
                                 Fore.GREEN,
@@ -506,7 +528,11 @@ def delete_sensors(
 
 
 def delete_panels(
-    x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    ac_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all access control panels from a Verkada organization.
@@ -516,6 +542,10 @@ def delete_panels(
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
+    :param ac_session: The request session to use to make the call with.
+    :type ac_session: requests.Session
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
     exempt = []
 
@@ -578,7 +608,11 @@ def delete_panels(
 
 
 def delete_intercom(
-    x_verkada_token, usr, device_id, icom_session, org_id=ORG_ID
+    x_verkada_token,
+    usr,
+    device_id,
+    icom_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all Intercoms from a Verkada organization.
@@ -588,6 +622,10 @@ def delete_intercom(
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
+    :param icom_session: The request session to use to make the call with.
+    :type icom_session: requests.Session
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
     headers = {
         "x-verkada-organization-id": org_id,
@@ -612,7 +650,11 @@ def delete_intercom(
 
 
 def delete_environmental(
-    x_verkada_token, x_verkada_auth, usr, sv_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    sv_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all environmental sensors from a Verkada organization.
@@ -622,6 +664,10 @@ def delete_environmental(
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
+    :param sv_session: The request session to use to make the call with.
+    :type sv_session: requests.Session
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
     params = {"organizationId": org_id}
 
@@ -669,7 +715,11 @@ def delete_environmental(
 
 
 def delete_guest(
-    x_verkada_token, x_verkada_auth, usr, guest_session, org_id=ORG_ID
+    x_verkada_token,
+    x_verkada_auth,
+    usr,
+    guest_session: requests.Session,
+    org_id=ORG_ID,
 ):
     """
     Deletes all Guest devices from a Verkada organization.
@@ -679,6 +729,10 @@ def delete_guest(
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
+    :param guest_session: The request session to use to make the call with.
+    :type guest_session: requests.Session
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
     params = {"organizationId": org_id}
 
@@ -763,7 +817,9 @@ def delete_guest(
         raise custom_exceptions.APIExceptionHandler(e, response, ptype) from e
 
 
-def delete_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
+def delete_acls(
+    x_verkada_token, usr, acl_session: requests.Session, org_id=ORG_ID
+):
     """
     Deletes all access control levels from a Verkada organization.
 
@@ -772,6 +828,10 @@ def delete_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
+    :param acl_session: The request session to use to make the call with.
+    :type acl_session: requests.Session
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
 
     def find_schedule_by_id(schedule_id, schedules):
@@ -824,7 +884,9 @@ def delete_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
         raise custom_exceptions.APIExceptionHandler(e, response, ptype)
 
 
-def delete_desk_station(x_verkada_token, usr, ds_session, org_id=ORG_ID):
+def delete_desk_station(
+    x_verkada_token, usr, ds_session: requests.Session, org_id=ORG_ID
+):
     """
     Deletes all Guest devices from a Verkada organization.
 
@@ -833,6 +895,10 @@ def delete_desk_station(x_verkada_token, usr, ds_session, org_id=ORG_ID):
     :param x_verkada_auth: The authenticated user token for a valid Verkada
     session.
     :type x_verkada_auth: str
+    :param ds_session: The request session to use to make the call with.
+    :type ds_session: requests.Session
+    :param org_id: The organization ID for the targeted Verkada org.
+    :type org_id: str, optional
     """
     headers = {
         "x-verkada-organization-id": org_id,
@@ -874,6 +940,7 @@ def delete_desk_station(x_verkada_token, usr, ds_session, org_id=ORG_ID):
 
 
 if __name__ == "__main__":
+    csrf_token, user_token, user_id = None, None, None
     start_run_time = time.time()  # Start timing the script
     with requests.Session() as session:
         try:
