@@ -89,7 +89,7 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id):
         "X-Verkada-Organization-Id": org_id,
         "X-Verkada-Token": x_verkada_token,
         "X-Verkada-User-Id": x_verkada_auth,
-        "content-type": "application/json"
+        "content-type": "application/json",
     }
 
     body = {"logoutCurrentEmailOnly": True}

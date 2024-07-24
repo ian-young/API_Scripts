@@ -6,6 +6,7 @@ and create a Command account for them with org admin privileges.
 
 import csv
 import logging
+from datetime import datetime
 from os import getenv
 
 import requests
@@ -28,13 +29,14 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 load_dotenv()  # Import credentials file
 
-ORG_ID = getenv("boi_id")
-USERNAME = getenv("boi_username")
-PASSWORD = getenv("boi_password")
-TOTP = getenv("boi_totp")
-API_KEY = getenv("boi_key")
+ORG_ID = getenv("")
+USERNAME = getenv("")
+PASSWORD = getenv("")
+TOTP = getenv("")
+API_KEY = getenv("")
 FILE_PATH = (
-    "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/VCE_AC_Specialist_Check_ins_GuestLog - 2024-07-16 2.csv"
+    "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/"
+    "VCE_AC_Specialist_Check_ins_GuestLog - 2024-07-17.csv"
 )
 
 
@@ -137,7 +139,7 @@ def grant_org_admin(
             PROMOTE_ORG_ADMIN, headers=headers, json=body, timeout=3
         )
         response.raise_for_status()
-        log.debug("Request passed.")
+        log.info("Promoted to org admin.")
 
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Promote org admin") from e
@@ -154,11 +156,13 @@ def create_vce_user(user_info_list, api_key=API_KEY):
             to API_KEY.
 
     Returns:
-        None
+        list: A list of all emails of the newly created accounts.
 
     Raises:
         APIExceptionHandler: If an error occurs during the API request.
     """
+    emails = []
+
     log.debug("User list:\n%s", user_info_list)
     csrf_token, user_token, user_id = None, None, None
 
@@ -171,8 +175,8 @@ def create_vce_user(user_info_list, api_key=API_KEY):
 
         try:
             csrf_token, user_token, user_id = login_and_get_tokens(
-                        session, USERNAME, PASSWORD, TOTP, ORG_ID
-                    )
+                session, USERNAME, PASSWORD, TOTP, ORG_ID
+            )
 
             for result in user_info_list:
                 log.debug("Loading result info into JSON body.")
@@ -181,6 +185,7 @@ def create_vce_user(user_info_list, api_key=API_KEY):
                     "last_name": result["Last Name"],
                     "email": result["Guest Email"],
                 }
+                emails.append(result["Guest Email"])
                 log.debug(body)
 
                 log.debug("Posting request to create user.")
@@ -188,7 +193,7 @@ def create_vce_user(user_info_list, api_key=API_KEY):
                     CREATE_USER, headers=headers, json=body, timeout=3
                 )
 
-                if response.status_code !=500:
+                if response.status_code != 500:
                     response.raise_for_status()
 
                 else:
@@ -206,6 +211,8 @@ def create_vce_user(user_info_list, api_key=API_KEY):
 
                 grant_org_admin(csrf_token, user_id, data["user_id"], session)
 
+            return emails
+
         except requests.exceptions.RequestException as e:
             raise APIExceptionHandler(e, response, "Create user") from e
 
@@ -217,4 +224,8 @@ def create_vce_user(user_info_list, api_key=API_KEY):
             log.info("Session closed.\nExiting...")
 
 
-create_vce_user(read_csv(FILE_PATH))
+participants = create_vce_user(read_csv(FILE_PATH))
+print(f"Emails were sent at {datetime.now().date()}")
+
+for person in participants:
+    print(person, end=", ")

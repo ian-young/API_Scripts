@@ -21,7 +21,7 @@ VX = "viewing_station/v1/"
 
 ## Camera API
 GET_ALERTS = f"{BASE_URL}{CAM}alerts?include_image_url=false&page_size=100"
-GET_SEEN_PLATES = f"{BASE_URL}{CAM}analytics/lpr/images?page_size=100"
+GET_SEEN_PLATES = f"{BASE_URL}{CAM}analytics/lpr/images"
 DELETE_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
 UPDATE_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
 CREATE_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"

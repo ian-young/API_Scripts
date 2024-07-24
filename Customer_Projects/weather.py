@@ -169,8 +169,10 @@ def send_snow(
                         Disposition("attachment"),
                     )
 
-                message.attachment = attachment  # Add the attachment
+                message.add_attachment(attachment)  # Add the attachment
 
+                if SENDGRID_API_KEY is None:
+                    raise ValueError("SENDGRID_API_KEY is not set.")
                 sendgrid = SendGridAPIClient(
                     SENDGRID_API_KEY
                 )  # Load the API client
@@ -330,13 +332,8 @@ def load_stream(image_name: str, jwt: str, camera_id: str):
     """
     # Format the links
     live_link = (
-        FOOTAGE_URL
-        + camera_id
-        + "&org_id="
-        + ORG_ID
-        + "&resolution=high_res&jwt="
-        + jwt
-        + "&type=stream"
+        f"{FOOTAGE_URL}{camera_id}&org_id={ORG_ID}&resolution=high_res"
+        f"&jwt={jwt}&type=stream"
     )
 
     # Set the commands to run that will save the images

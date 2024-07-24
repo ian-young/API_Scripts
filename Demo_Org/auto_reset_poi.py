@@ -14,7 +14,7 @@ import time
 
 import requests
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 
 # Set timeout for a 429
 MAX_RETRIES = 10
@@ -55,10 +55,10 @@ except ImportError:
     log.debug("RPi.GPIO is not available. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([])  # Label of plate #!Not plate number!#
+PERSISTENT_PLATES = sorted([""])  # Label of plate #!Not plate number!#
 PERSISTENT_PERSONS = sorted(["Parkour"])  # PoI label
 PERSISTENT_PID = sorted(["751e9607-4617-43e1-9e8c-1bd439c116b6"])  # PoI ID
-PERSISTENT_LID = sorted([])  # LPoI ID
+PERSISTENT_LID = sorted([""])  # LPoI ID
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\

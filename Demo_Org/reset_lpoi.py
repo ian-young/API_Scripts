@@ -16,7 +16,7 @@ import datetime
 import requests
 from dotenv import load_dotenv
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 
 load_dotenv()  # Load credentials file
 

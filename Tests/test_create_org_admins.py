@@ -33,9 +33,7 @@ USERNAME = getenv("boi_username")
 PASSWORD = getenv("boi_password")
 TOTP = getenv("boi_totp")
 API_KEY = getenv("boi_key")
-FILE_PATH = (
-    "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/VCE_AC_Specialist_Check_ins_GuestLog - 2024-07-16 2.csv"
-)
+FILE_PATH = "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/VCE_AC_Specialist_Check_ins_GuestLog - 2024-07-16 2.csv"
 
 
 def read_csv(file_name):
@@ -171,8 +169,8 @@ def create_vce_user(user_info_list, api_key=API_KEY):
 
         try:
             csrf_token, user_token, user_id = login_and_get_tokens(
-                        session, USERNAME, PASSWORD, TOTP, ORG_ID
-                    )
+                session, USERNAME, PASSWORD, TOTP, ORG_ID
+            )
 
             for result in user_info_list:
                 log.debug("Loading result info into JSON body.")
@@ -188,7 +186,7 @@ def create_vce_user(user_info_list, api_key=API_KEY):
                     CREATE_USER, headers=headers, json=body, timeout=3
                 )
 
-                if response.status_code !=500:
+                if response.status_code != 500:
                     response.raise_for_status()
 
                 else:

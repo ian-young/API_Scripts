@@ -16,7 +16,7 @@ import datetime
 import requests
 from dotenv import load_dotenv
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 
 load_dotenv()  # Load credentials file
 
@@ -41,8 +41,8 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = []
-PERSISTENT_PERSONS = []
+PERSISTENT_PLATES = [""]
+PERSISTENT_PERSONS = [""]
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\

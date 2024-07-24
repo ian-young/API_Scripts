@@ -8,6 +8,7 @@ import csv
 import logging
 from datetime import datetime, timedelta
 from os import getenv
+from typing import List, Dict, Optional, Union
 
 import requests
 from dotenv import load_dotenv
@@ -28,57 +29,81 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 load_dotenv()  # Load credentials
 
-API_KEY = getenv("lab_key")
+API_KEY = getenv("slc_key")
 CURRENT_TIME = datetime.now()
-START_TIME = int(CURRENT_TIME.timestamp())
+END_TIME = int(CURRENT_TIME.timestamp())
 CSV_OUTPUT = f"lpr_info-{datetime.now().date()}.csv"
 CSV_CAMERAS = "cameras.csv"
-END_TIME = int((CURRENT_TIME - timedelta(days=1)).timestamp())
+START_TIME = int((CURRENT_TIME - timedelta(days=1)).timestamp())
 
 
-def parse_cameras(api_key=API_KEY):
+def convert_epoch_to_time(epoch_time: float) -> str:
+    """
+    Converts an epoch time to a formatted time string.
+
+    Args:
+        epoch_time (float): The epoch time to convert.
+
+    Returns:
+        str: The formatted time string in the format "%H:%M:%S".
+    """
+    return datetime.fromtimestamp(epoch_time).strftime("%H:%M:%S")
+
+
+def parse_cameras(api_key: Optional[str] = API_KEY) -> List[Dict[str, str]]:
     """
     Parse camera data to retrieve device IDs.
 
     Args:
-        api_key (str): The API key for authentication.
+        api_key (str): The API key for authentication. (optional)
 
     Raises:
         APIExceptionHandler: If an error occurs during the API request.
 
     Returns:
-        list: A list of device IDs.
+        list of dict: A list of device IDs and their assigned sites.
     """
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
         "x-api-key": api_key,
     }
-    device_ids = []
+
+    lpr_cameras = ["CB52-E", "CB62-E", "CB52-TE", "CB62-TE"]
+    device_ids: List[Dict[str, str]] = []
 
     try:
-        # [ ] TODO: Filter out the cameras that don't support LPR
         log.info("Request cameras list.")
         response = requests.get(GET_CAMERA_DATA, headers=headers, timeout=5)
         response.raise_for_status()
         data = response.json()
-        log.debug(data["cameras"])
-        device_ids.extend(device["camera_id"] for device in data["cameras"])
-        log.info("List retrieved.")
+        device_ids.extend(
+            {
+                "ID": device["camera_id"],
+                "Site": device["site"],
+                "Camera": device["name"],
+            }
+            for device in data["cameras"]
+            if device["model"] in lpr_cameras
+        )
 
     except APIExceptionHandler as e:
         raise APIExceptionHandler(e, response, "Get Camera Data") from e
 
+    log.debug("Returning %s", device_ids)
+
     return device_ids
 
 
-def get_plates(camera_id, api_key=API_KEY):
+def get_plates(
+    camera_ids: List[Dict[str, str]], api_key: Optional[str] = API_KEY
+) -> List[Dict[str, str]]:
     """
     Get license plates seen by a specific camera.
 
     Args:
-        camera_id (str): The ID of the camera.
-        api_key (str): The API key for authentication.
+        camera_id (dict): The ID of the camera and its assigned site.
+        api_key (str): The API key for authentication. (optional)
 
     Raises:
         APIExceptionHandler: If an error occurs during the API request.
@@ -87,33 +112,60 @@ def get_plates(camera_id, api_key=API_KEY):
         None
     """
 
+    final_dict: List[Dict[str, str]] = []
+
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
         "x-api-key": api_key,
     }
-    body = {
-        "camera_id": camera_id,
-        "start_time": START_TIME,
-        "end_time": END_TIME,
-    }
+    for camera in camera_ids:
+        log.debug("Running for %s", str(camera))
+        body: Dict[str, Union[str, int]] = {
+            "camera_id": camera["ID"],
+            "start_time": START_TIME,
+            "end_time": END_TIME,
+        }
+        try:
+            log.debug("Requesting plates from %s", camera["ID"])
+            response = requests.get(
+                GET_SEEN_PLATES, headers=headers, params=body, timeout=3
+            )
 
-    try:
-        response = requests.post(
-            GET_SEEN_PLATES, headers=headers, json=body, timeout=3
-        )
-        response.raise_for_status()
-        data = response.json()
-        # [ ] TODO: Parse data
+            if response.status_code == 500:
+                log.warning(
+                    "Camera %s does not have LPR enabled.", camera["ID"]
+                )
 
-    except APIExceptionHandler as e:
-        raise APIExceptionHandler(e, response, "Get License Plates") from e
+            else:
+                response.raise_for_status()
+                log.debug("Converting response to JSON.")
+                data = response.json()
+            final_dict.extend(
+                {
+                    "Time": convert_epoch_to_time(value["timestamp"]),
+                    "Plate": value["license_plate"],
+                    "Camera": camera["Camera"],
+                    "Site": camera["Site"],
+                }
+                for value in data["detections"]
+                if value is not None
+            )
+
+        except APIExceptionHandler as e:
+            raise APIExceptionHandler(e, response, "Get License Plates") from e
+
+    return final_dict
 
 
-cameras = parse_cameras()
-all_plate_info = (get_plates(camera) for camera in cameras)
+all_plate_info = get_plates(parse_cameras())
+
 with open(CSV_OUTPUT, "w", newline="", encoding="UTF-8") as file:
     fieldnames = ("Time", "Plate", "Camera", "Site")
     writer = csv.DictWriter(file, fieldnames=fieldnames)
     writer.writeheader()
-    writer.writerows(all_plate_info)
+
+    if plate_info_list := [
+        plate_info for plate_info in all_plate_info if plate_info is not None
+    ]:
+        writer.writerows(plate_info_list)

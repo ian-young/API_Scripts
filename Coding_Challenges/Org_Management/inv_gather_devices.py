@@ -17,8 +17,8 @@ import requests
 from dotenv import load_dotenv
 from tinydb import TinyDB, Query
 
-import custom_exceptions
-from verkada_totp import generate_totp
+import QoL.custom_exceptions as custom_exceptions
+from QoL.verkada_totp import generate_totp
 
 load_dotenv()  # Load credentials file
 
