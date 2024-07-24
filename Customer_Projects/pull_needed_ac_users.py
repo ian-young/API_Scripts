@@ -72,7 +72,8 @@ def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
         )
     log.debug("Data retrieved")
     log.debug(
-        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage(PID))
+        "Total memory used: %iKiB",
+        calculate_memory(start_mem, memory_usage(PID)),
     )
 
     gc.collect()  # Clear out variables from memory
@@ -128,7 +129,8 @@ def read_sis_csv(file_name: str) -> List[Dict[str, str]]:
 
     log.debug("Data retrieved")
     log.debug(
-        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage(PID))
+        "Total memory used: %iKiB",
+        calculate_memory(start_mem, memory_usage(PID)),
     )
 
     gc.collect()  # Clear out variables from memory
@@ -198,7 +200,8 @@ def compile_data_for_csv(
 
     log.info("Finished compiling csv files.")
     log.debug(
-        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage(PID))
+        "Total memory used: %iKiB",
+        calculate_memory(start_mem, memory_usage(PID)),
     )
     log.debug("CPU utilization: %.1f%%", cpu_usage(PID, None) - start_cpu)
 

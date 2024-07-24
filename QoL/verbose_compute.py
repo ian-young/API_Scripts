@@ -16,7 +16,7 @@ log.setLevel(LOG_LEVEL)
 logging.basicConfig(
     level=LOG_LEVEL,
     format=("(%(asctime)s.%(msecs)03d) %(levelname)s: %(message)s"),
-    datefmt="%H:%M:%S"
+    datefmt="%H:%M:%S",
 )
 
 
