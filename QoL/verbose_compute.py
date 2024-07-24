@@ -6,6 +6,7 @@ Purpose: This is a module that may be imported for improved verbosity on
 
 import logging
 from gc import collect
+from typing import Optional
 
 import psutil
 
@@ -23,26 +24,34 @@ def memory_usage(process_id: int) -> float:
     """
     Calculate the memory usage of the current process.
 
+    Args:
+        process_id (int): The process ID for which CPU usage needs to be
+            calculated.
+
     Returns:
         float: The memory usage of the current process in kibibytes.
     """
     log.debug("Getting process memory")
-    process = psutil.Process(process_id)
-    mem_info = process.memory_info()
 
     collect()  # Clear out variables from memory
 
-    return mem_info.rss / 1024  # Convert to kibibytes
+    # Convert to kibibytes
+    return psutil.Process(process_id).memory_info().rss / 1024
 
 
-def cpu_usage(process_id: int) -> float:
+def cpu_usage(process_id: int, interval: Optional[int] = 1) -> float:
     """
-    Calculate the CPU usage of the current process.
+    Calculate the CPU usage of a specified process.
+
+    Args:
+        process_id (int): The process ID for which CPU usage needs to be
+            calculated.
+        interval (Optional[int]): The time interval in seconds over which
+            CPU usage is calculated. Defaults to 1.
 
     Returns:
-        float: The CPU usage percentage of the current process.
+        float: The CPU usage percentage of the specified process.
     """
     log.debug("Getting process CPU usage")
-    process = psutil.Process(process_id)
 
-    return process.cpu_percent(interval=1)
+    return psutil.Process(process_id).cpu_percent(interval=interval)

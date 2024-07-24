@@ -7,6 +7,8 @@ import time
 import multiprocessing
 
 from QoL.verbose_compute import cpu_usage
+
+
 def cpu_intensive_task(duration: int):
     """
     Simulate a CPU-intensive task that runs for a specified duration.
@@ -46,4 +48,6 @@ def cpu_usage_test():
 
 
 if __name__ == "__main__":
-    print(cpu_usage_test())
+    usage_values = cpu_usage_test()
+    for value in usage_values:
+        print(f"Value returned with: {value:.1f}%")

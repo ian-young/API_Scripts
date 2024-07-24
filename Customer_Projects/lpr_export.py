@@ -29,7 +29,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 load_dotenv()  # Load credentials
 
-API_KEY = getenv("slc_key")
+API_KEY = getenv("lab_key")
 CURRENT_TIME = datetime.now()
 END_TIME = int(CURRENT_TIME.timestamp())
 CSV_OUTPUT = f"lpr_info-{datetime.now().date()}.csv"
@@ -111,7 +111,6 @@ def get_plates(
     Returns:
         None
     """
-
     final_dict: List[Dict[str, str]] = []
 
     headers = {
@@ -132,15 +131,10 @@ def get_plates(
                 GET_SEEN_PLATES, headers=headers, params=body, timeout=3
             )
 
-            if response.status_code == 500:
-                log.warning(
-                    "Camera %s does not have LPR enabled.", camera["ID"]
-                )
+            response.raise_for_status()
+            log.debug("Converting response to JSON.")
+            data = response.json()
 
-            else:
-                response.raise_for_status()
-                log.debug("Converting response to JSON.")
-                data = response.json()
             final_dict.extend(
                 {
                     "Time": convert_epoch_to_time(value["timestamp"]),

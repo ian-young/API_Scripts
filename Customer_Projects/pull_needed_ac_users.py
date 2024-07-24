@@ -6,11 +6,13 @@ access users that should be in Command.
 
 import csv
 import logging
-import os
 import gc
+from os import getpid
 from typing import List, Dict
 
-import psutil
+from QoL.verbose_compute import memory_usage, cpu_usage
+
+PID = getpid()
 
 CSV_OUTPUT = (
     "/Users/ian.young/Documents/.scripts/API_Scripts/"
@@ -39,22 +41,6 @@ logging.basicConfig(
 log.setLevel(LOG_LEVEL)
 
 
-def memory_usage() -> float:
-    """
-    Calculate the memory usage of the current process.
-
-    Returns:
-        float: The memory usage of the current process in kibibytes.
-    """
-    log.debug("Getting process memory")
-    process = psutil.Process(os.getpid())
-    mem_info = process.memory_info()
-
-    gc.collect()  # Clear out variables from memory
-
-    return mem_info.rss / 1024  # Convert to kibibytes
-
-
 def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
     """
     Reads a CSV file and extracts the first name, last name, and email columns.
@@ -65,7 +51,7 @@ def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
     Returns:
         list of dict: A list of dictionaries containing 'first_name', 'last_name', and 'email'.
     """
-    start_mem = memory_usage()
+    start_mem = memory_usage(PID)
     data: List[Dict[str, str]] = []
 
     # Open file
@@ -86,7 +72,7 @@ def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
         )
     log.debug("Data retrieved")
     log.debug(
-        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage())
+        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage(PID))
     )
 
     gc.collect()  # Clear out variables from memory
@@ -104,7 +90,7 @@ def read_sis_csv(file_name: str) -> List[Dict[str, str]]:
     Returns:
         list of dict: A list of dictionaries containing 'first_name', 'last_name', and 'email'.
     """
-    start_mem = memory_usage()
+    start_mem = memory_usage(PID)
     data: List[Dict[str, str]] = []
 
     # Open file
@@ -142,7 +128,7 @@ def read_sis_csv(file_name: str) -> List[Dict[str, str]]:
 
     log.debug("Data retrieved")
     log.debug(
-        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage())
+        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage(PID))
     )
 
     gc.collect()  # Clear out variables from memory
@@ -165,7 +151,8 @@ def compile_data_for_csv(
     Returns:
         list of dict: Returns all matching values between the two csvs.
     """
-    start_mem = memory_usage()
+    start_cpu = cpu_usage(PID, None)
+    start_mem = memory_usage(PID)
     compiled_data = []
 
     log.info("Reading csv files")
@@ -211,8 +198,9 @@ def compile_data_for_csv(
 
     log.info("Finished compiling csv files.")
     log.debug(
-        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage())
+        "Total memory used: %iKiB", calculate_memory(start_mem, memory_usage(PID))
     )
+    log.debug("CPU utilization: %.1f%%", cpu_usage(PID, None) - start_cpu)
 
     gc.collect()  # Clear out variables from memory
 
