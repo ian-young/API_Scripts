@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 from os import getenv
+from typing import Callable, Optional, Any, List
 
 import requests
 from dotenv import load_dotenv
@@ -76,7 +77,7 @@ class ResultThread(threading.Thread):
         self._result = self._target(*self._args, **self._kwargs)
 
     @property
-    def result(self):
+    def result(self) -> Any:
         """
         Passes back the return value of the function ran.
         """
@@ -84,7 +85,7 @@ class ResultThread(threading.Thread):
 
 
 # Define a helper function to create threads with arguments
-def create_thread_with_args(target, args):
+def create_thread_with_args(target: Callable, args: Any) -> ResultThread:
     """
     Allows the creation of a ResultThread and still pass arguments to the
     thread.
@@ -105,8 +106,11 @@ def create_thread_with_args(target, args):
 
 
 def login_and_get_tokens(
-    login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
-):
+    login_session: requests.Session,
+    username: Optional[str] = USERNAME,
+    password: Optional[str] = PASSWORD,
+    org_id: Optional[str] = ORG_ID,
+) -> tuple[str, str, str]:
     """
     Initiates a Command session with the given user credentials and Verkada
     organization ID.
@@ -153,7 +157,12 @@ def login_and_get_tokens(
         raise APIExceptionHandler(e, response, "Login") from e
 
 
-def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
+def logout(
+    logout_session: requests.Session,
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    org_id: Optional[str] = ORG_ID,
+):
     """
     Logs the Python script out of Command to prevent orphaned sessions.
 
@@ -196,7 +205,9 @@ def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
 ##############################################################################
 
 
-def list_cameras(api_key, camera_session):
+def list_cameras(
+    api_key: str, camera_session: requests.Session
+) -> Optional[List[str]]:
     """
     Will list all cameras inside of a Verkada organization.
 
@@ -215,6 +226,11 @@ def list_cameras(api_key, camera_session):
 
     try:
         response = camera_session.get(CAMERA_URL, headers=headers)
+
+        if response.status_code == 400:
+            log.warning("No cameras were found in the org.")
+            return None
+
         response.raise_for_status()
         log.debug("-------")
         log.debug("Camera data retrieved.")
@@ -234,8 +250,12 @@ def list_cameras(api_key, camera_session):
 
 
 def get_sites(
-    x_verkada_token, x_verkada_auth, usr, site_session, org_id=ORG_ID
-):
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    site_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> List[str]:
     """
     Lists all Verkada Guest sites.
 
@@ -258,8 +278,8 @@ def get_sites(
         "X-Verkada-Auth": x_verkada_auth,
         "User": usr,
     }
-
-    url = SITES + org_id
+    if org_id is not None:
+        url = SITES + org_id
     site_ids = []
 
     try:
@@ -284,7 +304,13 @@ def get_sites(
         raise APIExceptionHandler(e, response, "Sites") from e
 
 
-def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID):
+def list_ac(
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    ac_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> Optional[List[str]]:
     """
     Lists all access control devices.
 
@@ -334,13 +360,23 @@ def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID):
         return access_ids
 
     # Handle exceptions
+    except KeyError:
+        log.warning("No access controllers found in org.")
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Access Control") from e
 
+    return None  # Catch odd cases
+
 
 def list_alarms(
-    x_verkada_token, x_verkada_auth, usr, alarms_session, org_id=ORG_ID
-):
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    alarms_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> tuple[
+    List[str], List[str], List[str], List[str], List[str], List[str], List[str]
+]:
     """
     Lists all alarm devices.
 
@@ -463,8 +499,12 @@ def list_alarms(
 
 
 def list_viewing_stations(
-    x_verkada_token, x_verkada_auth, usr, vx_session, org_id=ORG_ID
-):
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    vx_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> List[str]:
     """
     Lists all viewing stations.
 
@@ -519,8 +559,12 @@ def list_viewing_stations(
 
 
 def list_gateways(
-    x_verkada_token, x_verkada_auth, usr, gc_session, org_id=ORG_ID
-):
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    gc_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> List[str]:
     """
     Lists all cellular gateways.
 
@@ -574,8 +618,12 @@ def list_gateways(
 
 
 def list_sensors(
-    x_verkada_token, x_verkada_auth, usr, sv_session, org_id=ORG_ID
-):
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    sv_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> List[str]:
     """
     Lists all environmental sensors.
 
@@ -629,8 +677,12 @@ def list_sensors(
 
 
 def list_horns(
-    x_verkada_token, x_verkada_auth, usr, bz_session, org_id=ORG_ID
-):
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    bz_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> List[str]:
     """
     Lists all BZ horn speakers.
 
@@ -681,7 +733,12 @@ def list_horns(
         raise APIExceptionHandler(e, response, "BZ11 Horn Speakers") from e
 
 
-def list_desk_stations(x_verkada_token, usr, ds_session, org_id=ORG_ID):
+def list_desk_stations(
+    x_verkada_token: str,
+    usr: str,
+    ds_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> Optional[List[str]]:
     """
     Lists all desk stations.
 
@@ -706,8 +763,13 @@ def list_desk_stations(x_verkada_token, usr, ds_session, org_id=ORG_ID):
 
     try:
         # Request the JSON archive library
-        log.debug("Requesting desk stations.")
+        log.debug("Requesting Desk Stations.")
         response = ds_session.get(DESK_URL, headers=headers)
+
+        if response.status_code == 403:
+            log.warning("No Desk Stations were found in the org.")
+            return None
+
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Desk station JSON retrieved. Parsing and logging.")
 
@@ -732,9 +794,9 @@ def list_guest(
     x_verkada_auth,
     usr,
     guest_session,
-    org_id=ORG_ID,
+    org_id: Optional[str] = ORG_ID,
     sites=None,
-):
+) -> tuple[List[str], List[str]]:
     """
     Lists all guest printers and iPads.
 
@@ -809,7 +871,12 @@ def list_guest(
         raise APIExceptionHandler(e, response, "Sites") from e
 
 
-def list_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
+def list_acls(
+    x_verkada_token: str,
+    usr: str,
+    acl_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
+) -> tuple[Optional[List[str]], Optional[List[str]]]:
     """
     Lists all access control levels.
 
@@ -835,6 +902,11 @@ def list_acls(x_verkada_token, usr, acl_session, org_id=ORG_ID):
     try:
         log.debug("Gathering access control levels.")
         response = acl_session.get(ACCESS_LEVELS, headers=headers)
+
+        if response.status_code == 403:
+            log.warning("No ACLs were found in this org")
+            return None, None
+
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Access control levels received.")
 
@@ -940,7 +1012,7 @@ if __name__ == "__main__":
         # Gracefully handle an interrupt
         except KeyboardInterrupt:
             log.warning(
-                "\nKeyboard interrupt detected. Logging out & aborting..."
+                "Keyboard interrupt detected. Logging out & aborting..."
             )
 
         finally:
