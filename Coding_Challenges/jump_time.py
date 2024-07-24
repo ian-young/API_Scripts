@@ -44,7 +44,7 @@ def month_to_text(month):
 def ask_time():
     """
     Asks the user for a date and returns an epoch timestamp
-    
+
     :return: Epoch timestamp of a prompted date.
     :rtype: int
     """
@@ -132,7 +132,7 @@ def ask_time():
 def check_month_days(month, year):
     """
     Checks how many days are in the given month
-    
+
     :param month: The month value to be checking.
     :type month: int
     :param year: They year to check against.

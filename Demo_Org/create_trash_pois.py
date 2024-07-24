@@ -13,7 +13,7 @@ from os import getenv
 import requests
 from dotenv import load_dotenv
 
-from custom_exceptions import APIThrottleException
+from QoL.custom_exceptions import APIThrottleException
 
 load_dotenv()  # Load credentials file
 

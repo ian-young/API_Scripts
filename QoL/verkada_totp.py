@@ -34,6 +34,7 @@ def generate_totp(secret):
 if __name__ == "__main__":
     # Replace this with your own base32-encoded secret
     TOTP_SECRET = getenv("totp_secret")
+
     print(f"Secret: {TOTP_SECRET}")
     try:
         for _ in range(2):

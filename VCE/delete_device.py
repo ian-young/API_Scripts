@@ -17,10 +17,10 @@ import colorama
 import requests
 from colorama import Fore, Style
 from dotenv import load_dotenv
+from QoL.verkada_totp import generate_totp
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 import VCE.gather_devices as gather_devices
-from verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
@@ -201,7 +201,7 @@ def login_and_get_tokens(
     login_data = {
         "email": username,
         "password": password,
-        "otp": generate_totp(getenv("lab_totp")),
+        "otp": generate_totp(getenv("")),
         "org_id": org_id,
     }
 
@@ -398,7 +398,7 @@ def delete_sensors(
                             APANEL_DECOM, headers=headers, json=data
                         )
 
-                        if response.status == 200:
+                        if response.status_code == 200:
                             log.debug(
                                 "%sKeypad deleted successfully%s",
                                 Fore.GREEN,
@@ -874,6 +874,7 @@ def delete_desk_station(x_verkada_token, usr, ds_session, org_id=ORG_ID):
 
 
 if __name__ == "__main__":
+    csrf_token, user_token, user_id = None, None, None
     start_run_time = time.time()  # Start timing the script
     with requests.Session() as session:
         try:

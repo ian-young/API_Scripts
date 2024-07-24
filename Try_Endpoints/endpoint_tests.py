@@ -270,7 +270,6 @@ passed{Fore.RED} in {short_time}s "
         sthread.join()
 
 
-
 def flash_led(pin, count, speed):
     """
     Flashes an LED that is wired into the GPIO board of a raspberry pi

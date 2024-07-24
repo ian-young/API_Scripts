@@ -15,6 +15,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 from os import getenv
+from typing import List
 
 import colorama
 import requests
@@ -94,7 +95,7 @@ PLATE = getenv("")  # AC plate cred to manipulate
 
 GENERAL_HEADER = {"accept": "application/json", "x-api-key": API_KEY}
 
-FAILED_ENDPOINTS = []
+FAILED_ENDPOINTS: List[str] = []
 FAILED_ENDPOINTS_LOCK = threading.Lock()
 MAX_RETRIES = 5  # How many times the program should retry on 429
 RETRY_DELAY = 0.25  # Seconds to wait

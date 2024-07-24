@@ -11,7 +11,7 @@ from os import getenv, environ
 import requests
 from dotenv import load_dotenv
 
-from verkada_totp import generate_totp
+from QoL.verkada_totp import generate_totp
 
 environ.clear()
 load_dotenv()  # Load credentials file

@@ -19,7 +19,7 @@ from os import environ, getenv
 import requests
 from dotenv import load_dotenv
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 
 environ.clear()  # Clear any previously loaded variables
 load_dotenv()  # Import credentials
