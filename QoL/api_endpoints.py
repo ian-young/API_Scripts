@@ -43,7 +43,7 @@ DELETE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 GET_ALL_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 UPDATE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 CREATE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
-GET_ALL_LPOI = (f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest")
+GET_ALL_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
 GET_TREND_DATA = (
     f"{BASE_URL}{CAM}analytics/occupancy_trends?interval=1_hour"
 )
