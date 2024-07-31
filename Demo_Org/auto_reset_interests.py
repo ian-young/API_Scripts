@@ -11,8 +11,10 @@ import logging
 import os
 import threading
 import time
+from typing import Any, Dict, List, Optional, Union
 
 import requests
+from tqdm import tqdm
 
 import QoL.custom_exceptions as custom_exceptions
 
@@ -23,17 +25,18 @@ BACKOFF = 0.25
 
 # Set logger
 log = logging.getLogger()
-log.setLevel(logging.INFO)
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+LOG_LEVEL = logging.WARNING
+log.setLevel(LOG_LEVEL)
+logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-if ORG_ID := os.environ.get("ORG_ID"):
+if ORG_ID := os.environ.get("slc_id"):
     log.debug("ID retrieved.")
 
-if API_KEY := os.environ.get("API_KEY"):
+if API_KEY := os.environ.get("slc_key"):
     log.debug("Key retrieved.")
 
 try:
@@ -55,10 +58,12 @@ except ImportError:
     log.debug("RPi.GPIO is not available. Running on a non-Pi platform")
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([""])  # Label of plate #!Not plate number!#
-PERSISTENT_PERSONS = sorted(["Parkour"])  # PoI label
-PERSISTENT_PID = sorted(["751e9607-4617-43e1-9e8c-1bd439c116b6"])  # PoI ID
-PERSISTENT_LID = sorted([""])  # LPoI ID
+PERSISTENT_PLATES: List[str] = sorted(
+    []
+)  # Label of plate #!Not plate number!#
+PERSISTENT_PERSONS: List[str] = sorted([])  # PoI label
+PERSISTENT_PID: List[str] = sorted([])  # PoI ID
+PERSISTENT_LID: List[str] = sorted([])  # LPoI ID
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/\
@@ -77,7 +82,9 @@ class RateLimiter:
     created to prevent hitting the API limit.
     """
 
-    def __init__(self, rate_limit, max_events_per_sec=5, pacing=1):
+    def __init__(
+        self, rate_limit: int, max_events_per_sec: int = 5, pacing: int = 1
+    ):
         """
         Initialization of the rate limiter.
 
@@ -94,10 +101,10 @@ class RateLimiter:
         self.lock = threading.Lock()  # Local lock to prevent race conditions
         self.max_events_per_sec = max_events_per_sec
         self.pacing = pacing
-        self.start_time = 0
+        self.start_time: float = 0
         self.event_count = 0
 
-    def acquire(self):
+    def acquire(self) -> bool:
         """
         States whether or not the program may create new threads or not.
 
@@ -134,16 +141,23 @@ class RateLimiter:
             return True
 
 
-def run_thread_with_rate_limit(threads, rate_limit=5):
+def run_thread_with_rate_limit(
+    threads: List[threading.Thread], description: str, rate_limit: int = 5
+):
     """
     Run a thread with rate limiting.
 
-    :param target: The target function to be executed in the thread:
-    :type targe: function:
+    :param threads: The threads to be ran with rate limiting
+    :type threads: List[threading.Thread]
+    :param rate_limit: How many threads may be ran per second.
+    :type rate_limit: int
     :return: The thread that was created and ran
     :rtype: thread
     """
     limiter = RateLimiter(rate_limit=rate_limit)
+    progress_bar = tqdm(
+        total=len(threads) * 2, desc=f"Processing {description} threads"
+    )
 
     def run_thread(thread):
         limiter.acquire()
@@ -156,12 +170,16 @@ def run_thread_with_rate_limit(threads, rate_limit=5):
 
     for thread in threads:
         run_thread(thread)
+        progress_bar.update(1)
 
     for thread in threads:
         thread.join()
+        progress_bar.update(1)
+
+    progress_bar.close()
 
 
-def clean_list(messy_list):
+def clean_list(messy_list: List[Any]) -> List[Any]:
     """
     Removes any None values from error codes
 
@@ -173,7 +191,7 @@ def clean_list(messy_list):
     return [value for value in messy_list if value is not None]
 
 
-def flash_led(pin, local_stop_event, speed):
+def flash_led(pin: int, local_stop_event: threading.Event, speed: int):
     """
     Flashes an LED that is wired into the GPIO board of a raspberry pi for
     the duration of work.
@@ -182,7 +200,7 @@ def flash_led(pin, local_stop_event, speed):
     :type pin: int
     :param local_stop_event: Thread-local event to indicate when the program's
     work is done and the LED can stop flashing.
-    :type local_stop_event: Bool
+    :type local_stop_event: threading.Event
     :param speed: How long each flash should last in seconds.
     :type failed: int
     :return: None
@@ -200,7 +218,9 @@ def flash_led(pin, local_stop_event, speed):
 ##############################################################################
 
 
-def get_people(org_id=ORG_ID, api_key=API_KEY):
+def get_people(
+    org_id: Optional[str] = ORG_ID, api_key: Optional[str] = API_KEY
+) -> Optional[List[str]]:
     """
     Returns JSON-formatted persons in a Command org.
 
@@ -231,7 +251,7 @@ def get_people(org_id=ORG_ID, api_key=API_KEY):
             iter(persons)
         except (TypeError, AttributeError):
             log.error("People are not iterable.")
-            return
+            return None
 
         return persons
     else:
@@ -242,7 +262,9 @@ def get_people(org_id=ORG_ID, api_key=API_KEY):
         return None
 
 
-def get_people_ids(persons=None):
+def get_people_ids(
+    persons: Optional[List[Dict[str, str]]] = None
+) -> List[Optional[str]]:
     """
     Returns an array of all PoI labels in an organization.
 
@@ -254,18 +276,25 @@ def get_people_ids(persons=None):
     :rtype: list
     """
     person_id = []
+    if persons:
+        for person in persons:
+            if person.get("person_id"):
+                person_id.append(person.get("person_id"))
+            else:
+                log.error(
+                    "There has been an error with person %s.",
+                    person.get("label"),
+                )
+    else:
+        log.error("No list was provided.")
 
-    for person in persons:
-        if person.get("person_id"):
-            person_id.append(person.get("person_id"))
-        else:
-            log.error(
-                "There has been an error with person %s.", person.get("label")
-            )
     return person_id
 
 
-def get_person_id(person=PERSISTENT_PERSONS, persons=None):
+def get_person_id(
+    person: Union[str, List[str]] = PERSISTENT_PERSONS,
+    persons: Optional[List[Dict[str, str]]] = None,
+) -> Optional[str]:
     """
         Returns the Verkada ID for a given PoI.
 
@@ -277,16 +306,26 @@ def get_person_id(person=PERSISTENT_PERSONS, persons=None):
         :return: The person ID of the given PoI.
         :rtype: str
     """
-    if person_id := next(
-        (name["person_id"] for name in persons if name["label"] == person),
-        None,
-    ):
-        return person_id
-    log.warning("Person %s was not found in the database...", person)
+    if persons:
+        if person_id := next(
+            (name["person_id"] for name in persons if name["label"] == person),
+            None,
+        ):
+            return person_id
+        log.warning("Person %s was not found in the database...", person)
+
+    else:
+        log.error("No list was provided.")
+
     return None
 
 
-def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
+def delete_person(
+    person: str,
+    persons: List[Dict[str, str]],
+    org_id: Optional[str] = ORG_ID,
+    api_key: Optional[str] = API_KEY,
+):
     """
     Deletes the given person from the organization.
 
@@ -334,6 +373,9 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
             raise custom_exceptions.APIThrottleException("API throttled")
 
     # Handle exceptions
+    except requests.exceptions.Timeout:
+        log.warning("Request timed out.")
+
     except custom_exceptions.APIThrottleException:
         log.critical(
             "Person - Hit API request rate limit of 500 requests per minute."
@@ -345,7 +387,12 @@ def delete_person(person, persons, org_id=ORG_ID, api_key=API_KEY):
         ) from e
 
 
-def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
+def purge_people(
+    delete: List[Optional[str]],
+    persons: List[Dict[str, str]],
+    org_id: Optional[str] = ORG_ID,
+    api_key: Optional[str] = API_KEY,
+):
     """
     Purges all PoIs that aren't marked as safe/persistent.
 
@@ -362,7 +409,6 @@ def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
     """
     if not delete:
         log.warning("Person - There's nothing here")
-        return
 
     local_stop_event = threading.Event()
 
@@ -394,7 +440,7 @@ def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
         )
         threads.append(thread)  # Add the thread to the pile
 
-    run_thread_with_rate_limit(threads)
+    run_thread_with_rate_limit(threads, "PoI")
 
     person_end_time = time.time()
     person_elapsed_time = person_end_time - person_start_time
@@ -406,10 +452,8 @@ def purge_people(delete, persons, org_id=ORG_ID, api_key=API_KEY):
         local_stop_event.set()
         flash_thread.join()
 
-    return 1  # Completed
 
-
-def print_person_name(to_delete, persons):
+def print_person_name(to_delete: str, persons: List[Dict[str, str]]) -> str:
     """
     Returns the label of a PoI with a given ID
 
@@ -449,10 +493,8 @@ def run_people():
     else:
         log.warning("No persons were found.")
 
-    return 1  # Completed
 
-
-def handle_people(persons):
+def handle_people(persons: List[Dict[str, str]]):
     """
     Handle the processing of people by gathering IDs, searching for
     safe people, and deleting people if needed.
@@ -495,7 +537,9 @@ There are no more persons to delete."
 ##############################################################################
 
 
-def get_plates(org_id=ORG_ID, api_key=API_KEY):
+def get_plates(
+    org_id: Optional[str] = ORG_ID, api_key: Optional[str] = API_KEY
+) -> Optional[List[str]]:
     """
     Returns JSON-formatted plates in a Command org.
 
@@ -527,7 +571,7 @@ def get_plates(org_id=ORG_ID, api_key=API_KEY):
             iter(plates)
         except (TypeError, AttributeError):
             log.error("Plates are not iterable.")
-            return
+            return None
 
         return plates
     else:
@@ -535,10 +579,12 @@ def get_plates(org_id=ORG_ID, api_key=API_KEY):
             "Plate - Error with retrieving plates. Status code %s",
             response.status_code,
         )
-        return
+        return None
 
 
-def get_plate_ids(plates=None):
+def get_plate_ids(
+    plates: Optional[List[Dict[str, str]]] = None
+) -> List[Optional[str]]:
     """
     Returns an array of all LPoI labels in an organization.
 
@@ -551,19 +597,25 @@ def get_plate_ids(plates=None):
     """
     plate_id = []
 
-    for plate in plates:
-        if plate.get("license_plate"):
-            plate_id.append(plate.get("license_plate"))
-        else:
-            log.error(
-                "Plate - There has been an error with plate %s.",
-                plate.get("label"),
-            )
+    if plates:
+        for plate in plates:
+            if plate.get("license_plate"):
+                plate_id.append(plate.get("license_plate"))
+            else:
+                log.error(
+                    "Plate - There has been an error with plate %s.",
+                    plate.get("label"),
+                )
+    else:
+        log.error("No list was provided")
 
     return plate_id
 
 
-def get_plate_id(plate=PERSISTENT_PLATES, plates=None):
+def get_plate_id(
+    plate: Optional[Union[str, List[str]]] = PERSISTENT_PLATES,
+    plates: Optional[List[Dict[str, str]]] = None,
+) -> Optional[str]:
     """
     Returns the Verkada ID for a given LPoI.
 
@@ -575,20 +627,29 @@ def get_plate_id(plate=PERSISTENT_PLATES, plates=None):
     :return: The plate ID of the given LPoI.
     :rtype: str
     """
-    if plate_id := next(
-        (
-            name["license_plate"]
-            for name in plates
-            if name["description"] == plate
-        ),
-        None,
+    if plates and (
+        plate_id := next(
+            (
+                name["license_plate"]
+                for name in plates
+                if name["description"] == plate
+            ),
+            None,
+        )
     ):
         return plate_id
+
     log.error("Plate %s was not found in the database...", plate)
+
     return None
 
 
-def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
+def delete_plate(
+    plate: str,
+    plates: List[Dict[str, str]],
+    org_id: Optional[str] = ORG_ID,
+    api_key: Optional[str] = API_KEY,
+):
     """
     Deletes the given plate from the organization.
 
@@ -655,7 +716,12 @@ def delete_plate(plate, plates, org_id=ORG_ID, api_key=API_KEY):
         )
 
 
-def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
+def purge_plates(
+    delete: List[Optional[str]],
+    plates: List[Dict[str, str]],
+    org_id: Optional[str] = ORG_ID,
+    api_key: Optional[str] = API_KEY,
+):
     """
     Purges all LPoIs that aren't marked as safe/persistent.
 
@@ -672,7 +738,6 @@ def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
     """
     if not delete:
         log.warning("Plate - There's nothing here")
-        return
 
     local_stop_event = threading.Event()
 
@@ -704,7 +769,7 @@ def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
         )
         threads.append(thread)  # Add the thread to the pile
 
-    run_thread_with_rate_limit(threads)
+    run_thread_with_rate_limit(threads, "LPoI")
 
     plate_end_time = time.time()
     plate_elapsed_time = plate_end_time - plate_start_time
@@ -716,10 +781,8 @@ def purge_plates(delete, plates, org_id=ORG_ID, api_key=API_KEY):
         local_stop_event.set()
         flash_thread.join()
 
-    return 1  # Completed
 
-
-def print_plate_name(to_delete, plates):
+def print_plate_name(to_delete: str, plates: List[Dict[str, str]]) -> str:
     """
         Returns the description of a LPoI with a given ID
 
@@ -759,10 +822,8 @@ def run_plates():
     else:
         log.info("No plates were found.")
 
-    return 1  # Completed
 
-
-def handle_plates(plates):
+def handle_plates(plates: List[Dict[str, str]]):
     """
     Handle the processing of plates by gathering IDs, searching for safe
     plates, and deleting plates if needed.
