@@ -9,7 +9,7 @@ import csv
 import gc
 import logging
 from os import getpid
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from tqdm import tqdm
 
@@ -17,29 +17,63 @@ from QoL.verbose_compute import memory_usage
 
 PID = getpid()
 
-CSV_OUTPUT = "formatted_users.csv"
-CSV_AC_LIST = "LegacySystemExport.csv"
-CSV_SIS_USERS = "SISExport.csv"
-CSV_CURRENT_USERS = "VerkadaExport.csv"
+CSV_OUTPUT = (
+    "/Users/ian.young/Documents/.scripts/API_Scripts/"
+    "Customer_Projects/formatted_users.csv"
+)
+CSV_AC_LIST = (
+    "/Users/ian.young/Documents/.scripts/API_Scripts/"
+    "Customer_Projects/LegacySystemExport.csv"
+)
+CSV_SIS_USERS = (
+    "/Users/ian.young/Documents/.scripts/API_Scripts/"
+    "Customer_Projects/SISExport.csv"
+)
+CSV_CURRENT_USERS = (
+    "/Users/ian.young/Documents/.scripts/API_Scripts/"
+    "Customer_Projects/VerkadaExport.csv"
+)
 CARD_TYPE = "Standard 26-bit Wiegand"
 STATUS = "Active"
 
 SCHOOL_ID_MAPPING = {
-    "704": "(JHS)",
-    "304": "(JJHS)",
+    "704": "(HS)",
+    "304": "(JHS)",
     "114": "(ES)",
     "110": "(ESS)",
-    "112": "(ESSS)"
+    "112": "(ESSS)",
 }
 
 calculate_memory = lambda start_mem, end_mem: end_mem - start_mem
 
+# Clear all handlers associated with the root logger object
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
 log = logging.getLogger()
-LOG_LEVEL = logging.WARNING
+LOG_LEVEL = logging.ERROR
 logging.basicConfig(
-    level=LOG_LEVEL, format="(%(asctime)s) %(levelname)s: %(message)s"
+    level=LOG_LEVEL,
+    format="%(asctime)s.%(msecs)03d | %(levelname)-0s %(message)s",
 )
 log.setLevel(LOG_LEVEL)
+
+
+def count_lines(file_path: str) -> int:
+    """
+    Count the number of lines in a file.
+
+    Args:
+        file_path (str): The path to the file to count the lines in.
+
+    Returns:
+        int: The total number of lines in the file.
+
+    Raises:
+        This function does not raise any exceptions.
+    """
+    with open(file_path, "r", newline="", encoding="UTF-8") as count_file:
+        return sum(1 for _ in count_file) - 1
 
 
 def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
@@ -63,7 +97,9 @@ def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
         csv_reader = csv.DictReader(csv_file)
 
         log.info("Parsing access control csv")
-        for row in tqdm(csv_reader, desc="Read legacy file"):
+        for row in tqdm(
+            csv_reader, total=count_lines(file_name), desc="Read legacy file"
+        ):
             # Extract useful columns
             name_parts = row["Name"].split(", ")
             if len(name_parts) == 2:
@@ -88,6 +124,7 @@ def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
         calculate_memory(start_mem, memory_usage(PID)),
     )
 
+    csv_file.close()
     gc.collect()  # Clear out variables from memory
 
     return data
@@ -116,7 +153,9 @@ def read_sis_csv(file_name: str) -> List[Dict[str, str]]:
 
         log.info("Parsing sis csv")
         # Extract useful columns
-        for row in tqdm(csv_reader, desc="Read sis csv"):
+        for row in tqdm(
+            csv_reader, total=count_lines(file_name), desc="Read sis csv"
+        ):
             if (
                 row["Email_Addr"] not in recorded_emails
                 and row["Email_Addr"] != ""
@@ -153,6 +192,7 @@ def read_sis_csv(file_name: str) -> List[Dict[str, str]]:
         calculate_memory(start_mem, memory_usage(PID)),
     )
 
+    csv_file.close()
     gc.collect()  # Clear out variables from memory
 
     return data
@@ -180,7 +220,10 @@ def read_command_csv(file_name: str) -> List[Dict[str, str]]:
 
         log.info("Parsing sis csv")
         # Extract useful columns
-        for row in tqdm(csv_reader, desc="Read Command csv"):
+        for row in tqdm(
+            csv_reader, total=count_lines(file_name), desc="Read Command csv"
+        ):
+
             try:
                 data.append(
                     {
@@ -211,12 +254,18 @@ def read_command_csv(file_name: str) -> List[Dict[str, str]]:
         calculate_memory(start_mem, memory_usage(PID)),
     )
 
+    csv_file.close()
     gc.collect()  # Clear out variables from memory
 
     return data
 
 
-def collect_groups(sis_users_list, index, current_email=None, collected_groups=None):
+def collect_groups(
+    sis_users_list: List[Dict[str, str]],
+    index: int,
+    current_email: Optional[str] = None,
+    collected_groups: Optional[List[str]] = None,
+) -> List[str]:
     """
     Collect groups associated with a specific email from the SIS users
     list recursively.
@@ -262,10 +311,12 @@ def collect_groups(sis_users_list, index, current_email=None, collected_groups=N
             collected_groups.append(group)
 
     # Recurse to the next item
-    return collect_groups(sis_users_list, index + 1, current_email, collected_groups)
+    return collect_groups(
+        sis_users_list, index + 1, current_email, collected_groups
+    )
 
 
-def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str,str]:
+def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
     """
     Process the SIS users list to collect user groups for each unique
         email.
@@ -294,7 +345,10 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str,str]:
                 user_groups[email] = ";".join(groups)
 
             # Skip ahead to the next unique email
-            while index < len(sis_users_list) and sis_users_list[index]["Email"] == email:
+            while (
+                index < len(sis_users_list)
+                and sis_users_list[index]["Email"] == email
+            ):
                 index += 1
 
         else:
@@ -368,7 +422,7 @@ def compile_data_for_csv(
                             "cardFormat": CARD_TYPE,
                             "facilityCode": "103",
                             "cardNumber": ac_user["Card Number"],
-                            "groups": user_groups.get(email, "")
+                            "groups": user_groups.get(email, ""),
                         }
                     )
 
@@ -386,9 +440,80 @@ def compile_data_for_csv(
         calculate_memory(start_mem, memory_usage(PID)),
     )
 
+    update_current_users_with_groups(CSV_CURRENT_USERS, user_groups)
     gc.collect()  # Clear out variables from memory
 
     return compiled_data
+
+
+def update_current_users_with_groups(
+    file_name: str, processed_sis_users: Dict[str, str]
+):
+    """
+    Update the current users with their respective groups based on
+        processed SIS users.
+
+    Args:
+        file_name (str): The name of the original file to read user data
+            from.
+        processed_sis_users (Dict[str, str]): A dictionary mapping user
+            emails to their associated groups.
+
+    Returns:
+        None
+
+    Raises:
+        This function does not raise any exceptions.
+
+    Examples:
+        update_current_users_with_groups("users.csv", {
+            "user1@example.com": ["Group1", "Group2"]
+        })
+    """
+
+    start_mem = memory_usage(PID)
+
+    # Open the original file and a new file for the updated data
+    with open(
+        file_name, "r", newline="", encoding="UTF-8"
+    ) as current_file, open(
+        "updated_users.csv", "w", newline="", encoding="UTF-8"
+    ) as group_file:
+
+        csv_reader = csv.DictReader(current_file)
+        group_fieldnames = csv_reader.fieldnames or []
+        group_writer = csv.DictWriter(group_file, fieldnames=group_fieldnames)
+
+        group_writer.writeheader()
+
+        # Process each row in the original file
+        for user in tqdm(
+            csv_reader,
+            total=count_lines(file_name),
+            desc="Writing Updated Users",
+        ):
+            email = user.get("email")
+            if email in processed_sis_users:
+                existing_groups = user.get("groups", "").strip()
+                new_groups = "".join(processed_sis_users[email])
+                if existing_groups and new_groups:
+                    user["groups"] = f"{existing_groups}; {new_groups}"
+                elif existing_groups:
+                    user["groups"] = existing_groups
+                else:
+                    user["groups"] = new_groups
+            # Write the updated user to the new file
+            group_writer.writerow(user)
+
+    log.info("Data updated and written to updated_users.csv")
+    log.debug(
+        "Total memory used: %iKiB",
+        calculate_memory(start_mem, memory_usage(PID)),
+    )
+
+    group_file.close()
+    current_file.close()
+    gc.collect()  # Clear out variables from memory
 
 
 if ac_user_list := compile_data_for_csv(
@@ -421,7 +546,7 @@ if ac_user_list := compile_data_for_csv(
             "groups",
             "cloudUnlock",
             "bluetoothUnlock",
-            "photoUrl"
+            "photoUrl",
         )
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
