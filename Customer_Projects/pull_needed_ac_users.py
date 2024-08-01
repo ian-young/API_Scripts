@@ -17,22 +17,10 @@ from QoL.verbose_compute import memory_usage
 
 PID = getpid()
 
-CSV_OUTPUT = (
-    "/Users/ian.young/Documents/.scripts/API_Scripts/"
-    "Customer_Projects/formatted_users.csv"
-)
-CSV_AC_LIST = (
-    "/Users/ian.young/Documents/.scripts/API_Scripts/"
-    "Customer_Projects/LegacySystemExport.csv"
-)
-CSV_SIS_USERS = (
-    "/Users/ian.young/Documents/.scripts/API_Scripts/"
-    "Customer_Projects/SISExport.csv"
-)
-CSV_CURRENT_USERS = (
-    "/Users/ian.young/Documents/.scripts/API_Scripts/"
-    "Customer_Projects/VerkadaExport.csv"
-)
+CSV_OUTPUT = "formatted_users.csv"
+CSV_AC_LIST = "LegacySystemExport.csv"
+CSV_SIS_USERS = "SISExport.csv"
+CSV_CURRENT_USERS = "CurrentExport.csv"
 CARD_TYPE = "Standard 26-bit Wiegand"
 STATUS = "Active"
 
@@ -54,7 +42,7 @@ log = logging.getLogger()
 LOG_LEVEL = logging.ERROR
 logging.basicConfig(
     level=LOG_LEVEL,
-    format="%(asctime)s.%(msecs)03d | %(levelname)-0s %(message)s",
+    format="%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s",
 )
 log.setLevel(LOG_LEVEL)
 
@@ -263,7 +251,7 @@ def read_command_csv(file_name: str) -> List[Dict[str, str]]:
 def collect_groups(
     sis_users_list: List[Dict[str, str]],
     index: int,
-    current_email: Optional[str] = None,
+    current_name: Optional[str] = None,
     collected_groups: Optional[List[str]] = None,
 ) -> List[str]:
     """
@@ -291,14 +279,14 @@ def collect_groups(
         return collected_groups
 
     current_user = sis_users_list[index]
-    email = current_user["Email"]
+    full_name = f"{current_user['First Name']} {current_user['Last Name']}"
 
-    # Initialize current_email on the first call
-    if current_email is None:
-        current_email = email
+    # Initialize current_name on the first call
+    if current_name is None:
+        current_name = full_name
 
     # If we have moved to a different email, return the accumulated groups
-    if email != current_email:
+    if full_name != current_name:
         return collected_groups
 
     # Process the current SchoolID
@@ -312,7 +300,7 @@ def collect_groups(
 
     # Recurse to the next item
     return collect_groups(
-        sis_users_list, index + 1, current_email, collected_groups
+        sis_users_list, index + 1, current_name, collected_groups
     )
 
 
@@ -337,17 +325,20 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
     while index < len(sis_users_list):
         current_user = sis_users_list[index]
 
-        if email := current_user["Email"]:
-            if email not in user_groups:
+        if (
+            full_name := f"{current_user['First Name']} {current_user['Last Name']}"
+        ):
+            if full_name not in user_groups:
 
                 # Collect groups for the current email
-                groups = collect_groups(sis_users_list, index, email)
-                user_groups[email] = ";".join(groups)
+                groups = collect_groups(sis_users_list, index, full_name)
+                user_groups[full_name] = ";".join(groups)
 
             # Skip ahead to the next unique email
             while (
                 index < len(sis_users_list)
-                and sis_users_list[index]["Email"] == email
+                and f"{sis_users_list[index]['First Name']} {sis_users_list[index]['Last Name']}"
+                == full_name
             ):
                 index += 1
 
@@ -409,6 +400,7 @@ def compile_data_for_csv(
             ):
                 first_name = sis_user["First Name"]
                 last_name = sis_user["Last Name"]
+                full_name = f"{first_name} {last_name}"
 
                 log.debug("Checking names %s", first_name)
 
@@ -422,7 +414,7 @@ def compile_data_for_csv(
                             "cardFormat": CARD_TYPE,
                             "facilityCode": "103",
                             "cardNumber": ac_user["Card Number"],
-                            "groups": user_groups.get(email, ""),
+                            "groups": user_groups.get(full_name, ""),
                         }
                     )
 
@@ -492,10 +484,10 @@ def update_current_users_with_groups(
             total=count_lines(file_name),
             desc="Writing Updated Users",
         ):
-            email = user.get("email")
-            if email in processed_sis_users:
+            full_name = f"{user['firstName']} {user['lastName']}"
+            if full_name in processed_sis_users:
                 existing_groups = user.get("groups", "").strip()
-                new_groups = "".join(processed_sis_users[email])
+                new_groups = "".join(processed_sis_users[full_name])
                 if existing_groups and new_groups:
                     user["groups"] = f"{existing_groups}; {new_groups}"
                 elif existing_groups:
