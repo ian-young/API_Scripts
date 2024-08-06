@@ -78,7 +78,7 @@ Before you begin, ensure you have the following software installed on your termi
 4. **Docker**
     - Download and install Docker from the [official Docker website](https://www.docker.com/products/docker-desktop/).
     - Follow the installation instructions for your operating system.
-    - Verify the installtion:
+    - Verify the installation:
 
         ```fish
         docker --version
@@ -142,7 +142,7 @@ pip install -r requirements.txt
 The project uses environment variables for configuration, managed by the python-dotenv module. Follow these steps to configure your environment variables:
 
 1. **Download the .env-generic File**:
-    Download the [.env-generic](https://github.com/ian-young/API_Scripts/raw/main/.env-generic) file.
+    Download the [.env-generic](https://github.com/ian-young/API_Scripts/blob/main/.env-generic) file.
 
 2. **Rename and Move the File**:
     Rename the file to .env and move it to the root directory of the project:

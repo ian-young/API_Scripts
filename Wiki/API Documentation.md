@@ -159,7 +159,7 @@ For actions that require emulating user behavior, you need to authenticate using
 
 ### Example Script
 
-Here’s [an example script](https://github.com/ian-young/API_Scripts/blob/wip/auto_reset_interests.py) demonstrating the use of the Verkada public REST API to manage persons of interest.
+Here’s [an example script](https://github.com/ian-young/API_Scripts/blob/main/Demo_Org/auto_reset_interests.py) demonstrating the use of the Verkada public REST API to manage persons of interest.
 
 ## Docker Application
 
