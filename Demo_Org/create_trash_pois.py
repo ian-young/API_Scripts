@@ -24,8 +24,8 @@ URL_POI = "https://api.verkada.com/cameras/v1/people/person_of_interest"
 URL_LPR = "https://api.verkada.com/cameras/v1/\
 analytics/lpr/license_plate_of_interest"
 
-ORG_ID = getenv("slc_id")
-API_KEY = getenv("slc_key")
+ORG_ID = getenv("")
+API_KEY = getenv("")
 
 # Set logger
 log = logging.getLogger()
