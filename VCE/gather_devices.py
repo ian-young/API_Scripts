@@ -14,8 +14,8 @@ from typing import Callable, Optional, Any, List
 import requests
 from dotenv import load_dotenv
 
+from QoL import login_and_get_tokens, logout
 from QoL.custom_exceptions import APIExceptionHandler
-from QoL.verkada_totp import generate_totp
 
 load_dotenv()  # Load credentials file
 
@@ -24,6 +24,7 @@ API_KEY = getenv("")
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
+TOTP = getenv("")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -53,7 +54,6 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-devices_serials = [""]
 ARRAY_LOCK = threading.Lock()
 
 
@@ -101,113 +101,11 @@ def create_thread_with_args(target: Callable, args: Any) -> ResultThread:
 
 
 ##############################################################################
-#############################  Authentication  ###############################
-##############################################################################
-
-
-def login_and_get_tokens(
-    login_session: requests.Session,
-    username: Optional[str] = USERNAME,
-    password: Optional[str] = PASSWORD,
-    org_id: Optional[str] = ORG_ID,
-) -> tuple[str, str, str]:
-    """
-    Initiates a Command session with the given user credentials and Verkada
-    organization ID.
-
-    :param login_session: The user session to use when making API calls.
-    :type login_session: requests.Session
-    :param username: A Verkada user's username to be used during the login.
-    :type username: str, optional
-    :param password: A Verkada user's password used during the login process.
-    :type password: str, optional
-    :param org_id: The Verkada Org ID that is being logged into.
-    :type org_id: str, optional
-    :return: Will return the csrf_token of the session that has been initiated
-    along with the user token for the session and the user's id.
-    :rtype: String, String, String
-    """
-    # Prepare login data
-    login_data = {
-        "email": username,
-        "password": password,
-        "otp": generate_totp(getenv("lab_totp")),
-        "org_id": org_id,
-    }
-
-    try:
-        # Request the user session
-        log.debug("Requesting session.")
-        response = login_session.post(LOGIN_URL, json=login_data)
-        response.raise_for_status()
-        log.debug("Session opened.")
-
-        # Extract relevant information from the JSON response
-        log.debug("Parsing JSON response.")
-        json_response = response.json()
-        session_token = json_response.get("csrfToken")
-        session_user_token = json_response.get("userToken")
-        session_user_id = json_response.get("userId")
-        log.debug("Response parsed. Returning values.")
-
-        return session_token, session_user_token, session_user_id
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Login") from e
-
-
-def logout(
-    logout_session: requests.Session,
-    x_verkada_token: str,
-    x_verkada_auth: str,
-    org_id: Optional[str] = ORG_ID,
-):
-    """
-    Logs the Python script out of Command to prevent orphaned sessions.
-
-    :param logout_session: The user session to use when making API calls.
-    :type logout_session: requests.Session
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
-    """
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-organization": org_id,
-    }
-
-    body = {"logoutCurrentEmailOnly": True}
-    try:
-        response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
-        response.raise_for_status()
-
-        log.info("Logging out.")
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Logout") from e
-
-    except KeyboardInterrupt:
-        log.warning("Keyboard interrupt detected. Exiting...")
-
-    finally:
-        logout_session.close()
-
-
-##############################################################################
 #################################  Requests  #################################
 ##############################################################################
 
 
-def list_cameras(
-    api_key: str, camera_session: requests.Session
-) -> Optional[List[str]]:
+def list_cameras(api_key: str, camera_session: requests.Session) -> List[str]:
     """
     Will list all cameras inside of a Verkada organization.
 
@@ -224,14 +122,12 @@ def list_cameras(
     camera_ids = []
     log.debug("Requesting camera data")
 
-    try:
-        response = camera_session.get(CAMERA_URL, headers=headers)
+    response = camera_session.get(CAMERA_URL, headers=headers)
 
-        if response.status_code == 400:
-            log.warning("No cameras were found in the org.")
-            return None
+    if response.status_code == 400:
+        log.warning("No cameras were found in the org.")
 
-        response.raise_for_status()
+    elif response.status_code == 200:
         log.debug("-------")
         log.debug("Camera data retrieved.")
 
@@ -242,11 +138,12 @@ def list_cameras(
             log.debug("Retrieved %s: %s", camera["name"], camera["camera_id"])
             camera_ids.append(camera["camera_id"])
 
-        return camera_ids
+    else:
+        log.error(
+            "List cameras endpoint returned with: %s", response.status_code
+        )
 
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Cameras") from e
+    return camera_ids
 
 
 def get_sites(
@@ -297,11 +194,11 @@ def get_sites(
             log.debug("Retrieved %s: %s", site["siteId"], site["siteName"])
             site_ids.append(site["siteId"])
 
-        return site_ids
-
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Sites") from e
+
+    return site_ids
 
 
 def list_ac(
@@ -310,7 +207,7 @@ def list_ac(
     usr: str,
     ac_session: requests.Session,
     org_id: Optional[str] = ORG_ID,
-) -> Optional[List[str]]:
+) -> List[str]:
     """
     Lists all access control devices.
 
@@ -357,15 +254,13 @@ def list_ac(
 
             access_ids.append(controller["deviceId"])
 
-        return access_ids
-
     # Handle exceptions
     except KeyError:
         log.warning("No access controllers found in org.")
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Access Control") from e
 
-    return None  # Catch odd cases
+    return access_ids
 
 
 def list_alarms(
@@ -491,11 +386,11 @@ def list_alarms(
             )
             wr_ids.append(wr["deviceId"])
 
-        return dcs_ids, gbs_ids, hub_ids, ms_ids, pb_ids, ws_ids, wr_ids
-
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Alarms") from e
+
+    return dcs_ids, gbs_ids, hub_ids, ms_ids, pb_ids, ws_ids, wr_ids
 
 
 def list_viewing_stations(
@@ -551,11 +446,11 @@ def list_viewing_stations(
             )
             vx_ids.append(vx["viewingStationId"])
 
-        return vx_ids
-
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Viewing Stations") from e
+
+    return vx_ids
 
 
 def list_gateways(
@@ -610,11 +505,11 @@ def list_gateways(
             )
             gc_ids.append(gc["device_id"])
 
-        return gc_ids
-
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Cellular Gateways") from e
+
+    return gc_ids
 
 
 def list_sensors(
@@ -669,11 +564,11 @@ def list_sensors(
             )
             sv_ids.append(sv["deviceId"])
 
-        return sv_ids
-
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Environmental Sensors") from e
+
+    return sv_ids
 
 
 def list_horns(
@@ -738,7 +633,7 @@ def list_desk_stations(
     usr: str,
     ds_session: requests.Session,
     org_id: Optional[str] = ORG_ID,
-) -> Optional[List[str]]:
+) -> List[str]:
     """
     Lists all desk stations.
 
@@ -761,16 +656,14 @@ def list_desk_stations(
 
     desk_ids = []
 
-    try:
-        # Request the JSON archive library
-        log.debug("Requesting Desk Stations.")
-        response = ds_session.get(DESK_URL, headers=headers)
+    # Request the JSON archive library
+    log.debug("Requesting Desk Stations.")
+    response = ds_session.get(DESK_URL, headers=headers)
 
-        if response.status_code == 403:
-            log.warning("No Desk Stations were found in the org.")
-            return None
+    if response.status_code == 403:
+        log.warning("No Desk Stations were found in the org.")
 
-        response.raise_for_status()  # Raise an exception for HTTP errors
+    elif response.status_code == 200:
         log.debug("Desk station JSON retrieved. Parsing and logging.")
 
         desk_stations = response.json()["deskApps"]
@@ -782,11 +675,13 @@ def list_desk_stations(
             )
             desk_ids.append(ds["deviceId"])
 
-        return desk_ids
+    else:
+        log.error(
+            "List desk station endpoint returned with: %s",
+            str(response.status_code),
+        )
 
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Desk Stations") from e
+    return desk_ids
 
 
 def list_guest(
@@ -864,11 +759,11 @@ def list_guest(
                 printer_ids.append(printer["printerId"])
             log.debug("Printers retrieved.")
 
-        return ipad_ids, printer_ids
-
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Sites") from e
+
+    return ipad_ids, printer_ids
 
 
 def list_acls(
@@ -876,7 +771,7 @@ def list_acls(
     usr: str,
     acl_session: requests.Session,
     org_id: Optional[str] = ORG_ID,
-) -> tuple[Optional[List[str]], Optional[List[str]]]:
+) -> tuple[Optional[List[str]], List[str]]:
     """
     Lists all access control levels.
 
@@ -897,7 +792,7 @@ def list_acls(
         "x-verkada-user-id": usr,
     }
 
-    acl_ids = []
+    acl_ids, acls = [], []
 
     try:
         log.debug("Gathering access control levels.")
@@ -905,7 +800,6 @@ def list_acls(
 
         if response.status_code == 403:
             log.warning("No ACLs were found in this org")
-            return None, None
 
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Access control levels received.")
@@ -918,11 +812,11 @@ def list_acls(
             acl_ids.append(acl["scheduleId"])
         log.debug("Access levels retrieved.")
 
-        return acls, acl_ids
-
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "Sites") from e
+
+    return acls, acl_ids
 
 
 ##############################################################################
@@ -937,7 +831,9 @@ if __name__ == "__main__":
         start_run_time = time.time()  # Start timing the script
         try:
             # Initialize the user session.
-            csrf_token, user_token, user_id = login_and_get_tokens(session)
+            csrf_token, user_token, user_id = login_and_get_tokens(
+                session, USERNAME, PASSWORD, TOTP, ORG_ID
+            )
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
@@ -1018,6 +914,6 @@ if __name__ == "__main__":
         finally:
             if csrf_token and user_token:
                 log.debug("Logging out.")
-                logout(session, csrf_token, user_token)
+                logout(session, csrf_token, user_token, ORG_ID)
             session.close()
             log.debug("Session closed.\nExiting...")
