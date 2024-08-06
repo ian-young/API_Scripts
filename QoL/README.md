@@ -16,7 +16,7 @@ This file houses all custom exceptions that are used throughout the rest of the 
 
 ### [avl_tree.py](https://github.com/ian-young/API_Scripts/blob/main/QoL/avl_tree.py)
 
-Can build manage, delete, compare and manipulate AVL trees to reduce Big O runtime in scripts that handle large files and need to make lots of search calls, compares and/or node modifications.
+Can build, manage, delete, compare and manipulate AVL trees to reduce Big O runtime in scripts that handle large files and need to make lots of search calls, compares and/or node modifications.
 
 ### [api_endpoints.py](https://github.com/ian-young/API_Scripts/blob/main/QoL/api_endpoints.py)
 
