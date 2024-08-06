@@ -112,7 +112,7 @@ def list_cameras(api_key: str, camera_session: requests.Session) -> List[str]:
     :param api_key: The API key generated from the organization to target.
     :type api_key: str
     :param camera_session: The request session to use to make the call with.
-    :type camera_session: object
+    :type camera_session: requests.Session
     :return: Returns a list of all camera device IDs found inside of a Verkada
     organization.
     :rtype: list
@@ -680,17 +680,16 @@ def list_desk_stations(
             "List desk station endpoint returned with: %s",
             str(response.status_code),
         )
-
     return desk_ids
 
 
 def list_guest(
-    x_verkada_token,
-    x_verkada_auth,
-    usr,
-    guest_session,
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    usr: str,
+    guest_session: requests.Session,
     org_id: Optional[str] = ORG_ID,
-    sites=None,
+    sites: Optional[List[str]]=None,
 ) -> tuple[List[str], List[str]]:
     """
     Lists all guest printers and iPads.
