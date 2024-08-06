@@ -36,10 +36,10 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Set final, global credential variables
-API_KEY = getenv("apple_as_key")
-USERNAME = getenv("apple_as_username")
-PASSWORD = getenv("apple_as_password")
-ORG_ID = getenv("apple_as_id")
+API_KEY = getenv("")
+USERNAME = getenv("")
+PASSWORD = getenv("")
+ORG_ID = getenv("")
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
