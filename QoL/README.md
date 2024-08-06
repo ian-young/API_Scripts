@@ -6,7 +6,7 @@ These are scripts that may be utilized to improve the coding experience within t
 
 ### [create_code_divider.py](https://github.com/ian-young/API_Scripts/blob/main/QoL/create_code_divider.py)
 
-This script may be ran to output a given string padded with the `#` character to center it. The divider will not exceed 79 characters to adhere to PEP8 standards.
+This script may be run to output a given string padded with the `#` character to center it. The divider will not exceed 79 characters to adhere to PEP8 standards.
 
 ## Module Importing
 
