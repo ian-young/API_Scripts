@@ -37,7 +37,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 # Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([])  # Label of plate #!Not plate number!#
+PERSISTENT_PLATES = sorted([""])  # Label of plate #!Not plate number!#
 PERSISTENT_PERSONS = sorted(["Parkour"])  # PoI label
 PERSISTENT_USERS = sorted(
     [
@@ -50,7 +50,7 @@ PERSISTENT_USERS = sorted(
     ]
 )  # Must use full name
 PERSISTENT_PID = sorted(["751e9607-4617-43e1-9e8c-1bd439c116b6"])  # PoI ID
-PERSISTENT_LID = sorted([])  # LPoI ID
+PERSISTENT_LID = sorted([""])  # LPoI ID
 
 # Set API endpoint URLs
 PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"

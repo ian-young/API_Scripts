@@ -12,7 +12,7 @@ from os import getenv
 import requests
 from dotenv import load_dotenv
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 
 load_dotenv()  # Load credentials file
 
@@ -198,7 +198,7 @@ if __name__ == "__main__":
             # Handles when the required credentials were not received
             else:
                 log.critical(
-                    "No credentials or incorrect credentials " "were provided."
+                    "No credentials or incorrect credentials were provided."
                 )
 
             # Calculate the time take to run and post it to the log

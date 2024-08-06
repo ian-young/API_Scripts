@@ -20,9 +20,9 @@ from colorama import Fore, Style
 from dotenv import load_dotenv
 from tzlocal import get_localzone
 
-import avl_tree  # File to work with trees
-import custom_exceptions  # Import custom exceptions to save space
-from verkada_totp import generate_totp
+import QoL.avl_tree as avl_tree  # File to work with trees
+import QoL.custom_exceptions as custom_exceptions  # Import custom exceptions to save space
+from QoL.verkada_totp import generate_totp
 
 colorama.init(autoreset=True)  # Initialize colorized output
 

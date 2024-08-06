@@ -15,11 +15,12 @@ import csv
 import logging
 from datetime import datetime, timedelta
 from os import environ, getenv
+from typing import Any, Dict, Generator, List, Union
 
 import requests
 from dotenv import load_dotenv
 
-import custom_exceptions
+import QoL.custom_exceptions as custom_exceptions
 
 environ.clear()  # Clear any previously loaded variables
 load_dotenv()  # Import credentials
@@ -52,7 +53,7 @@ HEADERS = {
 }
 
 
-def celsius_to_fahrenheit(temp_value):
+def celsius_to_fahrenheit(temp_value: float) -> float:
     """
     Convert a temperature value from Celsius to Fahrenheit.
 
@@ -65,7 +66,9 @@ def celsius_to_fahrenheit(temp_value):
     return temp_value * (9 / 5) + 32
 
 
-def read_and_filter_csv(file_path, cutoff):
+def read_and_filter_csv(
+    file_path: str, cutoff: datetime
+) -> Generator[Any, Any, Any]:
     """
     Reads a CSV file at the specified file path, filters out rows
     based on a cutoff time, and yields the filtered rows.
@@ -91,7 +94,7 @@ def read_and_filter_csv(file_path, cutoff):
         log.error("Could not find the csv file. Check working directory.")
 
 
-def fetch_all_data():
+def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
     """
     Fetches all temperature data from the API, appends the data to CSV,
     and filters out old data based on a specified number of days to keep.
@@ -128,7 +131,6 @@ def fetch_all_data():
                     )
 
             # Check if there are more pages to fetch
-            url = None
             if data["next_page_token"] is not None:
                 url = f"{BASE_URL}?device_id={DEVICE_ID}&page_token=\
 {data['next_page_token']}&page_size={PAGE_SIZE}&fields={FIELDS}&interval={INTERVAL}"
