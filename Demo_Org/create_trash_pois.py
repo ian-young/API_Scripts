@@ -9,11 +9,13 @@ import logging
 import threading
 import time
 from os import getenv
+from typing import Any, List
 
 import requests
 from dotenv import load_dotenv
+from tqdm import tqdm
 
-from custom_exceptions import APIThrottleException
+from QoL.custom_exceptions import APIThrottleException
 
 load_dotenv()  # Load credentials file
 
@@ -27,7 +29,13 @@ API_KEY = getenv("")
 
 # Set logger
 log = logging.getLogger()
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+LOG_LEVEL = logging.ERROR
+log.setLevel(LOG_LEVEL)
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="(%(asctime)s.%(msecs)03d) %(levelname)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 # Mute non-essential logging from requests library
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -100,7 +108,7 @@ class PurgeManager:
             self.call_count = 0
 
 
-def clean_list(messy_list):
+def clean_list(messy_list: List[Any]) -> List[Any]:
     """
     Removes any None values from error codes
 
@@ -117,7 +125,9 @@ def clean_list(messy_list):
 ##############################################################################
 
 
-def create_poi(poi_name, poi_image, download, manager):
+def create_poi(
+    poi_name: str, poi_image: str, download: str, manager: PurgeManager
+):
     """Will create a person of interest with a given URL to an image or path
     to a file
 
@@ -149,10 +159,11 @@ def create_poi(poi_name, poi_image, download, manager):
             # Handle the case where the file download failed
             log.critical("Failed to download the image")
     else:
-        file_content = poi_image  # No need to parse the file
+        file_content = str.encode(poi_image)  # No need to parse the file
 
     # Convert the binary content to base64
-    base64_image = base64.b64encode(file_content).decode("utf-8")
+    if file_content:
+        base64_image = base64.b64encode(file_content).decode("utf-8")
 
     # Set payload
     payload = {"label": poi_name, "base64_image": base64_image}
@@ -174,7 +185,7 @@ def create_poi(poi_name, poi_image, download, manager):
         log.critical("Hit API request rate limit of 500/min")
 
 
-def create_plate(lpoi_name, plate_number, manager):
+def create_plate(lpoi_name: str, plate_number: str, manager: PurgeManager):
     """
     Create a LPoI with a given name and plate
 
@@ -211,15 +222,18 @@ def create_plate(lpoi_name, plate_number, manager):
 
 # Check if the code is being ran directly or imported
 if __name__ == "__main__":
+    AMOUNT = 40
+    progress_bar = tqdm(total=AMOUNT * 2, desc="Creating trash")
+
     IMAGE = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.\
 pinimg.com%2F736x%2F87%2Fea%2F33%2F87ea336233db8ad468405db8f94da050--human-\
 faces-photos-of.jpg&f=1&nofb=1&ipt=6af7ecf6cd0e15496e7197f3b6cb1527beaa8718\
 c58609d4feca744209047e57&ipo=images"
-    purge_manager = PurgeManager(call_count_limit=300)
+    purge_manager = PurgeManager(call_count_limit=100)
 
     start_time = time.time()
     threads = []
-    for i in range(1, 11):
+    for i in range(AMOUNT):
         name = f"PoI{i}"
         plate = f"PLATE{i}"
         plate_name = f"Plate{i}"
@@ -246,9 +260,13 @@ c58609d4feca744209047e57&ipo=images"
             ),
         )
         thread_lpoi.start()
+        progress_bar.update(1)
 
     for thread in threads:
         thread.join()
+        progress_bar.update(1)
+
+    progress_bar.close()
 
     end_time = time.time()
     elapsed_time = end_time - start_time

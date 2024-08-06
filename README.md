@@ -12,11 +12,11 @@ The purpose of these scripts is:
 * Stay up to date with coding skills
   * Continue to learn how to optimize code
   * Experiment with new methods of running code and making calls
-* Create automation that may be shared with customers or used on customer orgs
+* Create automations that may be shared with customers or used on customer orgs
 
 ## Navigating the Repository
 
-This repository has three branches:
+This repository has two branches:
 
 1. The [`main`](https://github.com/ian-young/API_Scripts) branch which is where working, production-level code is located.
 2. The [`wip`](https://github.com/ian-young/API_Scripts/tree/wip) branch is intended for code that is working and ready to be public-facing but still has features that need to be developed or is in the debugging phase.
@@ -28,6 +28,4 @@ This repository has three branches:
 
 Scripts that will have a larger impact will have an associated project where issues may be posted and organized for organized development of the script. Items that may be found in project can range from bug reports, documentation requests, feature requests, etc.
 
-Current running projects in the repository are:
-
-1. All projects are complete
+There are no current running projects in this repository; all work is caught up!
