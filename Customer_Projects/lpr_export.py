@@ -29,7 +29,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 load_dotenv()  # Load credentials
 
-API_KEY = getenv("lab_key")
+API_KEY = getenv("")
 CURRENT_TIME = datetime.now()
 END_TIME = int(CURRENT_TIME.timestamp())
 CSV_OUTPUT = f"lpr_info-{datetime.now().date()}.csv"
