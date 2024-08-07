@@ -196,7 +196,10 @@ def get_sites(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Sites") from e
+        if response.status_code == 403:
+            log.warning("No sites found")
+        else:
+            raise APIExceptionHandler(e, response, "Sites") from e
 
     return site_ids
 
@@ -507,7 +510,10 @@ def list_gateways(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Cellular Gateways") from e
+        if response.status_code == 404:
+            log.warning("No gateways found")
+        else:
+            raise APIExceptionHandler(e, response, "Cellular Gateways") from e
 
     return gc_ids
 
@@ -624,6 +630,10 @@ def list_horns(
         return bz_ids
 
     # Handle exceptions
+    except KeyError:
+        log.warning("No BZ11s found in the org.")
+        return bz_ids
+
     except requests.exceptions.RequestException as e:
         raise APIExceptionHandler(e, response, "BZ11 Horn Speakers") from e
 
@@ -813,7 +823,12 @@ def list_acls(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Sites") from e
+        if response.status_code == 403:
+            log.warning("No ACLs found in the org")
+        else:
+            raise APIExceptionHandler(
+                e, response, "Access Control Levels"
+            ) from e
 
     return acls, acl_ids
 
