@@ -12,7 +12,7 @@ from os import getenv
 import requests
 from dotenv import load_dotenv
 
-from QoL.authentication import login_and_get_tokens, logout
+from QoL import login_and_get_tokens, logout
 from QoL.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
 from QoL.custom_exceptions import APIExceptionHandler
 

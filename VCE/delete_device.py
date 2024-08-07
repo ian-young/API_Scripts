@@ -18,10 +18,9 @@ import colorama
 import requests
 from colorama import Fore, Style
 from dotenv import load_dotenv
-from QoL.verkada_totp import generate_totp
 
-import QoL.custom_exceptions as custom_exceptions
 import VCE.gather_devices as gather_devices
+from QoL import login_and_get_tokens, logout, custom_exceptions
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
@@ -184,107 +183,6 @@ def run_thread_with_rate_limit(
 
 
 ##############################################################################
-#############################  Authentication  ###############################
-##############################################################################
-
-
-def login_and_get_tokens(
-    login_session: requests.Session,
-    username: Optional[str] = USERNAME,
-    password: Optional[str] = PASSWORD,
-    org_id: Optional[str] = ORG_ID,
-) -> tuple[str, str, str]:
-    """
-    Initiates a Command session with the given user credentials and Verkada
-    organization ID.
-
-    :param login_session: The request session to use to make the call with.
-    :type login_session: requests.Session
-    :param username: A Verkada user's username to be used during the login.
-    :type username: str, optional
-    :param password: A Verkada user's password used during the login process.
-    :type password: str, optional
-    :param org_id: The Verkada Org ID that is being logged into.
-    :type org_id: str, optional
-    :return: Will return the csrf_token of the session that has been initiated
-    along with the user token for the session and the user's id.
-    :rtype: String, String, String
-    """
-    # Prepare login data
-    login_data = {
-        "email": username,
-        "password": password,
-        "otp": generate_totp(getenv("")),
-        "org_id": org_id,
-    }
-
-    try:
-        # Request the user session
-        log.debug("Requesting session.")
-        response = login_session.post(LOGIN_URL, json=login_data)
-        response.raise_for_status()
-        log.debug("Session opened.")
-
-        # Extract relevant information from the JSON response
-        log.debug("Parsing JSON response.")
-        json_response = response.json()
-        session_token = json_response.get("csrfToken")
-        session_user_token = json_response.get("userToken")
-        session_user_id = json_response.get("userId")
-        log.debug("Response parsed. Returning values.")
-
-        return session_token, session_user_token, session_user_id
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Log in"
-        ) from e
-
-
-def logout(
-    logout_session: requests.Session,
-    x_verkada_token: str,
-    x_verkada_auth: str,
-    org_id: Optional[str] = ORG_ID,
-):
-    """
-    Logs the Python script out of Command to prevent orphaned sessions.
-
-    :param logout_session: The request session to use to make the call with.
-    :type logout_session: requests.Session
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
-    """
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-organization": org_id,
-    }
-
-    body = {"logoutCurrentEmailOnly": True}
-    try:
-        response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
-        response.raise_for_status()
-
-        log.info("Logging out.")
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Logout"
-        ) from e
-
-    finally:
-        logout_session.close()
-
-
-##############################################################################
 ################################  Requests  ##################################
 ##############################################################################
 
@@ -377,7 +275,7 @@ def delete_sensors(
         "Content-Type": "application/json",
     }
 
-    def delete_sensor(device_dict: List[Dict[str ,str]]):
+    def delete_sensor(device_dict: List[Dict[str, str]]):
         """
         Deletes a generic wireless alarm sensor from Verkada Command.
 
@@ -631,8 +529,6 @@ def delete_intercom(
     device_id: str,
     icom_session: requests.Session,
     org_id: Optional[str] = ORG_ID,
-    icom_session: requests.Session,
-    org_id=ORG_ID,
 ):
     """
     Deletes all Intercoms from a Verkada organization.
@@ -838,10 +734,10 @@ def delete_guest(
 
 
 def delete_acls(
-  x_verkada_token: str,
-  usr: str,
-  acl_session: requests.Session,
-  org_id: Optional[str] = ORG_ID
+    x_verkada_token: str,
+    usr: str,
+    acl_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
 ):
     """
     Deletes all access control levels from a Verkada organization.
@@ -910,10 +806,10 @@ def delete_acls(
 
 
 def delete_desk_station(
-  x_verkada_token: str,
-  usr: str,
-  ds_session: requests.Session,
-  org_id: Optional[str] = ORG_ID
+    x_verkada_token: str,
+    usr: str,
+    ds_session: requests.Session,
+    org_id: Optional[str] = ORG_ID,
 ):
     """
     Deletes all Guest devices from a Verkada organization.
@@ -973,7 +869,10 @@ if __name__ == "__main__":
     with requests.Session() as session:
         try:
             # Initialize the user session.
-            csrf_token, user_token, user_id = login_and_get_tokens(session)
+            if USERNAME and PASSWORD and ORG_ID:
+                csrf_token, user_token, user_id = login_and_get_tokens(
+                    session, USERNAME, PASSWORD, ORG_ID
+                )
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
@@ -1089,6 +988,7 @@ if __name__ == "__main__":
         finally:
             if csrf_token and user_token:
                 log.debug("Logging out.")
-                logout(session, csrf_token, user_token)
+                if ORG_ID and csrf_token:
+                    logout(session, csrf_token, user_token, ORG_ID)
             session.close()
             log.debug("Session closed.\nExiting...")

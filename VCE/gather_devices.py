@@ -689,7 +689,7 @@ def list_guest(
     usr: str,
     guest_session: requests.Session,
     org_id: Optional[str] = ORG_ID,
-    sites: Optional[List[str]]=None,
+    sites: Optional[List[str]] = None,
 ) -> tuple[List[str], List[str]]:
     """
     Lists all guest printers and iPads.
@@ -830,9 +830,10 @@ if __name__ == "__main__":
         start_run_time = time.time()  # Start timing the script
         try:
             # Initialize the user session.
-            csrf_token, user_token, user_id = login_and_get_tokens(
-                session, USERNAME, PASSWORD, TOTP, ORG_ID
-            )
+            if USERNAME and PASSWORD and ORG_ID:
+                csrf_token, user_token, user_id = login_and_get_tokens(
+                    session, USERNAME, PASSWORD, ORG_ID, TOTP
+                )
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id:
@@ -913,6 +914,7 @@ if __name__ == "__main__":
         finally:
             if csrf_token and user_token:
                 log.debug("Logging out.")
-                logout(session, csrf_token, user_token, ORG_ID)
+                if ORG_ID and csrf_token:
+                    logout(session, csrf_token, user_token, ORG_ID)
             session.close()
             log.debug("Session closed.\nExiting...")
