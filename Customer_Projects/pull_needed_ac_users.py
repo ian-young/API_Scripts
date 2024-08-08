@@ -42,10 +42,11 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
 log = logging.getLogger()
-LOG_LEVEL = logging.WARNING
+LOG_LEVEL = logging.DEBUG
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s.%(msecs)03d | %(levelname)s | %(message)s",
+    datefmt="%H:%M%S",
 )
 log.setLevel(LOG_LEVEL)
 
