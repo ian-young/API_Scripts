@@ -461,27 +461,27 @@ if __name__ == "__main__":
                     session, USERNAME, PASSWORD, ORG_ID
                 )
 
-            # Continue if the required information has been received
-            if csrf_token and user_token and user_id:
-                log.debug("Retrieving archive library.")
-                archives = read_verkada_camera_archives(
-                    session, csrf_token, user_token, user_id, ORG_ID
-                )
-                log.debug(
-                    "%sArchive library retrieved.%s",
-                    Fore.GREEN,
-                    Style.RESET_ALL,
-                )
+                # Continue if the required information has been received
+                if csrf_token and user_token and user_id:
+                    log.debug("Retrieving archive library.")
+                    archives = read_verkada_camera_archives(
+                        session, csrf_token, user_token, user_id, ORG_ID
+                    )
+                    log.debug(
+                        "%sArchive library retrieved.%s",
+                        Fore.GREEN,
+                        Style.RESET_ALL,
+                    )
 
-                log.debug("Entering remove archives method.")
-                remove_verkada_camera_archives(
-                    session, csrf_token, user_token, user_id, archives
-                )
-                log.debug(
-                    "%sProgram completed successfully.%s",
-                    Fore.GREEN,
-                    Style.RESET_ALL,
-                )
+                    log.debug("Entering remove archives method.")
+                    remove_verkada_camera_archives(
+                        session, csrf_token, user_token, user_id, archives
+                    )
+                    log.debug(
+                        "%sProgram completed successfully.%s",
+                        Fore.GREEN,
+                        Style.RESET_ALL,
+                    )
 
             # Handles when the required credentials were not received
             else:
@@ -501,7 +501,7 @@ if __name__ == "__main__":
             print("\nKeyboard interrupt detected. Aborting...")
 
         finally:
-            if ORG_ID and csrf_token:
+            if ORG_ID and "csrf_token" in locals():
                 logout(session, csrf_token, user_token, ORG_ID)
             session.close()
             log.debug("Session closed. Exiting...")

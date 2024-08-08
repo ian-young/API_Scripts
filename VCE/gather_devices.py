@@ -850,62 +850,64 @@ if __name__ == "__main__":
                     session, USERNAME, PASSWORD, ORG_ID, TOTP
                 )
 
-            # Continue if the required information has been received
-            if csrf_token and user_token and user_id:
-                # Define the threads with arguments
-                c_thread = create_thread_with_args(
-                    list_cameras, [API_KEY, session]
-                )
-                ac_thread = create_thread_with_args(
-                    list_ac, [csrf_token, user_token, user_id, session]
-                )
-                br_thread = create_thread_with_args(
-                    list_alarms, [csrf_token, user_token, user_id, session]
-                )
-                vx_thread = create_thread_with_args(
-                    list_viewing_stations,
-                    [csrf_token, user_token, user_id, session],
-                )
-                gc_thread = create_thread_with_args(
-                    list_gateways, [csrf_token, user_token, user_id, session]
-                )
-                sv_thread = create_thread_with_args(
-                    list_sensors, [csrf_token, user_token, user_id, session]
-                )
-                bz_thread = create_thread_with_args(
-                    list_horns, [csrf_token, user_token, user_id, session]
-                )
-                ds_thread = create_thread_with_args(
-                    list_desk_stations, [csrf_token, user_id, session]
-                )
-                guest_thread = create_thread_with_args(
-                    list_guest, [csrf_token, user_token, user_id, session]
-                )
-                acl_thread = create_thread_with_args(
-                    list_acls, [csrf_token, user_id, session]
-                )
+                # Continue if the required information has been received
+                if csrf_token and user_token and user_id:
+                    # Define the threads with arguments
+                    c_thread = create_thread_with_args(
+                        list_cameras, [API_KEY, session]
+                    )
+                    ac_thread = create_thread_with_args(
+                        list_ac, [csrf_token, user_token, user_id, session]
+                    )
+                    br_thread = create_thread_with_args(
+                        list_alarms, [csrf_token, user_token, user_id, session]
+                    )
+                    vx_thread = create_thread_with_args(
+                        list_viewing_stations,
+                        [csrf_token, user_token, user_id, session],
+                    )
+                    gc_thread = create_thread_with_args(
+                        list_gateways,
+                        [csrf_token, user_token, user_id, session],
+                    )
+                    sv_thread = create_thread_with_args(
+                        list_sensors,
+                        [csrf_token, user_token, user_id, session],
+                    )
+                    bz_thread = create_thread_with_args(
+                        list_horns, [csrf_token, user_token, user_id, session]
+                    )
+                    ds_thread = create_thread_with_args(
+                        list_desk_stations, [csrf_token, user_id, session]
+                    )
+                    guest_thread = create_thread_with_args(
+                        list_guest, [csrf_token, user_token, user_id, session]
+                    )
+                    acl_thread = create_thread_with_args(
+                        list_acls, [csrf_token, user_id, session]
+                    )
 
-                threads = [
-                    c_thread,
-                    ac_thread,
-                    br_thread,
-                    vx_thread,
-                    gc_thread,
-                    sv_thread,
-                    bz_thread,
-                    ds_thread,
-                    guest_thread,
-                    acl_thread,
-                ]
+                    threads = [
+                        c_thread,
+                        ac_thread,
+                        br_thread,
+                        vx_thread,
+                        gc_thread,
+                        sv_thread,
+                        bz_thread,
+                        ds_thread,
+                        guest_thread,
+                        acl_thread,
+                    ]
 
-                for thread in threads:
-                    thread.start()
+                    for thread in threads:
+                        thread.start()
 
-                for thread in threads:
-                    thread.join()
+                    for thread in threads:
+                        thread.join()
 
-                for thread in threads:
-                    print(thread)
+                    for thread in threads:
+                        print(thread)
 
             # Handles when the required credentials were not received
             else:
@@ -929,7 +931,7 @@ if __name__ == "__main__":
         finally:
             if csrf_token and user_token:
                 log.debug("Logging out.")
-                if ORG_ID and csrf_token:
+                if ORG_ID and "csrf_token" in locals():
                     logout(session, csrf_token, user_token, ORG_ID)
             session.close()
             log.debug("Session closed.\nExiting...")

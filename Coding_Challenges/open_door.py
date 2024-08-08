@@ -102,12 +102,16 @@ if __name__ == "__main__":
                     session, USERNAME, PASSWORD, ORG_ID
                 )
 
-            if csrf_token and user_token and user_id:
-                log.debug("Credentials retrieved.")
-                unlock_door(
-                    session, csrf_token, user_token, user_id, VIRTUAL_DEVICE
-                )
-                log.debug("All door(s) unlocked.")
+                if csrf_token and user_token and user_id:
+                    log.debug("Credentials retrieved.")
+                    unlock_door(
+                        session,
+                        csrf_token,
+                        user_token,
+                        user_id,
+                        VIRTUAL_DEVICE,
+                    )
+                    log.debug("All door(s) unlocked.")
 
             else:
                 log.warning("Did not receive the necessary credentials.")
@@ -116,6 +120,6 @@ if __name__ == "__main__":
             log.warning("Keyboard interrupt detected. Exiting...")
 
         finally:
-            if ORG_ID and csrf_token:
+            if ORG_ID and "csrf_token" in locals():
                 logout(session, csrf_token, user_token, ORG_ID)
             session.close()

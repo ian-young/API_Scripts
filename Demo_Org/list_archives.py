@@ -22,9 +22,9 @@ from QoL import login_and_get_tokens, logout, custom_exceptions
 load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
-USERNAME = getenv("")
-PASSWORD = getenv("")
-ORG_ID = getenv("")
+USERNAME = "ian.young+test7@verkada.com"
+PASSWORD = getenv("lab_kuma_password")
+ORG_ID = getenv("lab_id")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -149,20 +149,20 @@ if __name__ == "__main__":
                     session, USERNAME, PASSWORD, ORG_ID
                 )
 
-            if csrf_token and user_token and user_id:
-                log.debug("Reading archives list.")
-                name_verkada_camera_archives(
-                    read_verkada_camera_archives(
-                        session, csrf_token, user_token, user_id
+                if csrf_token and user_token and user_id:
+                    log.debug("Reading archives list.")
+                    name_verkada_camera_archives(
+                        read_verkada_camera_archives(
+                            session, csrf_token, user_token, user_id
+                        )
                     )
-                )
-                log.debug("Reached EoL.")
+                    log.debug("Reached EoL.")
 
-            else:
-                log.critical(
-                    "No credentials were provided during the "
-                    "authentication process."
-                )
+                else:
+                    log.critical(
+                        "No credentials were provided during the "
+                        "authentication process."
+                    )
 
         elapsed_time = time.time() - start_time
         log.info("Total time to complete %.2fs.", elapsed_time)
@@ -170,7 +170,7 @@ if __name__ == "__main__":
         print("\nKeyboard interrupt detected. Aborting...")
 
     finally:
-        if ORG_ID and csrf_token:
+        if ORG_ID and "csrf_token" in locals():
             logout(session, csrf_token, user_token, user_id)
         session.close()
 

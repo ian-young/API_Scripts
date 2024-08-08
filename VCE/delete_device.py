@@ -874,89 +874,89 @@ if __name__ == "__main__":
                     session, USERNAME, PASSWORD, ORG_ID
                 )
 
-            # Continue if the required information has been received
-            if csrf_token and user_token and user_id:
-                # Place each element in their own thread to speed up runtime
-                camera_thread = threading.Thread(
-                    target=delete_cameras,
-                    args=(
-                        session,
-                        csrf_token,
-                        user_token,
-                    ),
-                )
+                # Continue if the required information has been received
+                if csrf_token and user_token and user_id:
+                    # Place each element in their own thread to speed up runtime
+                    camera_thread = threading.Thread(
+                        target=delete_cameras,
+                        args=(
+                            session,
+                            csrf_token,
+                            user_token,
+                        ),
+                    )
 
-                alarm_thread = threading.Thread(
-                    target=delete_sensors,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                    ),
-                )
+                    alarm_thread = threading.Thread(
+                        target=delete_sensors,
+                        args=(
+                            csrf_token,
+                            user_token,
+                            user_id,
+                            session,
+                        ),
+                    )
 
-                ac_thread = threading.Thread(
-                    target=delete_panels,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                    ),
-                )
+                    ac_thread = threading.Thread(
+                        target=delete_panels,
+                        args=(
+                            csrf_token,
+                            user_token,
+                            user_id,
+                            session,
+                        ),
+                    )
 
-                sv_thread = threading.Thread(
-                    target=delete_environmental,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                    ),
-                )
+                    sv_thread = threading.Thread(
+                        target=delete_environmental,
+                        args=(
+                            csrf_token,
+                            user_token,
+                            user_id,
+                            session,
+                        ),
+                    )
 
-                guest_thread = threading.Thread(
-                    target=delete_guest,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                    ),
-                )
+                    guest_thread = threading.Thread(
+                        target=delete_guest,
+                        args=(
+                            csrf_token,
+                            user_token,
+                            user_id,
+                            session,
+                        ),
+                    )
 
-                acl_thread = threading.Thread(
-                    target=delete_acls,
-                    args=(
-                        csrf_token,
-                        user_id,
-                        session,
-                    ),
-                )
+                    acl_thread = threading.Thread(
+                        target=delete_acls,
+                        args=(
+                            csrf_token,
+                            user_id,
+                            session,
+                        ),
+                    )
 
-                desk_thread = threading.Thread(
-                    target=delete_desk_station,
-                    args=(
-                        csrf_token,
-                        user_id,
-                        session,
-                    ),
-                )
+                    desk_thread = threading.Thread(
+                        target=delete_desk_station,
+                        args=(
+                            csrf_token,
+                            user_id,
+                            session,
+                        ),
+                    )
 
-                # # List all the threads to be ran
-                threads = [
-                    camera_thread,
-                    alarm_thread,
-                    ac_thread,
-                    sv_thread,
-                    guest_thread,
-                    acl_thread,
-                    desk_thread,
-                ]
+                    # # List all the threads to be ran
+                    threads = [
+                        camera_thread,
+                        alarm_thread,
+                        ac_thread,
+                        sv_thread,
+                        guest_thread,
+                        acl_thread,
+                        desk_thread,
+                    ]
 
-                # Start the clocked threads
-                run_thread_with_rate_limit(threads)
+                    # Start the clocked threads
+                    run_thread_with_rate_limit(threads)
 
             # Handles when the required credentials were not received
             else:
@@ -988,7 +988,7 @@ if __name__ == "__main__":
         finally:
             if csrf_token and user_token:
                 log.debug("Logging out.")
-                if ORG_ID and csrf_token:
+                if ORG_ID and "csrf_token" in locals():
                     logout(session, csrf_token, user_token, ORG_ID)
             session.close()
             log.debug("Session closed.\nExiting...")
