@@ -399,14 +399,23 @@ def compile_data_for_csv(
 
     # Process SIS users to collect groups
     user_groups = process_sis_users(sis_users_list)
-    update_users_thread = threading.Thread(
-        target=update_current_users_with_groups,
+    # update_users_thread = threading.Thread(
+    #     target=update_current_users_with_groups,
+    #     args=(
+    #         CSV_CURRENT_USERS,
+    #         user_groups,
+    #     ),
+    # )
+    # update_users_thread.start()
+    groups_and_emails_thread = threading.Thread(
+        target=update_current_users_with_groups_and_emails,
         args=(
             CSV_CURRENT_USERS,
             user_groups,
+            current_users_list,
         ),
     )
-    update_users_thread.start()
+    groups_and_emails_thread.start()
 
     for sis_user in sis_users_list:
         try:
@@ -450,11 +459,132 @@ def compile_data_for_csv(
         calculate_memory(start_mem, memory_usage(PID)),
     )
 
+    groups_and_emails_thread.join()
     email_thread.join()
-    update_users_thread.join()
+    # update_users_thread.join()
     gc.collect()  # Clear out variables from memory
 
     return compiled_data
+
+
+def validate_and_update_email(
+    user: Dict[str, str], email_pattern: re.Pattern
+) -> Dict[str, str]:
+    """
+    Validate and update the email format of a user.
+
+    Args:
+        user (Dict[str, str]): A dictionary containing user information
+        with keys 'firstName', 'lastName', and 'Email'.
+        email_pattern (re.Pattern): Compiled regex pattern to match
+        against the email.
+
+    Returns:
+        Dict[str, str]: A dictionary with the user's full name and
+        updated email if necessary.
+    """
+    email = user.get("Email", "")
+    if not email_pattern.match(email):
+        first_name = user.get("First Name", "").lower()
+        last_name = user.get("Last Name", "").lower()
+        new_email = f"{first_name}.{last_name}{DOMAIN}"
+        return {"Name": f"{first_name} {last_name}", "Email": new_email}
+    return {}
+
+
+def update_current_users_with_groups_and_emails(
+    file_name: str,
+    processed_sis_users: Dict[str, str],
+    user_list: List[Dict[str, str]],
+):
+    """
+    Update the current users with their respective groups based on
+    processed SIS users and ensure that their email addresses are in the
+    correct format.
+
+    Args:
+        file_name (str): The name of the original file to read user data
+        from.
+        processed_sis_users (Dict[str, str]): A dictionary mapping full
+        names to their associated groups.
+        user_list (List[Dict[str, str]]): A list of dictionaries
+        containing user information with keys 'Email', 'firstName', and
+        'lastName'.
+
+    Returns:
+        None
+
+    Raises:
+        This function does not raise any exceptions.
+
+    Examples:
+        update_current_users_with_groups_and_emails("users.csv", {
+            "John Doe": "Group1; Group2"
+        }, user_list)
+    """
+    start_mem = memory_usage(PID)
+
+    # Regex pattern for email in the format first_name.last_name@juabsd.org
+    domain_pattern = re.escape(DOMAIN)
+    email_pattern = re.compile(rf"^[a-z]+(\.[a-z]+)?\.[a-z]+{domain_pattern}$")
+
+    need_an_email = []
+
+    # Process the user_list to ensure emails are correctly formatted
+    for user in tqdm(user_list, desc="Adding updated info"):
+        if updated_info := validate_and_update_email(user, email_pattern):
+            need_an_email.append(updated_info)
+            user["Email"] = updated_info["Email"]
+
+    # Open the original file and a new file for the updated data
+    with (
+        open(file_name, "r", newline="", encoding="UTF-8") as current_file,
+        open(
+            "updated_users.csv", "w", newline="", encoding="UTF-8"
+        ) as group_file,
+    ):
+
+        csv_reader = csv.DictReader(current_file)
+        group_fieldnames = csv_reader.fieldnames or []
+        group_writer = csv.DictWriter(group_file, fieldnames=group_fieldnames)
+
+        group_writer.writeheader()
+
+        # Process each row in the original file
+        for user in tqdm(
+            csv_reader,
+            total=count_lines(file_name),
+            desc="Writing Updated Users",
+        ):
+            full_name = f"{user['firstName']} {user['lastName']}"
+
+            if updated_info := validate_and_update_email(user, email_pattern):
+                user["email"] = updated_info["Email"]
+
+            if full_name in processed_sis_users:
+                existing_groups = user.get("groups", "").strip()
+                new_groups = "".join(processed_sis_users[full_name])
+                if existing_groups and new_groups:
+                    user["groups"] = f"{existing_groups}; {new_groups}"
+                elif existing_groups:
+                    user["groups"] = existing_groups
+                else:
+                    user["groups"] = new_groups
+
+            # Write the updated user to the new file
+            group_writer.writerow(user)
+
+    log.info(
+        "Data updated and written to updated_users.csv and need_email_domain.csv"
+    )
+    log.debug(
+        "Total memory used: %iKiB",
+        calculate_memory(start_mem, memory_usage(PID)),
+    )
+
+    current_file.close()
+    group_file.close()
+    gc.collect()  # Clear out variables from memory
 
 
 def update_current_users_with_groups(
@@ -484,12 +614,12 @@ def update_current_users_with_groups(
     start_mem = memory_usage(PID)
 
     # Open the original file and a new file for the updated data
-    with open(
-        file_name, "r", newline="", encoding="UTF-8"
-    ) as current_file, open(
-        "updated_users.csv", "w", newline="", encoding="UTF-8"
-    ) as group_file:
-
+    with (
+        open(file_name, "r", newline="", encoding="UTF-8") as current_file,
+        open(
+            "updated_users.csv", "w", newline="", encoding="UTF-8"
+        ) as group_file,
+    ):
         csv_reader = csv.DictReader(current_file)
         group_fieldnames = csv_reader.fieldnames or []
         group_writer = csv.DictWriter(group_file, fieldnames=group_fieldnames)
@@ -551,15 +681,8 @@ def add_to_domain(user_list: List[Dict[str, str]]):
     need_an_email = []
 
     for user in tqdm(user_list, desc="Adding emails"):
-        email = user.get("Email", "")
-        # If the email doesn't match the pattern, construct the new email and add to the list
-        if not email_pattern.match(email):
-            first_name = user.get("First Name", "").lower()
-            last_name = user.get("Last Name", "").lower()
-            new_email = f"{first_name}.{last_name}{DOMAIN}"
-            need_an_email.append(
-                {"Name": f"{first_name} {last_name}", "Email": new_email}
-            )
+        if updated_info := validate_and_update_email(user, email_pattern):
+            need_an_email.append(updated_info)
 
     # Write the need_an_email list to the CSV file
     with open(
@@ -578,6 +701,7 @@ def add_to_domain(user_list: List[Dict[str, str]]):
     )
 
     email_file.close()
+    gc.collect()
 
 
 if ac_user_list := compile_data_for_csv(
