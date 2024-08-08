@@ -382,7 +382,8 @@ def compile_data_for_csv(
     log.info("CSV files read successfully")
 
     email_thread = threading.Thread(
-        target=add_to_domain, args=current_users_list
+        target=add_to_domain,
+        args=(current_users_list,),
     )
     email_thread.start()
 
@@ -399,7 +400,10 @@ def compile_data_for_csv(
     user_groups = process_sis_users(sis_users_list)
     update_users_thread = threading.Thread(
         target=update_current_users_with_groups,
-        args=(CSV_CURRENT_USERS, user_groups),
+        args=(
+            CSV_CURRENT_USERS,
+            user_groups,
+        ),
     )
     update_users_thread.start()
 
