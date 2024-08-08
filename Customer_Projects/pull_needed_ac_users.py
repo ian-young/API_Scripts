@@ -8,6 +8,8 @@ import concurrent.futures
 import csv
 import gc
 import logging
+import re
+import threading
 from os import getpid
 from typing import Dict, List, Optional
 
@@ -22,6 +24,7 @@ CSV_AC_LIST = "LegacySystemExport.csv"
 CSV_SIS_USERS = "SISExport.csv"
 CSV_CURRENT_USERS = "CurrentExport.csv"
 CARD_TYPE = "Standard 26-bit Wiegand"
+DOMAIN = "@email.com"
 STATUS = "Active"
 
 SCHOOL_ID_MAPPING = {
@@ -39,10 +42,11 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
 log = logging.getLogger()
-LOG_LEVEL = logging.ERROR
+LOG_LEVEL = logging.DEBUG
 logging.basicConfig(
     level=LOG_LEVEL,
-    format="%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s",
+    format="%(asctime)s.%(msecs)03d | %(levelname)s | %(message)s",
+    datefmt="%H:%M%S",
 )
 log.setLevel(LOG_LEVEL)
 
@@ -378,6 +382,12 @@ def compile_data_for_csv(
         current_users_list = future_current_users.result()
     log.info("CSV files read successfully")
 
+    email_thread = threading.Thread(
+        target=add_to_domain,
+        args=(current_users_list,),
+    )
+    email_thread.start()
+
     # Creating a lookup dictionary
     current_users_lookup = {
         user["Email"]: user for user in current_users_list if user["Email"]
@@ -389,6 +399,14 @@ def compile_data_for_csv(
 
     # Process SIS users to collect groups
     user_groups = process_sis_users(sis_users_list)
+    update_users_thread = threading.Thread(
+        target=update_current_users_with_groups,
+        args=(
+            CSV_CURRENT_USERS,
+            user_groups,
+        ),
+    )
+    update_users_thread.start()
 
     for sis_user in sis_users_list:
         try:
@@ -432,7 +450,8 @@ def compile_data_for_csv(
         calculate_memory(start_mem, memory_usage(PID)),
     )
 
-    update_current_users_with_groups(CSV_CURRENT_USERS, user_groups)
+    email_thread.join()
+    update_users_thread.join()
     gc.collect()  # Clear out variables from memory
 
     return compiled_data
@@ -462,7 +481,6 @@ def update_current_users_with_groups(
             "user1@example.com": ["Group1", "Group2"]
         })
     """
-
     start_mem = memory_usage(PID)
 
     # Open the original file and a new file for the updated data
@@ -506,6 +524,60 @@ def update_current_users_with_groups(
     group_file.close()
     current_file.close()
     gc.collect()  # Clear out variables from memory
+
+
+def add_to_domain(user_list: List[Dict[str, str]]):
+    """
+    Add domain to email addresses in a list of users if they do not
+    already have it.
+
+    Args:
+        user_list (List[Dict[str, str]]): A list of dictionaries
+        containing user information with keys 'email', 'firstName', and
+        'lastName'.
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
+    start_mem = memory_usage(PID)
+
+    # Regex pattern for email in the format first_name.last_name@juabsd.org
+    domain_pattern = re.escape(DOMAIN)
+    email_pattern = re.compile(rf"^[a-z]+(\.[a-z]+)?\.[a-z]+{domain_pattern}$")
+
+    need_an_email = []
+
+    for user in tqdm(user_list, desc="Adding emails"):
+        email = user.get("Email", "")
+        # If the email doesn't match the pattern, construct the new email and add to the list
+        if not email_pattern.match(email):
+            first_name = user.get("First Name", "").lower()
+            last_name = user.get("Last Name", "").lower()
+            new_email = f"{first_name}.{last_name}{DOMAIN}"
+            need_an_email.append(
+                {"Name": f"{first_name} {last_name}", "Email": new_email}
+            )
+
+    # Write the need_an_email list to the CSV file
+    with open(
+        "need_email_domain.csv", "w", newline="", encoding="UTF-8"
+    ) as email_file:
+        email_fieldnames = ("Name", "Email")
+        csv_writer = csv.DictWriter(email_file, fieldnames=email_fieldnames)
+        csv_writer.writeheader()
+        for email_data in tqdm(need_an_email, desc="Writing emails"):
+            csv_writer.writerow(email_data)
+
+    log.info("Data updated and written to need_email_domain.csv")
+    log.debug(
+        "Total memory used: %iKiB",
+        calculate_memory(start_mem, memory_usage(PID)),
+    )
+
+    email_file.close()
 
 
 if ac_user_list := compile_data_for_csv(
