@@ -177,8 +177,12 @@ def create_vce_user(user_info_list, api_key=API_KEY):
             # Initialize the user session.
             if USERNAME and PASSWORD and ORG_ID:
                 csrf_token, user_token, user_id = login_and_get_tokens(
-                    session, USERNAME, PASSWORD, ORG_ID, TOTP
-                ):
+                    session,
+                    USERNAME,
+                    PASSWORD,
+                    ORG_ID,
+                    TOTP,
+                )
 
                 for result in user_info_list:
                     log.debug("Loading result info into JSON body.")
@@ -211,18 +215,18 @@ def create_vce_user(user_info_list, api_key=API_KEY):
                         result["Guest Email"],
                     )
 
-                    grant_org_admin(csrf_token, user_id, data["user_id"], session)
+                    grant_org_admin(
+                        csrf_token, user_id, data["user_id"], session
+                    )
 
                 return emails
 
             # Handles when the required credentials were not received
             else:
                 log.critical(
-                    "%sNo credentials were provided during "
+                    "No credentials were provided during "
                     "the authentication process or audit log "
-                    "could not be retrieved.%s",
-                    Fore.MAGENTA,
-                    Style.RESET_ALL,
+                    "could not be retrieved."
                 )
 
         except requests.exceptions.RequestException as e:
