@@ -986,9 +986,8 @@ if __name__ == "__main__":
             )
 
         finally:
+            log.debug("Logging out.")
             if csrf_token and user_token:
-                log.debug("Logging out.")
-                if ORG_ID and "csrf_token" in locals():
-                    logout(session, csrf_token, user_token, ORG_ID)
+                logout(session, csrf_token, user_token, ORG_ID)
             session.close()
             log.debug("Session closed.\nExiting...")
