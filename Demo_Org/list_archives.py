@@ -22,9 +22,9 @@ from QoL import login_and_get_tokens, logout, custom_exceptions
 load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
-USERNAME = "ian.young+test7@verkada.com"
-PASSWORD = getenv("lab_kuma_password")
-ORG_ID = getenv("lab_id")
+USERNAME = getenv("")
+PASSWORD = getenv("")
+ORG_ID = getenv("")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
