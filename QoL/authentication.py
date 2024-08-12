@@ -5,13 +5,14 @@ Purpose: This script is used to log in and log out of a Command account.
 
 # Import essential libraries
 import logging
+from typing import Optional
 
 import requests
-from QoL.api_endpoints import LOGIN, LOGOUT
-from QoL.verkada_totp import generate_totp
 
 # Import custom exceptions to save space
 import QoL.custom_exceptions as custom_exceptions
+from QoL.api_endpoints import LOGIN, LOGOUT
+from QoL.verkada_totp import generate_totp
 
 # Set up the logger
 log = logging.getLogger()
@@ -20,32 +21,48 @@ log.setLevel(LOG_LEVEL)
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
 
 
-def login_and_get_tokens(login_session, username, password, totp, org_id):
+def login_and_get_tokens(
+    login_session: requests.Session,
+    username: str,
+    password: str,
+    org_id: str,
+    totp: Optional[str] = None,
+) -> tuple[str, str, str]:
     """
-    Initiates a Command session with the given user credentials and Verkada
-    organization ID.
+    Logs in a user to the Verkada API using the provided session and
+    credentials, and retrieves the session tokens.
 
-    :param login_session: The session to use when authenticating.
-    :type login_session: requests.Session
-    :param username: A Verkada user's username to be used during the login.
-    :type username: str, optional
-    :param password: A Verkada user's password used during the login process.
-    :type password: str, optional
-    :param org_id: The Verkada Org ID that is being logged into.
-    :type org_id: str, optional
-    :param totp: The TOTP secret used for 2FA
-    :type totp: str
-    :return: Will return the csrf_token of the session that has been initiated
-    along with the user token for the session and the user's id.
-    :rtype: String, String, String
+    Args:
+        login_session: The requests session to use for the login request.
+        username: The username of the user.
+        password: The password of the user.
+        org_id: The organization ID for which the user is logging in.
+        totp: The Time-based One-Time Password (TOTP) if two-factor
+            authentication is enabled (optional).
+
+    Returns:
+        A tuple containing the CSRF token, user token, and user ID
+        after successful login.
+
+    Raises:
+        custom_exceptions.APIExceptionHandler: If an error occurs during
+        the login process.
     """
+
     # Prepare login data
-    login_data = {
-        "email": username,
-        "password": password,
-        "otp": generate_totp(totp),
-        "org_id": org_id,
-    }
+    if totp:
+        login_data = {
+            "email": username,
+            "password": password,
+            "otp": generate_totp(totp),
+            "org_id": org_id,
+        }
+    else:
+        login_data = {
+            "email": username,
+            "password": password,
+            "org_id": org_id,
+        }
 
     try:
         # Request the user session
@@ -71,20 +88,31 @@ def login_and_get_tokens(login_session, username, password, totp, org_id):
         ) from e
 
 
-def logout(logout_session, x_verkada_token, x_verkada_auth, org_id):
+def logout(
+    logout_session: requests.Session,
+    x_verkada_token: str,
+    x_verkada_auth: str,
+    org_id: str,
+):
     """
-    Logs the Python script out of Command to prevent orphaned sessions.
+    Logs out the user from the Verkada API using the provided session and
+    authentication details.
 
-    :param logout_session: The session to use when authenticating.
-    :type logout_session: requests.Session
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    Args:
+        logout_session: The requests session to use for the logout
+            request.
+        x_verkada_token: The Verkada token for authentication.
+        x_verkada_auth: The Verkada user ID for authentication.
+        org_id: The organization ID for which the user is logged in.
+
+    Returns:
+        None
+
+    Raises:
+        custom_exceptions.APIExceptionHandler: If an error occurs during
+        the logout process.
     """
+
     headers = {
         "X-Verkada-Organization-Id": org_id,
         "X-Verkada-Token": x_verkada_token,

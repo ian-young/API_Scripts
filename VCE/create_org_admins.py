@@ -12,7 +12,7 @@ from os import getenv
 import requests
 from dotenv import load_dotenv
 
-from QoL.authentication import login_and_get_tokens, logout
+from QoL import login_and_get_tokens, logout
 from QoL.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
 from QoL.custom_exceptions import APIExceptionHandler
 
@@ -32,7 +32,7 @@ load_dotenv()  # Import credentials file
 ORG_ID = getenv("")
 USERNAME = getenv("")
 PASSWORD = getenv("")
-TOTP = getenv("")
+TOTP = getenv("")  # Leave blank if you don't have one on the account
 API_KEY = getenv("")
 FILE_PATH = (
     "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/"
@@ -164,7 +164,6 @@ def create_vce_user(user_info_list, api_key=API_KEY):
     emails = []
 
     log.debug("User list:\n%s", user_info_list)
-    csrf_token, user_token, user_id = None, None, None
 
     with requests.Session() as session:
         headers = {
@@ -172,53 +171,66 @@ def create_vce_user(user_info_list, api_key=API_KEY):
             "content-type": "application/json",
             "x-api-key": api_key,
         }
+        csrf_token, user_token, user_id = None, None, None
 
         try:
-            csrf_token, user_token, user_id = login_and_get_tokens(
-                session, USERNAME, PASSWORD, TOTP, ORG_ID
-            )
+            # Initialize the user session.
+            if USERNAME and PASSWORD and ORG_ID:
+                csrf_token, user_token, user_id = login_and_get_tokens(
+                    session, USERNAME, PASSWORD, ORG_ID, TOTP
+                ):
 
-            for result in user_info_list:
-                log.debug("Loading result info into JSON body.")
-                body = {
-                    "first_name": result["First Name"],
-                    "last_name": result["Last Name"],
-                    "email": result["Guest Email"],
-                }
-                emails.append(result["Guest Email"])
-                log.debug(body)
+                for result in user_info_list:
+                    log.debug("Loading result info into JSON body.")
+                    body = {
+                        "first_name": result["First Name"],
+                        "last_name": result["Last Name"],
+                        "email": result["Guest Email"],
+                    }
+                    emails.append(result["Guest Email"])
+                    log.debug(body)
 
-                log.debug("Posting request to create user.")
-                response = session.post(
-                    CREATE_USER, headers=headers, json=body, timeout=3
+                    log.debug("Posting request to create user.")
+                    response = session.post(
+                        CREATE_USER, headers=headers, json=body, timeout=3
+                    )
+
+                    if response.status_code != 500:
+                        response.raise_for_status()
+
+                    else:
+                        log.warning("User already exists. Skipping.")
+                        continue
+
+                    data = response.json()
+                    log.info(
+                        "User %s %s has been successfully created. An email has been "
+                        "sent to %s.",
+                        result["First Name"],
+                        result["Last Name"],
+                        result["Guest Email"],
+                    )
+
+                    grant_org_admin(csrf_token, user_id, data["user_id"], session)
+
+                return emails
+
+            # Handles when the required credentials were not received
+            else:
+                log.critical(
+                    "%sNo credentials were provided during "
+                    "the authentication process or audit log "
+                    "could not be retrieved.%s",
+                    Fore.MAGENTA,
+                    Style.RESET_ALL,
                 )
-
-                if response.status_code != 500:
-                    response.raise_for_status()
-
-                else:
-                    log.warning("User already exists. Skipping.")
-                    continue
-
-                data = response.json()
-                log.info(
-                    "User %s %s has been successfully created. An email has been "
-                    "sent to %s.",
-                    result["First Name"],
-                    result["Last Name"],
-                    result["Guest Email"],
-                )
-
-                grant_org_admin(csrf_token, user_id, data["user_id"], session)
-
-            return emails
 
         except requests.exceptions.RequestException as e:
             raise APIExceptionHandler(e, response, "Create user") from e
 
         finally:
+            log.debug("Logging out.")
             if user_id and user_token:
-                log.debug("Logging out.")
                 logout(session, csrf_token, user_id, ORG_ID)
             session.close()
             log.info("Session closed.\nExiting...")

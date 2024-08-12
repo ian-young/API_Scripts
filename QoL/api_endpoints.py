@@ -182,4 +182,5 @@ PROMOTE_ORG_ADMIN = (
 )
 
 # Misc
+DASHBOARD_URL = "https://command.verkada.com/dashboard"
 DEVICE_DATA = "https://vappinit.command.verkada.com/app/v2/init"
