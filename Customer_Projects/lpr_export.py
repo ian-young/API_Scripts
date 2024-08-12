@@ -1,14 +1,14 @@
 """
 Author: Ian Young
 Purpose: Will retrieve all seen plates in the past 24 hours and save the
-    the data in a csv.
+    the data in a csv. This is meant to be used for scheduled exports.
 """
 
 import csv
 import logging
 from datetime import datetime, timedelta
 from os import getenv
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Union
 
 import requests
 from dotenv import load_dotenv
@@ -29,12 +29,18 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 load_dotenv()  # Load credentials
 
-API_KEY = getenv("lab_key")
+API_KEY = getenv("")
 CURRENT_TIME = datetime.now()
 END_TIME = int(CURRENT_TIME.timestamp())
 CSV_OUTPUT = f"lpr_info-{datetime.now().date()}.csv"
 CSV_CAMERAS = "cameras.csv"
 START_TIME = int((CURRENT_TIME - timedelta(days=1)).timestamp())
+
+HEADERS = {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "x-api-key": API_KEY,
+}
 
 
 def convert_epoch_to_time(epoch_time: float) -> str:
@@ -50,12 +56,12 @@ def convert_epoch_to_time(epoch_time: float) -> str:
     return datetime.fromtimestamp(epoch_time).strftime("%H:%M:%S")
 
 
-def parse_cameras(api_key: Optional[str] = API_KEY) -> List[Dict[str, str]]:
+def parse_cameras() -> List[Dict[str, str]]:
     """
     Parse camera data to retrieve device IDs.
 
     Args:
-        api_key (str): The API key for authentication. (optional)
+        None
 
     Raises:
         APIExceptionHandler: If an error occurs during the API request.
@@ -63,18 +69,12 @@ def parse_cameras(api_key: Optional[str] = API_KEY) -> List[Dict[str, str]]:
     Returns:
         list of dict: A list of device IDs and their assigned sites.
     """
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "x-api-key": api_key,
-    }
-
     lpr_cameras = ["CB52-E", "CB62-E", "CB52-TE", "CB62-TE"]
     device_ids: List[Dict[str, str]] = []
 
     try:
         log.info("Request cameras list.")
-        response = requests.get(GET_CAMERA_DATA, headers=headers, timeout=5)
+        response = requests.get(GET_CAMERA_DATA, headers=HEADERS, timeout=5)
         response.raise_for_status()
         data = response.json()
         device_ids.extend(
@@ -95,29 +95,23 @@ def parse_cameras(api_key: Optional[str] = API_KEY) -> List[Dict[str, str]]:
     return device_ids
 
 
-def get_plates(
-    camera_ids: List[Dict[str, str]], api_key: Optional[str] = API_KEY
-) -> List[Dict[str, str]]:
+def get_plates(camera_ids: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """
     Get license plates seen by a specific camera.
 
     Args:
         camera_id (dict): The ID of the camera and its assigned site.
-        api_key (str): The API key for authentication. (optional)
 
     Raises:
         APIExceptionHandler: If an error occurs during the API request.
 
     Returns:
-        None
+        list of dict: A formatted list of dictionary values with a
+            license plate value, the camera it was seen by, the time, it
+            was seen at, and the site the camera resides in.
     """
     final_dict: List[Dict[str, str]] = []
 
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "x-api-key": api_key,
-    }
     for camera in camera_ids:
         log.debug("Running for %s", str(camera))
         body: Dict[str, Union[str, int]] = {
@@ -128,7 +122,7 @@ def get_plates(
         try:
             log.debug("Requesting plates from %s", camera["ID"])
             response = requests.get(
-                GET_SEEN_PLATES, headers=headers, params=body, timeout=3
+                GET_SEEN_PLATES, headers=HEADERS, params=body, timeout=3
             )
 
             response.raise_for_status()
@@ -145,6 +139,15 @@ def get_plates(
                 for value in data["detections"]
                 if value is not None
             )
+
+            # Check if there are more pages
+            if data["next_page_token"] is not None:
+                body = {
+                    "camera_id": camera["ID"],
+                    "start_time": START_TIME,
+                    "end_time": END_TIME,
+                    "page_token": data["next_page_token"],
+                }
 
         except APIExceptionHandler as e:
             raise APIExceptionHandler(e, response, "Get License Plates") from e

@@ -16,7 +16,7 @@ log.setLevel(LOG_LEVEL)
 logging.basicConfig(
     level=LOG_LEVEL,
     format=("(%(asctime)s.%(msecs)03d) %(levelname)s: %(message)s"),
-    datefmt="%H:%M:%S"
+    datefmt="%H:%M:%S",
 )
 
 
@@ -25,7 +25,7 @@ def memory_usage(process_id: int) -> float:
     Calculate the memory usage of the current process.
 
     Args:
-        process_id (int): The process ID for which CPU usage needs to be
+        process_id (int): The process ID for which memory usage needs to be
             calculated.
 
     Returns:

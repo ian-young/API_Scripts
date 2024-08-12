@@ -20,41 +20,37 @@ EVENT = "events/v1/"
 VX = "viewing_station/v1/"
 
 ## Camera API
-GET_ALERTS = f"{BASE_URL}{CAM}alerts?include_image_url=false&page_size=100"
+GET_ALERTS = f"{BASE_URL}{CAM}alerts"
 GET_SEEN_PLATES = f"{BASE_URL}{CAM}analytics/lpr/images"
 DELETE_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
 UPDATE_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
 CREATE_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
-GET_PLATE_TIMESTAMP = f"{BASE_URL}{CAM}analytics/lpr/timestamps?page_size=100"
+GET_PLATE_TIMESTAMP = f"{BASE_URL}{CAM}analytics/lpr/timestamps"
 GET_MAX_PEP_VEH_COUNTS = f"{BASE_URL}{CAM}analytics/max_object_counts"
-GET_PEP_VEH_COUNTS = f"{BASE_URL}{CAM}analytics/object_counts?page_size=100"
+GET_PEP_VEH_COUNTS = f"{BASE_URL}{CAM}analytics/object_counts"
 MQTT_CONFIG = f"{BASE_URL}{CAM}analytics/object_position_mqtt"
 GET_AUDIO_STATUS = f"{BASE_URL}{CAM}audio/status"
 UPDATE_AUDIO_STATUS = f"{BASE_URL}{CAM}audio/status"
 GET_CB = f"{BASE_URL}{CAM}cloud_backup/settings"
 UPDATE_CB = f"{BASE_URL}{CAM}cloud_backup/settings"
-GET_CAMERA_DATA = f"{BASE_URL}{CAM}devices?page_size=100"
+GET_CAMERA_DATA = f"{BASE_URL}{CAM}devices"
 GET_FOOTAGE_LINK = f"{BASE_URL}{CAM}footage/link"
 GET_THUMB_IMG = f"{BASE_URL}{CAM}footage/thumbnails?resolution=low-res"
 GET_THUMB_LINK = f"{BASE_URL}{CAM}footage/thumbnails/link?expiry=86400"
 GET_STREAM_TOKEN = f"{BASE_URL}{CAM}footage/token"
 STREAM_FOOTAGE = f"{BASE_URL}stream/{CAM}footage/stream/key?transcode=false"
 DELETE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
-GET_ALL_POI = f"{BASE_URL}{CAM}people/person_of_interest?page_size=100"
+GET_ALL_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 UPDATE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 CREATE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
-GET_ALL_LPOI = (
-    f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest?page_size=1000"
-)
-GET_TREND_DATA = (
-    f"{BASE_URL}{CAM}analytics/occupancy_trends?interval=1_hour&type=person"
-)
+GET_ALL_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
+GET_TREND_DATA = f"{BASE_URL}{CAM}analytics/occupancy_trends?interval=1_hour"
 GET_LATEST_THUMB_IMG = (
     f"{BASE_URL}{CAM}footage/thumbnails/latest?resolution=low-res"
 )
 
 ## Core API
-GET_AUDIT_LOGS = f"{BASE_URL}{CORE}audit_log?page_size=100"
+GET_AUDIT_LOGS = f"{BASE_URL}{CORE}audit_log"
 DELETE_USER = f"{BASE_URL}{CORE}user"
 GET_USER = f"{BASE_URL}{CORE}user"
 CREATE_USER = f"{BASE_URL}{CORE}user"
@@ -95,19 +91,19 @@ DEACTIVATE_AC_USR_RU = (
 )
 
 ## Sensor API
-GET_SENSOR_ALERTS = f"{BASE_URL}{SV}alerts?page_size=100"
+GET_SENSOR_ALERTS = f"{BASE_URL}{SV}alerts"
 GET_SENSOR_DATA = f"{BASE_URL}{SV}data"
 
 ## Guest API
 GET_GUEST_SITES = f"{BASE_URL}{GUEST}sites"
-GET_GUEST_VISITS = f"{BASE_URL}{GUEST}visits?page_size=100"
+GET_GUEST_VISITS = f"{BASE_URL}{GUEST}visits"
 
 ## Alarm API
 GET_ALARM_DEVICES = f"{BASE_URL}{ALARM}devices"
 GET_ALARM_SITE_INFO = f"{BASE_URL}{ALARM}sites"
 
 ## Events API
-GET_EVENTS = f"{BASE_URL}{EVENT}access?page_size=100"
+GET_EVENTS = f"{BASE_URL}{EVENT}access"
 
 ## Viewing Station API
 GET_VX_DEVICES = f"{BASE_URL}{VX}devices"
@@ -184,3 +180,7 @@ BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
 PROMOTE_ORG_ADMIN = (
     "https://vprovision.command.verkada.com/org/set_user_permissions"
 )
+
+# Misc
+DASHBOARD_URL = "https://command.verkada.com/dashboard"
+DEVICE_DATA = "https://vappinit.command.verkada.com/app/v2/init"

@@ -107,11 +107,14 @@ The repository consists of three main branches:
     - Contains working, production-level code.
     - Scripts in this branch are ready to be shared, as credentials are not hard-coded.
     - Make sure to use the [requirements.txt](https://github.com/ian-young/API_Scripts/blob/main/requirements.txt) and [.env-generic](https://github.com/ian-young/API_Scripts/blob/main/.evn-generic) files when getting started with scripts from this repository. Remember to rename `.env-generic` to `.env` and that it is located in the same directory as the script being ran for proper functionality. Alternatively, the [.env-template](https://github.com/ian-young/API_Scripts/blob/main/.env-template) may also be used if running with multiple Verkada organizations.
-2. The [wip](https://github.com/ian-young/API_Scripts/tree/wip) (Work In Progress)
-    - Contains code that is working but still under development or debugging.
-3. The [ideas](https://github.com/ian-young/API_Scripts/tree/ideas)
-    - Holds experimental code.
-    - This branch will have a higher volume of commits while there is an active project and may contain non-working code.
+2. Feature branches
+    - Feature branches may be found in this repository for controlled developing and collaboration on projects.
+    - These feature branches help keep the commit history in main concise, linear and auditable.
+    - The feature branches may be found [here](https://github.com/ian-young/API_Scripts/branches)
+3. Private repository
+    - There is a private repository where all files are originally created, developed and tested before being released to the public.
+    - Assures security and safety of the code during the development process.
+    - Only highly experimental code stays private without being released to the public
 
 >[!TIP]
 >Development should start at the lowest branch (ideas) and progress to the production branch (main).

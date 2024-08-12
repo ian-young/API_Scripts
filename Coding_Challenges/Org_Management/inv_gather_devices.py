@@ -17,8 +17,7 @@ import requests
 from dotenv import load_dotenv
 from tinydb import TinyDB, Query
 
-import QoL.custom_exceptions as custom_exceptions
-from QoL.verkada_totp import generate_totp
+from QoL import login_and_get_tokens, logout, custom_exceptions
 
 load_dotenv()  # Load credentials file
 
@@ -31,6 +30,7 @@ API_KEY = getenv("")
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
+TOTP = getenv("")
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -62,102 +62,6 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 devices_serials = []
 ARRAY_LOCK = threading.Lock()
-
-
-##############################################################################
-###########################   Authentication   ###############################
-##############################################################################
-
-
-def login_and_get_tokens(
-    login_session, username=USERNAME, password=PASSWORD, org_id=ORG_ID
-):
-    """
-    Initiates a Command session with the given user credentials and Verkada
-    organization ID.
-
-    :param login_session: The user session to use when making API calls.
-    :type login_session: requests.Session
-    :param username: A Verkada user's username to be used during the login.
-    :type username: str, optional
-    :param password: A Verkada user's password used during the login process.
-    :type password: str, optional
-    :param org_id: The Verkada Org ID that is being logged into.
-    :type org_id: str, optional
-    :return: Will return the csrf_token of the session that has been initiated
-    along with the user token for the session and the user's id.
-    :rtype: String, String, String
-    """
-    # Prepare login data
-    login_data = {
-        "email": username,
-        "password": password,
-        "otp": generate_totp(getenv("lab_totp")),
-        "org_id": org_id,
-    }
-
-    try:
-        # Request the user session
-        log.debug("Requesting session.")
-        response = login_session.post(LOGIN_URL, json=login_data)
-        response.raise_for_status()
-        log.debug("Session opened.")
-
-        # Extract relevant information from the JSON response
-        log.debug("Parsing JSON response.")
-        json_response = response.json()
-        session_token = json_response.get("csrfToken")
-        session_user_token = json_response.get("userToken")
-        session_user_id = json_response.get("userId")
-        log.debug("Response parsed. Returning values.")
-
-        return session_token, session_user_token, session_user_id
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Login"
-        ) from e
-
-
-def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
-    """
-    Logs the Python script out of Command to prevent orphaned sessions.
-
-    :param logout_session: The user session to use when making API calls.
-    :type logout_session: requests.Session
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
-    """
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-organization": org_id,
-    }
-
-    body = {"logoutCurrentEmailOnly": True}
-    try:
-        response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
-        response.raise_for_status()
-
-        log.info("Logging out.")
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Logout"
-        ) from e
-
-    except KeyboardInterrupt:
-        log.warning("Keyboard interrupt detected. Exiting...")
-
-    finally:
-        logout_session.close()
 
 
 ##############################################################################
@@ -973,7 +877,10 @@ if __name__ == "__main__":
         start_run_time = time.time()  # Start timing the script
         try:
             # Initialize the user session.
-            csrf_token, user_token, user_id = login_and_get_tokens(session)
+            if USERNAME and PASSWORD and ORG_ID:
+                csrf_token, user_token, user_id = login_and_get_tokens(
+                    session, USERNAME, PASSWORD, ORG_ID, TOTP
+                )
             timestamp = int(time.time())
             # Starting time frame is an hour ago because the script runs hourly
             start_time = timestamp - TIME_FRAME
@@ -1134,6 +1041,8 @@ if __name__ == "__main__":
         finally:
             if csrf_token and user_token:
                 log.debug("Logging out.")
-                logout(session, csrf_token, user_token)
+                if ORG_ID:
+                    logout(session, csrf_token, user_token, ORG_ID)
+
             session.close()
             log.debug("Session closed.\nExiting...")
