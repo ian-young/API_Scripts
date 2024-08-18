@@ -11,12 +11,12 @@ Raises:
     API request.
 """
 
-import csv
 import logging
 from datetime import datetime, timedelta
 from os import environ, getenv
 from typing import Any, Dict, Generator, List, Union
 
+import pandas as pd
 import requests
 from dotenv import load_dotenv
 
@@ -64,34 +64,6 @@ def celsius_to_fahrenheit(temp_value: float) -> float:
         float: The temperature value converted to Fahrenheit.
     """
     return temp_value * (9 / 5) + 32
-
-
-def read_and_filter_csv(
-    file_path: str, cutoff: datetime
-) -> Generator[Any, Any, Any]:
-    """
-    Reads a CSV file at the specified file path, filters out rows
-    based on a cutoff time, and yields the filtered rows.
-
-    Args:
-        file_path: The path to the CSV file to read.
-        cutoff: The cutoff time to filter rows.
-
-    Returns:
-        Yields rows from the CSV file that have a time value greater
-        than or equal to the cutoff time.
-
-    Raises:
-        FileNotFoundError: Log if the file is not found.
-    """
-    try:
-        with open(file_path, "r", newline="", encoding="utf-8") as data_file:
-            reader = csv.DictReader(data_file)
-            for row in reader:
-                if datetime.fromisoformat(row["Time"]) >= cutoff:
-                    yield row
-    except FileNotFoundError:
-        log.error("Could not find the csv file. Check working directory.")
 
 
 def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
@@ -144,15 +116,21 @@ def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
 # Read existing CSV data and filter out old data
 cutoff_time = CURRENT_TIME - timedelta(days=DAYS_TO_KEEP)
 
-# Fetch all data from API
-all_data = list(read_and_filter_csv(CSV_FILE, cutoff_time))
-all_data.extend(fetch_all_data())
+# Read existing CSV data and filter out old data
+try:
+    df = pd.read_csv(CSV_FILE, parse_dates=["Time"])
+    df = df[df["Time"] >= cutoff_time.isoformat()]
+except FileNotFoundError:
+    df = pd.DataFrame(columns=["Time", "Temperature", "Device Name"])
+
+# Fetch new data from the API
+new_data = fetch_all_data()
+new_df = pd.DataFrame(new_data)
+
+# Combine old and new data
+combined_df = pd.concat([df, new_df]).drop_duplicates(subset=["Time"])
 
 # Write the updated data back to the CSV
-with open(CSV_FILE, "w", newline="", encoding="utf-8") as file:
-    fieldnames = ["Time", "Temperature", "Device Name"]
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(all_data)
+combined_df.to_csv(CSV_FILE, index=False)
 
 print("Temperature data updated.")

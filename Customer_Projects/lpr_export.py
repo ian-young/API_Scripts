@@ -1,16 +1,16 @@
 """
 Author: Ian Young
-Purpose: Will retrieve all seen plates in the past 24 hours and save the
+Purpose: Will retrieve all seen plates in the past 24 hours and save
     the data in a csv. This is meant to be used for scheduled exports.
 """
 
-import csv
 import logging
 from datetime import datetime, timedelta
 from os import getenv
 from typing import List, Dict, Union
 
 import requests
+import pandas as pd
 from dotenv import load_dotenv
 
 from QoL.custom_exceptions import APIExceptionHandler
@@ -157,12 +157,10 @@ def get_plates(camera_ids: List[Dict[str, str]]) -> List[Dict[str, str]]:
 
 all_plate_info = get_plates(parse_cameras())
 
-with open(CSV_OUTPUT, "w", newline="", encoding="UTF-8") as file:
-    fieldnames = ("Time", "Plate", "Camera", "Site")
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-    writer.writeheader()
+# Convert the list of dictionaries to a DataFrame
+df = pd.DataFrame(all_plate_info)
 
-    if plate_info_list := [
-        plate_info for plate_info in all_plate_info if plate_info is not None
-    ]:
-        writer.writerows(plate_info_list)
+# Write the DataFrame to a CSV file
+df.to_csv(CSV_OUTPUT, index=False, encoding="UTF-8")
+
+print(f"CSV file {CSV_OUTPUT} created with {len(df)} records.")
