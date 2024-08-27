@@ -1,5 +1,5 @@
 """
-Author: Ian Young
+Authors: Ian Young, Elmar Aliyev
 Purpose: Will retrieve all seen plates in the past 24 hours and save
     the data in a csv. This is meant to be used for scheduled exports.
 """
@@ -36,11 +36,12 @@ CSV_OUTPUT = f"lpr_info-{datetime.now().date()}.csv"
 CSV_CAMERAS = "cameras.csv"
 START_TIME = int((CURRENT_TIME - timedelta(days=1)).timestamp())
 
-HEADERS = {
-    "accept": "application/json",
-    "content-type": "application/json",
-    "x-api-key": API_KEY,
-}
+if API_KEY := getenv(""):
+    HEADERS = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-api-key": API_KEY,
+    }
 
 
 def convert_epoch_to_time(epoch_time: float) -> str:

@@ -1,6 +1,6 @@
 """
-Author:
-    Ian Young
+Authors:
+    Ian Young, Elmar Aliyev
 Purpose: 
     Fetches temperature data from a specified device using the
     Verkada API, appends the data to a CSV file, and filters out old data
@@ -14,7 +14,7 @@ Raises:
 import logging
 from datetime import datetime, timedelta
 from os import environ, getenv
-from typing import Any, Dict, Generator, List, Union
+from typing import Dict, List, Union
 
 import pandas as pd
 import requests
@@ -36,7 +36,11 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Constants
 DEVICE_ID = getenv("lab_sensor")
-API_KEY = getenv("lab_key")
+if API_KEY := getenv("lab_key"):
+    HEADERS = {
+        "accept": "application/json",
+        "x-api-key": API_KEY,
+    }
 CURRENT_TIME = datetime.now()
 END_TIME = int(CURRENT_TIME.timestamp())
 START_TIME = int((CURRENT_TIME - timedelta(days=1)).timestamp())
@@ -47,10 +51,6 @@ INTERVAL = "5m"
 BASE_URL = "https://api.verkada.com/environment/v1/data"
 CSV_FILE = "temperature_data.csv"
 DAYS_TO_KEEP = 7
-HEADERS = {
-    "accept": "application/json",
-    "x-api-key": API_KEY,
-}
 
 
 def celsius_to_fahrenheit(temp_value: float) -> float:

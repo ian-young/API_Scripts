@@ -1,5 +1,5 @@
 """
-Author: Ian Young
+Authors: Ian Young, Elmar Aliyev
 Purpose: Will take a person's email, first name and last name from a csv
 and create a Command account for them with org admin privileges.
 """
@@ -51,25 +51,64 @@ def read_csv(file_name):
         list of dict: A list of dictionaries containing 'first_name', 'last_name', and 'email'.
     """
     try:
-        # Read the CSV file using Pandas
-        df = pd.read_csv(file_name)
-
-        log.debug("Parsing csv")
-
-        # Split the 'Guest Name' into 'First Name' and 'Last Name'
-        df[['First Name', 'Last Name']] = df['Guest Name'].str.split(n=1, expand=True)
-
-        # Fill empty 'Last Name' fields with an empty string
-        df['Last Name'] = df['Last Name'].fillna("")
-
-        # Create a list of dictionaries containing the needed information
-        data = df[['First Name', 'Last Name', 'Guest Email']].to_dict(orient='records')
-
-        log.info("Data retrieved")
-        return data
-    except Exception as e:
-        log.error("An error occurred while reading the CSV file: %s", e)
+        return extract_data(file_name)
+    except FileNotFoundError:
+        log.error("The specified CSV file was not found: %s", file_name)
         return []
+    except pd.errors.EmptyDataError:
+        log.error("The CSV file is empty: %s", file_name)
+        return []
+    except pd.errors.ParserError:
+        log.error("Error parsing the CSV file: %s", file_name)
+        return []
+    except KeyError as e:
+        log.error("Missing expected column in the CSV file: %s", e)
+        return []
+    except AttributeError:
+        log.error("The 'Guest Name' column does not contain string values.")
+        return []
+    except TypeError as e:
+        log.error("Type error occurred: %s", e)
+        return []
+
+
+def extract_data(file_name):
+    """Extracts user data from a CSV file.
+
+    This function reads a CSV file to retrieve user information,
+    specifically extracting the first name, last name, and email from the
+    "Guest Name" and "Guest Email" columns. It processes the data to ensure
+    that names are split correctly and returns a structured list of
+    dictionaries containing the relevant information.
+
+    Args:
+        file_name (str): The path to the CSV file to read.
+
+    Returns:
+        list of dict: A list of dictionaries containing 'First Name',
+            'Last Name', and 'Guest Email'.
+    """
+
+    # Read the CSV file using Pandas
+    df = pd.read_csv(file_name)
+
+    log.debug("Parsing csv")
+
+    # Split the 'Guest Name' into 'First Name' and 'Last Name'
+    df[["First Name", "Last Name"]] = df["Guest Name"].str.split(
+        n=1, expand=True
+    )
+
+    # Fill empty 'Last Name' fields with an empty string
+    df["Last Name"] = df["Last Name"].fillna("")
+
+    # Create a list of dictionaries containing the needed information
+    data = df[["First Name", "Last Name", "Guest Email"]].to_dict(
+        orient="records"
+    )
+
+    log.info("Data retrieved")
+    return data
 
 
 def grant_org_admin(

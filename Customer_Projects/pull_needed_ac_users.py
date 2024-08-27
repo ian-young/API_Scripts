@@ -1,5 +1,5 @@
 """
-Author: Ian Young
+Authors: Ian Young, Elmar Aliyev
 Purpose: This script will compare three csvs and generate a fourth with
     access users that are in the old system and sis but not in Command.
 """
@@ -11,7 +11,7 @@ import re
 import threading
 from sys import stdout
 from os import getpid
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Hashable, Union
 
 import pandas as pd
 from tqdm import tqdm
@@ -53,39 +53,49 @@ logging.basicConfig(
 log.setLevel(LOG_LEVEL)
 
 
-def read_csv(file_name: str, columns_map: Dict[str, str], split_column: str = None, split_separator: str = None) -> \
-List[Dict[str, str]]:
+def read_csv(
+    file_name: str,
+    columns_map: Dict[str, str],
+    split_column: Optional[str] = None,
+    split_separator: Optional[str] = None,
+) -> List[Dict[Hashable, str]]:
     """
     Reads a CSV file and extracts specified columns.
 
     Args:
         file_name (str): The path to the CSV file.
-        columns_map (Dict[str, str]): A dictionary mapping the original column names to the desired keys in the output.
-        split_column (str, optional): Column to split into multiple columns. Defaults to None.
-        split_separator (str, optional): Separator for splitting the column. Defaults to None.
+        columns_map (Dict[str, str]): A dictionary mapping the original
+            column names to the desired keys in the output.
+        split_column (str, optional): Column to split into multiple
+            columns. Defaults to None.
+        split_separator (str, optional): Separator for splitting the
+            column. Defaults to None.
 
     Returns:
-        list of dict: A list of dictionaries containing the specified columns.
+        list of dict: A list of dictionaries containing the specified
+            columns.
     """
     start_mem = memory_usage(PID)
 
     # Read the CSV file using Pandas
-    df = pd.read_csv(file_name)
+    csv_data = pd.read_csv(file_name)
 
     if split_column and split_separator:
         # Split the specified column
-        split_cols = columns_map[split_column].split(',')
-        df[split_cols] = df[split_column].str.split(split_separator, expand=True)
+        split_cols = columns_map[split_column].split(",")
+        csv_data[split_cols] = csv_data[split_column].str.split(
+            split_separator, expand=True
+        )
 
     # Map columns to the desired keys
-    df = df.rename(columns=columns_map)
+    csv_data = csv_data.rename(columns=columns_map)
 
     # Fill missing data in 'Last Name' if it exists
-    if 'Last Name' in df.columns:
-        df['Last Name'] = df['Last Name'].fillna("")
+    if "Last Name" in csv_data.columns:
+        csv_data["Last Name"] = csv_data["Last Name"].fillna("")
 
     # Create a list of dictionaries containing the needed information
-    data = df[list(columns_map.values())].to_dict(orient='records')
+    data = csv_data[list(columns_map.values())].to_dict(orient="records")
 
     log.info("Data retrieved")
     log.debug(
@@ -98,39 +108,104 @@ List[Dict[str, str]]:
     return data
 
 
-def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
-    columns_map = {
-        "Name": "Name",
-        "cardNumber": "Card Number"
-    }
-    return read_csv(file_name, columns_map, split_column="Name", split_separator=", ")
+def read_ac_csv(file_name: str) -> List[Dict[Hashable, str]]:
+    """Reads a CSV file and maps specific columns to a standardized format.
+
+    This function processes a CSV file to extract user information,
+    specifically mapping the "Name" and "cardNumber" columns to a predefined
+    format. It returns a list of dictionaries containing the relevant data.
+
+    Args:
+        file_name (str): The name of the CSV file to read.
+
+    Returns:
+        List[Dict[str, str]]: A list of dictionaries with standardized user
+            information.
+    """
+
+    columns_map = {"Name": "Name", "cardNumber": "Card Number"}
+    return read_csv(
+        file_name, columns_map, split_column="Name", split_separator=", "
+    )
 
 
-def read_sis_csv(file_name: str) -> List[Dict[str, str]]:
+def read_sis_csv(file_name: str) -> List[Dict[Hashable, str]]:
+    """Reads a CSV file and maps specific columns to a standardized format.
+
+    This function processes a CSV file to extract student information,
+    mapping the "SchoolID", "First_Name", "Last_Name", and "Email_Addr"
+    columns to a predefined format. It returns a list of dictionaries
+    containing the relevant data.
+
+    Args:
+        file_name (str): The name of the CSV file to read.
+
+    Returns:
+        List[Dict[str, str]]: A list of dictionaries with standardized
+            student information.
+    """
     columns_map = {
         "SchoolID": "School ID",
         "First_Name": "First Name",
         "Last_Name": "Last Name",
-        "Email_Addr": "Email"
+        "Email_Addr": "Email",
     }
     return read_csv(file_name, columns_map)
 
 
-def read_command_csv(file_name: str) -> List[Dict[str, str]]:
+def read_command_csv(file_name: str) -> List[Dict[Hashable, str]]:
+    """Reads a CSV file and maps specific columns to a standardized format.
+
+    This function processes a CSV file to extract user information, mapping
+    the "firstName", "lastName", "cardNumber", and "email" columns to a
+    predefined format. It returns a list of dictionaries containing the
+    relevant data.
+
+    Args:
+        file_name (str): The name of the CSV file to read.
+
+    Returns:
+        List[Dict[Hashable, str]]: A list of dictionaries with
+            standardized user information.
+    """
+
     columns_map = {
         "firstName": "First Name",
         "lastName": "Last Name",
         "cardNumber": "Card Number",
-        "email": "Email"
+        "email": "Email",
     }
     return read_csv(file_name, columns_map)
 
 
+def convert_list_of_dicts(
+    input_list: List[Dict[Hashable, str]]
+) -> List[Dict[str, str]]:
+    """Converts a list of dictionaries with hashable keys to a list of
+    dictionaries with string keys.
+
+    This function iterates through each dictionary in the input list
+    and creates a new dictionary where all keys are converted to strings.
+    The resulting list maintains the same structure but ensures that
+    all keys are of type string.
+
+    Args:
+        input_list (List[Dict[Hashable, str]]): A list of dictionaries
+            with hashable keys.
+
+    Returns:
+        List[Dict[str, str]]: A list of dictionaries with all keys
+            converted to strings.
+    """
+
+    return [{str(key): value for key, value in d.items()} for d in input_list]
+
+
 def collect_groups(
-        sis_users_list: List[Dict[str, str]],
-        index: int,
-        current_name: Optional[str] = None,
-        collected_groups: Optional[List[str]] = None,
+    sis_users_list: List[Dict[str, str]],
+    index: int,
+    current_name: Optional[str] = None,
+    collected_groups: Optional[List[str]] = None,
 ) -> List[str]:
     """
     Collect groups associated with a specific email from the SIS users
@@ -204,7 +279,7 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
         current_user = sis_users_list[index]
 
         if full_name := (
-                f"{current_user['First Name']} " f"{current_user['Last Name']}"
+            f"{current_user['First Name']} " f"{current_user['Last Name']}"
         ):
             if full_name not in user_groups:
                 # Collect groups for the current email
@@ -213,9 +288,9 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
 
             # Skip ahead to the next unique email
             while (
-                    index < len(sis_users_list)
-                    and f"{sis_users_list[index]['First Name']} "
-                        f"{sis_users_list[index]['Last Name']}" == full_name
+                index < len(sis_users_list)
+                and f"{sis_users_list[index]['First Name']} "
+                f"{sis_users_list[index]['Last Name']}" == full_name
             ):
                 index += 1
 
@@ -226,7 +301,7 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
 
 
 def compile_data_for_csv(
-        third_party_csv: str, sis_csv: str, current_csv: str
+    third_party_csv: str, sis_csv: str, current_csv: str
 ) -> List[Dict[str, str]]:
     """
     Will take two dictionaries and prepare the data to be written to a
@@ -271,7 +346,7 @@ def compile_data_for_csv(
     }
 
     # Process SIS users to collect groups
-    user_groups = process_sis_users(sis_users_list)
+    user_groups = process_sis_users(convert_list_of_dicts(sis_users_list))
 
     # NOTE: Uncomment for updated_users to have only groups added
     # update_users_thread = threading.Thread(
@@ -298,9 +373,9 @@ def compile_data_for_csv(
         try:
             email = sis_user["Email"]
             if (
-                    email
-                    and email in current_users_lookup
-                    and not current_users_lookup[email]["Card Number"]
+                email
+                and email in current_users_lookup
+                and not current_users_lookup[email]["Card Number"]
             ):
                 first_name = sis_user["First Name"]
                 last_name = sis_user["Last Name"]
@@ -345,7 +420,7 @@ def compile_data_for_csv(
 
 
 def validate_and_update_email(
-        user: Dict[str, str], email_pattern: re.Pattern
+    user: Dict[str, str], email_pattern: re.Pattern
 ) -> Dict[str, str]:
     """
     Validate and update the email format of a user.
@@ -371,9 +446,9 @@ def validate_and_update_email(
 
 
 def update_current_users_with_groups_and_emails(
-        file_name: str,
-        processed_sis_users: Dict[str, str],
-        user_list: List[Dict[str, str]],
+    file_name: str,
+    processed_sis_users: Dict[str, str],
+    user_list: List[Dict[str, str]],
 ) -> None:
     """
     Updates current users with groups and emails based on processed SIS users.
@@ -399,7 +474,7 @@ def update_current_users_with_groups_and_emails(
             need_an_email.append(updated_info)
             user["Email"] = updated_info["Email"]
 
-    def update_groups(user: Dict[str, str], full_name: str) -> None:
+    def update_groups(user: pd.Series, full_name: str) -> None:
         """Update user's groups based on processed SIS users."""
         if full_name in processed_sis_users:
             existing_groups = user.get("groups", "").strip()
@@ -444,7 +519,11 @@ def update_current_users_with_groups_and_emails(
 
         total_count = len(csv_reader)
         csv_iterator = (
-            tqdm(csv_reader.iterrows(), total=total_count, desc="Writing Groups & Emails")
+            tqdm(
+                csv_reader.iterrows(),
+                total=total_count,
+                desc="Writing Groups & Emails",
+            )
             if IS_INTERACTIVE
             else csv_reader.iterrows()
         )
@@ -455,10 +534,13 @@ def update_current_users_with_groups_and_emails(
                 "not iterable."
             )
 
+        rows = []
         for _, user in csv_iterator:
             full_name = f"{user['firstName']} {user['lastName']}"
             update_groups(user, full_name)
-            group_writer = group_writer.append(user)
+            rows.append(user)
+
+        group_writer = pd.DataFrame(rows, columns=group_fieldnames)
 
     group_writer.to_csv(group_file, index=False)
 
@@ -475,7 +557,7 @@ def update_current_users_with_groups_and_emails(
 
 
 def update_current_users_with_groups(
-        file_name: str, processed_sis_users: Dict[str, str]
+    file_name: str, processed_sis_users: Dict[str, str]
 ):
     """
     Updates current users with groups in a CSV file by calling the
@@ -491,41 +573,34 @@ def update_current_users_with_groups(
     """
     start_mem = memory_usage(PID)
 
-    # Open the original file and a new file for the updated data
-    with (
-        open(file_name, "r", newline="", encoding="UTF-8") as current_file,
-        open(
-            "updated_users.csv", "w", newline="", encoding="UTF-8"
-        ) as group_file,
-    ):
-        extract_current_users_with_groups(
-            current_file, group_file, file_name, processed_sis_users
-        )
+    # Load the CSV data into a DataFrame
+    current_df = pd.read_csv(file_name, encoding="UTF-8")
+
+    # Call the extraction and update function
+    extract_current_users_with_groups(
+        current_df, "updated_users.csv", processed_sis_users
+    )
+
     log.info("Data updated and written to updated_users.csv")
     log.debug(
         "Total memory used: %iKiB",
         calculate_memory(start_mem, memory_usage(PID)),
     )
-
-    group_file.close()
-    current_file.close()
     gc.collect()  # Clear out variables from memory
 
 
 def extract_current_users_with_groups(
-        current_file: pd.DataFrame,
-        group_file: str,
-        file_name: str,
-        processed_sis_users: Dict[str, str],
+    current_df: pd.DataFrame,
+    output_file: str,
+    processed_sis_users: Dict[str, str],
 ):
     """
     Extracts current users with groups from a CSV file and updates the
     groups for each user based on processed SIS users.
 
     Args:
-        current_file: The CSV file containing the current users.
-        group_file: The CSV file to write the updated users with groups.
-        file_name: The name of the CSV file being processed.
+        current_df: The DataFrame containing the current users.
+        output_file: The CSV file to write the updated users with groups.
         processed_sis_users: A dictionary mapping user full names to
             lists of groups.
 
@@ -534,27 +609,19 @@ def extract_current_users_with_groups(
 
     Raises:
         ValueError: If the iterator is not iterable.
-
-    Examples:
-        extract_current_users_with_groups(
-            current_file,
-            group_file,
-            "users.csv",
-            processed_sis_users
-        )
     """
-    group_writer = pd.DataFrame(columns=current_file.columns.tolist())
-    group_writer.to_csv(group_file, index=False)
+    # Create an empty DataFrame to store updated rows
+    updated_rows = []
 
     # Check if the environment is interactive
     iterator = (
         tqdm(
-            current_file.iterrows(),
-            total=len(current_file),
+            current_df.iterrows(),
+            total=len(current_df),
             desc="Extracting and Writing Groups",
         )
         if IS_INTERACTIVE
-        else current_file.iterrows()
+        else current_df.iterrows()
     )
 
     if not hasattr(iterator, "__iter__"):
@@ -562,7 +629,7 @@ def extract_current_users_with_groups(
             "extract_current_users_with_groups iterator is not iterable."
         )
 
-    # Process each row in the original file
+    # Process each row in the DataFrame
     for _, user in iterator:
         full_name = f"{user['firstName']} {user['lastName']}"
         if full_name in processed_sis_users:
@@ -574,10 +641,14 @@ def extract_current_users_with_groups(
                 user["groups"] = existing_groups
             else:
                 user["groups"] = new_groups
-        # Write the updated user to the new file
-        group_writer = group_writer.append(user)
 
-    group_writer.to_csv(group_file, index=False)
+        updated_rows.append(user)
+
+    # Convert the list of updated rows back into a DataFrame
+    updated_df = pd.DataFrame(updated_rows, columns=current_df.columns)
+
+    # Write the updated DataFrame to the output CSV file
+    updated_df.to_csv(output_file, index=False)
 
 
 def add_to_domain(user_list: List[Dict[str, str]]):
@@ -618,7 +689,7 @@ def add_to_domain(user_list: List[Dict[str, str]]):
 
     # Write the need_an_email list to the CSV file
     with open(
-            "need_email_domain.csv", "w", newline="", encoding="UTF-8"
+        "need_email_domain.csv", "w", newline="", encoding="UTF-8"
     ) as email_file:
         check_needed_email(email_file, need_an_email)
     log.info("Data updated and written to need_email_domain.csv")
@@ -651,7 +722,7 @@ def check_needed_email(email_file, need_an_email):
 
 
 if ac_user_list := compile_data_for_csv(
-        CSV_AC_LIST, CSV_SIS_USERS, CSV_CURRENT_USERS
+    CSV_AC_LIST, CSV_SIS_USERS, CSV_CURRENT_USERS
 ):
     log.info("Writing file")
     fieldnames = [
@@ -683,4 +754,4 @@ if ac_user_list := compile_data_for_csv(
     ]
     df = pd.DataFrame(ac_user_list, columns=fieldnames)
     df.to_csv(CSV_OUTPUT, index=False, encoding="UTF-8")
-    log.info(f"Written to {CSV_OUTPUT} with {len(df)} records.")
+    log.info("Written to %s with %i records.", CSV_OUTPUT, len(df))
