@@ -5,15 +5,15 @@ Purpose: This script will compare three csvs and generate a fourth with
 """
 
 import concurrent.futures
-import csv
 import gc
 import logging
 import re
 import threading
 from sys import stdout
 from os import getpid
-from typing import Dict, List, Optional, Union, TextIO
+from typing import Dict, List, Optional, Union
 
+import pandas as pd
 from tqdm import tqdm
 
 from QoL.verbose_compute import memory_usage
@@ -53,243 +53,84 @@ logging.basicConfig(
 log.setLevel(LOG_LEVEL)
 
 
-def count_lines(file_path: str) -> int:
+def read_csv(file_name: str, columns_map: Dict[str, str], split_column: str = None, split_separator: str = None) -> \
+List[Dict[str, str]]:
     """
-    Count the number of lines in a file.
+    Reads a CSV file and extracts specified columns.
 
     Args:
-        file_path (str): The path to the file to count the lines in.
+        file_name (str): The path to the CSV file.
+        columns_map (Dict[str, str]): A dictionary mapping the original column names to the desired keys in the output.
+        split_column (str, optional): Column to split into multiple columns. Defaults to None.
+        split_separator (str, optional): Separator for splitting the column. Defaults to None.
 
     Returns:
-        int: The total number of lines in the file.
-
-    Raises:
-        This function does not raise any exceptions.
+        list of dict: A list of dictionaries containing the specified columns.
     """
-    with open(file_path, "r", newline="", encoding="UTF-8") as count_file:
-        return sum(1 for _ in count_file) - 1
+    start_mem = memory_usage(PID)
+
+    # Read the CSV file using Pandas
+    df = pd.read_csv(file_name)
+
+    if split_column and split_separator:
+        # Split the specified column
+        split_cols = columns_map[split_column].split(',')
+        df[split_cols] = df[split_column].str.split(split_separator, expand=True)
+
+    # Map columns to the desired keys
+    df = df.rename(columns=columns_map)
+
+    # Fill missing data in 'Last Name' if it exists
+    if 'Last Name' in df.columns:
+        df['Last Name'] = df['Last Name'].fillna("")
+
+    # Create a list of dictionaries containing the needed information
+    data = df[list(columns_map.values())].to_dict(orient='records')
+
+    log.info("Data retrieved")
+    log.debug(
+        "Total memory used: %iKiB",
+        calculate_memory(start_mem, memory_usage(PID)),
+    )
+
+    gc.collect()  # Clear out variables from memory
+
+    return data
 
 
 def read_ac_csv(file_name: str) -> List[Dict[str, str]]:
-    """
-    Reads a CSV file and extracts the first name, last name, and email
-        columns.
-
-    Args:
-        file_path (str): The path to the CSV file.
-
-    Returns:
-        list of dict: A list of dictionaries containing 'first_name',
-            'last_name', and 'email'.
-    """
-    start_mem = memory_usage(PID)
-    data: List[Dict[str, str]] = []
-
-    # Open file
-    with open(file_name, mode="r", newline="", encoding="UTF-8") as csv_file:
-        # Set reader
-        csv_reader = csv.DictReader(csv_file)
-
-        log.info("Parsing access control csv")
-
-        # Wrap in tqdm if being ran interactively
-        iterator = (
-            tqdm(csv_reader, total=count_lines(file_name), desc="Read AC File")
-            if IS_INTERACTIVE
-            else csv_reader
-        )
-
-        if not hasattr(iterator, "__iter__"):
-            raise ValueError("read_ac_csv iterator is not iterable.")
-
-        for row in iterator:
-            # Extract useful columns
-            name_parts = row["Name"].split(", ")
-            if len(name_parts) == 2:
-                data.append(
-                    {
-                        "First Name": name_parts[1],
-                        "Last Name": name_parts[0],
-                        "Card Number": row["cardNumber"],
-                    }
-                )
-            else:
-                data.append(
-                    {
-                        "First Name": name_parts[0],
-                        "Last Name": "",
-                        "Card Number": row["cardNumber"],
-                    }
-                )
-    log.info("Data retrieved")
-    log.debug(
-        "Total memory used: %iKiB",
-        calculate_memory(start_mem, memory_usage(PID)),
-    )
-
-    csv_file.close()
-    gc.collect()  # Clear out variables from memory
-
-    return data
+    columns_map = {
+        "Name": "Name",
+        "cardNumber": "Card Number"
+    }
+    return read_csv(file_name, columns_map, split_column="Name", split_separator=", ")
 
 
 def read_sis_csv(file_name: str) -> List[Dict[str, str]]:
-    """
-    Reads a CSV file and extracts the first name, last name, and email
-        columns.
-
-    Args:
-        file_path (str): The path to the CSV file.
-
-    Returns:
-        list of dict: A list of dictionaries containing 'first_name',
-            'last_name', and 'email'.
-    """
-    start_mem = memory_usage(PID)
-    data: List[Dict[str, str]] = []
-    recorded_emails = set()  # Will help avoid duplicate entries
-
-    # Open file
-    with open(file_name, mode="r", newline="", encoding="UTF-8") as csv_file:
-        # Set reader
-        csv_reader = csv.DictReader(csv_file)
-
-        log.info("Parsing sis csv")
-
-        # Wrap in tqdm if being ran interactively
-        iterator = (
-            tqdm(
-                csv_reader, total=count_lines(file_name), desc="Read SIS File"
-            )
-            if IS_INTERACTIVE
-            else csv_reader
-        )
-
-        if not hasattr(iterator, "__iter__"):
-            raise ValueError("read_sis_csv iterator is not iterable.")
-
-        # Extract useful columns
-        for row in iterator:
-            if (
-                row["Email_Addr"] not in recorded_emails
-                and row["Email_Addr"] != ""
-            ):
-                try:
-                    data.append(
-                        {
-                            "School ID": row["SchoolID"],
-                            "First Name": row["First_Name"],
-                            "Last Name": row["Last_Name"],
-                            "Email": row["Email_Addr"],
-                        }
-                    )
-
-                    recorded_emails.add(row["Email_Addr"])  # Track email
-
-                except IndexError:
-                    data.append(
-                        {
-                            "First Name": "",
-                            "Last Name": "",
-                            "Email": row["Email_Addr"],
-                        }
-                    )
-                    log.error(
-                        "%s: Either first name or last name was provided.",
-                        str(row),
-                    )
-                    continue
-
-    log.info("Data retrieved")
-    log.debug(
-        "Total memory used: %iKiB",
-        calculate_memory(start_mem, memory_usage(PID)),
-    )
-
-    csv_file.close()
-    gc.collect()  # Clear out variables from memory
-
-    return data
+    columns_map = {
+        "SchoolID": "School ID",
+        "First_Name": "First Name",
+        "Last_Name": "Last Name",
+        "Email_Addr": "Email"
+    }
+    return read_csv(file_name, columns_map)
 
 
 def read_command_csv(file_name: str) -> List[Dict[str, str]]:
-    """
-    Reads a CSV file and extracts the first name, last name, card number
-        and email columns.
-
-    Args:
-        file_path (str): The path to the CSV file.
-
-    Returns:
-        list of dict: A list of dictionaries containing 'first_name',
-            'last_name', and 'email'.
-    """
-    start_mem = memory_usage(PID)
-    data: List[Dict[str, str]] = []
-
-    # Open file
-    with open(file_name, mode="r", newline="", encoding="UTF-8") as csv_file:
-        # Set reader
-        csv_reader = csv.DictReader(csv_file)
-
-        log.info("Parsing sis csv")
-
-        # Wrap in tqdm if being ran interactively
-        iterator = (
-            tqdm(
-                csv_reader,
-                total=count_lines(file_name),
-                desc="Read Command File",
-            )
-            if IS_INTERACTIVE
-            else csv_reader
-        )
-
-        if not hasattr(iterator, "__iter__"):
-            raise ValueError("read_command_csv iterator is not iterable.")
-
-        # Extract useful columns
-        for row in iterator:
-            try:
-                data.append(
-                    {
-                        "First Name": row["firstName"],
-                        "Last Name": row["lastName"],
-                        "Email": row["email"],
-                        "Card Number": row["cardNumber"],
-                    }
-                )
-            except IndexError:
-                data.append(
-                    {
-                        "First Name": "",
-                        "Last Name": "",
-                        "Email": row["Email"],
-                    }
-                )
-                log.error(
-                    "%s: Either first name or last name was provided.",
-                    str(row),
-                )
-                continue
-
-    log.info("Data retrieved")
-    log.debug(
-        "Total memory used: %iKiB",
-        calculate_memory(start_mem, memory_usage(PID)),
-    )
-
-    csv_file.close()
-    gc.collect()  # Clear out variables from memory
-
-    return data
+    columns_map = {
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "cardNumber": "Card Number",
+        "email": "Email"
+    }
+    return read_csv(file_name, columns_map)
 
 
 def collect_groups(
-    sis_users_list: List[Dict[str, str]],
-    index: int,
-    current_name: Optional[str] = None,
-    collected_groups: Optional[List[str]] = None,
+        sis_users_list: List[Dict[str, str]],
+        index: int,
+        current_name: Optional[str] = None,
+        collected_groups: Optional[List[str]] = None,
 ) -> List[str]:
     """
     Collect groups associated with a specific email from the SIS users
@@ -363,19 +204,18 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
         current_user = sis_users_list[index]
 
         if full_name := (
-            f"{current_user['First Name']} " f"{current_user['Last Name']}"
+                f"{current_user['First Name']} " f"{current_user['Last Name']}"
         ):
             if full_name not in user_groups:
-
                 # Collect groups for the current email
                 groups = collect_groups(sis_users_list, index, full_name)
                 user_groups[full_name] = ";".join(groups)
 
             # Skip ahead to the next unique email
             while (
-                index < len(sis_users_list)
-                and f"{sis_users_list[index]['First Name']} "
-                f"{sis_users_list[index]['Last Name']}" == full_name
+                    index < len(sis_users_list)
+                    and f"{sis_users_list[index]['First Name']} "
+                        f"{sis_users_list[index]['Last Name']}" == full_name
             ):
                 index += 1
 
@@ -386,7 +226,7 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
 
 
 def compile_data_for_csv(
-    third_party_csv: str, sis_csv: str, current_csv: str
+        third_party_csv: str, sis_csv: str, current_csv: str
 ) -> List[Dict[str, str]]:
     """
     Will take two dictionaries and prepare the data to be written to a
@@ -458,9 +298,9 @@ def compile_data_for_csv(
         try:
             email = sis_user["Email"]
             if (
-                email
-                and email in current_users_lookup
-                and not current_users_lookup[email]["Card Number"]
+                    email
+                    and email in current_users_lookup
+                    and not current_users_lookup[email]["Card Number"]
             ):
                 first_name = sis_user["First Name"]
                 last_name = sis_user["Last Name"]
@@ -505,7 +345,7 @@ def compile_data_for_csv(
 
 
 def validate_and_update_email(
-    user: Dict[str, str], email_pattern: re.Pattern
+        user: Dict[str, str], email_pattern: re.Pattern
 ) -> Dict[str, str]:
     """
     Validate and update the email format of a user.
@@ -531,9 +371,9 @@ def validate_and_update_email(
 
 
 def update_current_users_with_groups_and_emails(
-    file_name: str,
-    processed_sis_users: Dict[str, str],
-    user_list: List[Dict[str, str]],
+        file_name: str,
+        processed_sis_users: Dict[str, str],
+        user_list: List[Dict[str, str]],
 ) -> None:
     """
     Updates current users with groups and emails based on processed SIS users.
@@ -597,19 +437,16 @@ def update_current_users_with_groups_and_emails(
         ) as group_file,
     ):
 
-        csv_reader = csv.DictReader(current_file)
-        group_writer = csv.DictWriter(
-            group_file, fieldnames=csv_reader.fieldnames or []
-        )
-        group_writer.writeheader()
+        csv_reader = pd.read_csv(current_file)
+        group_fieldnames = csv_reader.columns.tolist()
+        group_writer = pd.DataFrame(columns=group_fieldnames)
+        group_writer.to_csv(group_file, index=False)
 
-        total_count = count_lines(
-            file_name
-        )  # Ensure count_lines is defined correctly
+        total_count = len(csv_reader)
         csv_iterator = (
-            tqdm(csv_reader, total=total_count, desc="Writing Groups & Emails")
+            tqdm(csv_reader.iterrows(), total=total_count, desc="Writing Groups & Emails")
             if IS_INTERACTIVE
-            else csv_reader
+            else csv_reader.iterrows()
         )
 
         if not hasattr(csv_iterator, "__iter__"):
@@ -618,10 +455,12 @@ def update_current_users_with_groups_and_emails(
                 "not iterable."
             )
 
-        for user in csv_iterator:
+        for _, user in csv_iterator:
             full_name = f"{user['firstName']} {user['lastName']}"
             update_groups(user, full_name)
-            group_writer.writerow(user)
+            group_writer = group_writer.append(user)
+
+    group_writer.to_csv(group_file, index=False)
 
     log.info(
         "Data updated and written to updated_users.csv and "
@@ -636,7 +475,7 @@ def update_current_users_with_groups_and_emails(
 
 
 def update_current_users_with_groups(
-    file_name: str, processed_sis_users: Dict[str, str]
+        file_name: str, processed_sis_users: Dict[str, str]
 ):
     """
     Updates current users with groups in a CSV file by calling the
@@ -674,10 +513,10 @@ def update_current_users_with_groups(
 
 
 def extract_current_users_with_groups(
-    current_file: TextIO,
-    group_file: TextIO,
-    file_name: str,
-    processed_sis_users: Dict[str, str],
+        current_file: pd.DataFrame,
+        group_file: str,
+        file_name: str,
+        processed_sis_users: Dict[str, str],
 ):
     """
     Extracts current users with groups from a CSV file and updates the
@@ -704,21 +543,18 @@ def extract_current_users_with_groups(
             processed_sis_users
         )
     """
-    csv_reader = csv.DictReader(current_file)
-    group_fieldnames = csv_reader.fieldnames or []
-    group_writer = csv.DictWriter(group_file, fieldnames=group_fieldnames)
-
-    group_writer.writeheader()
+    group_writer = pd.DataFrame(columns=current_file.columns.tolist())
+    group_writer.to_csv(group_file, index=False)
 
     # Check if the environment is interactive
     iterator = (
         tqdm(
-            csv_reader,
-            total=count_lines(file_name),
+            current_file.iterrows(),
+            total=len(current_file),
             desc="Extracting and Writing Groups",
         )
         if IS_INTERACTIVE
-        else csv_reader
+        else current_file.iterrows()
     )
 
     if not hasattr(iterator, "__iter__"):
@@ -727,7 +563,7 @@ def extract_current_users_with_groups(
         )
 
     # Process each row in the original file
-    for user in iterator:
+    for _, user in iterator:
         full_name = f"{user['firstName']} {user['lastName']}"
         if full_name in processed_sis_users:
             existing_groups = user.get("groups", "").strip()
@@ -739,7 +575,9 @@ def extract_current_users_with_groups(
             else:
                 user["groups"] = new_groups
         # Write the updated user to the new file
-        group_writer.writerow(user)
+        group_writer = group_writer.append(user)
+
+    group_writer.to_csv(group_file, index=False)
 
 
 def add_to_domain(user_list: List[Dict[str, str]]):
@@ -780,7 +618,7 @@ def add_to_domain(user_list: List[Dict[str, str]]):
 
     # Write the need_an_email list to the CSV file
     with open(
-        "need_email_domain.csv", "w", newline="", encoding="UTF-8"
+            "need_email_domain.csv", "w", newline="", encoding="UTF-8"
     ) as email_file:
         check_needed_email(email_file, need_an_email)
     log.info("Data updated and written to need_email_domain.csv")
@@ -807,69 +645,42 @@ def check_needed_email(email_file, need_an_email):
     Raises:
         ValueError: If the iterator is not iterable.
     """
-    email_fieldnames = ("Name", "Email")
-    csv_writer = csv.DictWriter(email_file, fieldnames=email_fieldnames)
-    csv_writer.writeheader()
-
-    # Wrap in tqdm if being ran interactively
-    email_iterator = (
-        tqdm(need_an_email, desc="Writing Needed Emails")
-        if IS_INTERACTIVE
-        else need_an_email
-    )
-
-    if not hasattr(email_iterator, "__iter__"):
-        raise ValueError("check_needed_email iterator is not iterable.")
-
-    for email_data in email_iterator:
-        csv_writer.writerow(email_data)
+    email_fieldnames = ["Name", "Email"]
+    csv_writer = pd.DataFrame(need_an_email, columns=email_fieldnames)
+    csv_writer.to_csv(email_file, index=False)
 
 
 if ac_user_list := compile_data_for_csv(
-    CSV_AC_LIST, CSV_SIS_USERS, CSV_CURRENT_USERS
+        CSV_AC_LIST, CSV_SIS_USERS, CSV_CURRENT_USERS
 ):
     log.info("Writing file")
-    with open(CSV_OUTPUT, "w", newline="", encoding="UTF-8") as file:
-        fieldnames = (
-            "firstName",
-            "lastName",
-            "middleName",
-            "email",
-            "userId",
-            "externalId",
-            "companyName",
-            "employeeId",
-            "employeeType",
-            "employeeTitle",
-            "department",
-            "departmentId",
-            "startDate",
-            "endDate",
-            "roles",
-            "cardFormat",
-            "facilityCode",
-            "cardNumber",
-            "cardNumberHex",
-            "licensePlateNumbers",
-            "entryCode",
-            "groups",
-            "cloudUnlock",
-            "bluetoothUnlock",
-            "photoUrl",
-        )
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-
-        # Wrap in tqdm if being ran interactively
-        missing_users_iterator = (
-            tqdm(ac_user_list, desc="Writing Missing Users")
-            if IS_INTERACTIVE
-            else ac_user_list
-        )
-
-        if not hasattr(missing_users_iterator, "__iter__"):
-            raise ValueError("Missing Users iterator is not iterable.")
-
-        for final_row in missing_users_iterator:
-            writer.writerow(final_row)
-    log.info("Written to file")
+    fieldnames = [
+        "firstName",
+        "lastName",
+        "middleName",
+        "email",
+        "userId",
+        "externalId",
+        "companyName",
+        "employeeId",
+        "employeeType",
+        "employeeTitle",
+        "department",
+        "departmentId",
+        "startDate",
+        "endDate",
+        "roles",
+        "cardFormat",
+        "facilityCode",
+        "cardNumber",
+        "cardNumberHex",
+        "licensePlateNumbers",
+        "entryCode",
+        "groups",
+        "cloudUnlock",
+        "bluetoothUnlock",
+        "photoUrl",
+    ]
+    df = pd.DataFrame(ac_user_list, columns=fieldnames)
+    df.to_csv(CSV_OUTPUT, index=False, encoding="UTF-8")
+    log.info(f"Written to {CSV_OUTPUT} with {len(df)} records.")
