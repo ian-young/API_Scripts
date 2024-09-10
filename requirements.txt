@@ -51,7 +51,7 @@ tomli==2.0.1
 types-colorama==0.4.15.20240311
 types-psutil==6.0.0.20240901
 types-pytz==2024.1.0.20240417
-types-requests<=2.32.0.20240712
+types-requests<=2.32.0.20240907
 typing>=3.0.0.0,<4.0.0.0
 typing_extensions>=4.0.0,<5.0.0
 tzlocal>=5.0,<6.0
