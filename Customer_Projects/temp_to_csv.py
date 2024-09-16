@@ -1,42 +1,37 @@
 """
-Author:
-    Ian Young
+Authors:
+    Ian Young, Elmar Aliyev
 Purpose: 
     Fetches temperature data from a specified device using the
     Verkada API, appends the data to a CSV file, and filters out old data
     based on a specified number of days to keep.
 
 Raises:
-    custom_exceptions.APIExceptionHandler: If there is an issue with the
+    APIExceptionHandler: If there is an issue with the
     API request.
 """
 
-import csv
-import logging
 from datetime import datetime, timedelta
 from os import environ, getenv
-from typing import Any, Dict, Generator, List, Union
+from typing import Dict, List, Union
 
+import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-import QoL.custom_exceptions as custom_exceptions
+from tools import APIExceptionHandler
 
 environ.clear()  # Clear any previously loaded variables
 load_dotenv()  # Import credentials
 
-# Set logger
-log = logging.getLogger()
-log.setLevel(logging.ERROR)
-logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
 # Constants
-DEVICE_ID = getenv("lab_sensor")
-API_KEY = getenv("lab_key")
+DEVICE_ID = getenv("")
+HEADERS = {}  # Initialize
+if API_KEY := getenv(""):
+    HEADERS = {
+        "accept": "application/json",
+        "x-api-key": API_KEY,
+    }
 CURRENT_TIME = datetime.now()
 END_TIME = int(CURRENT_TIME.timestamp())
 START_TIME = int((CURRENT_TIME - timedelta(days=1)).timestamp())
@@ -47,10 +42,6 @@ INTERVAL = "5m"
 BASE_URL = "https://api.verkada.com/environment/v1/data"
 CSV_FILE = "temperature_data.csv"
 DAYS_TO_KEEP = 7
-HEADERS = {
-    "accept": "application/json",
-    "x-api-key": API_KEY,
-}
 
 
 def celsius_to_fahrenheit(temp_value: float) -> float:
@@ -64,34 +55,6 @@ def celsius_to_fahrenheit(temp_value: float) -> float:
         float: The temperature value converted to Fahrenheit.
     """
     return temp_value * (9 / 5) + 32
-
-
-def read_and_filter_csv(
-    file_path: str, cutoff: datetime
-) -> Generator[Any, Any, Any]:
-    """
-    Reads a CSV file at the specified file path, filters out rows
-    based on a cutoff time, and yields the filtered rows.
-
-    Args:
-        file_path: The path to the CSV file to read.
-        cutoff: The cutoff time to filter rows.
-
-    Returns:
-        Yields rows from the CSV file that have a time value greater
-        than or equal to the cutoff time.
-
-    Raises:
-        FileNotFoundError: Log if the file is not found.
-    """
-    try:
-        with open(file_path, "r", newline="", encoding="utf-8") as data_file:
-            reader = csv.DictReader(data_file)
-            for row in reader:
-                if datetime.fromisoformat(row["Time"]) >= cutoff:
-                    yield row
-    except FileNotFoundError:
-        log.error("Could not find the csv file. Check working directory.")
 
 
 def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
@@ -136,7 +99,7 @@ def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
 {data['next_page_token']}&page_size={PAGE_SIZE}&fields={FIELDS}&interval={INTERVAL}"
 
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "sv") from e
+        raise APIExceptionHandler(e, response, "sv") from e
 
     return filtered_data
 
@@ -144,15 +107,21 @@ def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
 # Read existing CSV data and filter out old data
 cutoff_time = CURRENT_TIME - timedelta(days=DAYS_TO_KEEP)
 
-# Fetch all data from API
-all_data = list(read_and_filter_csv(CSV_FILE, cutoff_time))
-all_data.extend(fetch_all_data())
+# Read existing CSV data and filter out old data
+try:
+    df = pd.read_csv(CSV_FILE, parse_dates=["Time"])
+    df = df[df["Time"] >= cutoff_time.isoformat()]
+except FileNotFoundError:
+    df = pd.DataFrame(columns=["Time", "Temperature", "Device Name"])
+
+# Fetch new data from the API
+new_data = fetch_all_data()
+new_df = pd.DataFrame(new_data)
+
+# Combine old and new data
+combined_df = pd.concat([df, new_df]).drop_duplicates(subset=["Time"])
 
 # Write the updated data back to the CSV
-with open(CSV_FILE, "w", newline="", encoding="utf-8") as file:
-    fieldnames = ["Time", "Temperature", "Device Name"]
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(all_data)
+combined_df.to_csv(CSV_FILE, index=False)
 
 print("Temperature data updated.")

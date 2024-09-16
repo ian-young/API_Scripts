@@ -8,16 +8,34 @@ once made.
 
 # Import essential libraries
 import json
-import logging
 import threading
 import time
+from typing import List
 from os import getenv
 
 import requests
 from dotenv import load_dotenv
 from tinydb import TinyDB, Query
 
-from QoL import login_and_get_tokens, logout, custom_exceptions
+from tools import (
+    log,
+    login_and_get_tokens,
+    logout,
+    custom_exceptions,
+    SharedParams,
+)
+from tools.api_endpoints import (
+    AC_URL,
+    ALARM_URL,
+    VX_URL,
+    GC_URL,
+    SV_URL,
+    BZ_URL,
+    GET_CAMERA_DATA,
+    GET_AUDIT_LOGS,
+    GET_SITES,
+    set_org_id,
+)
 
 load_dotenv()  # Load credentials file
 
@@ -33,32 +51,10 @@ ORG_ID = getenv("")
 TOTP = getenv("")
 
 # Set final, global URLs
-LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
-LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
-CAMERA_URL = "https://api.verkada.com/cameras/v1/devices"
-AUDIT_URL = "https://api.verkada.com/core/v1/audit_log"
-AC_URL = "https://vcerberus.command.verkada.com/get_entities"
-ALARM_URL = "https://alarms.command.verkada.com/device/get_all"
-VX_URL = "https://vvx.command.verkada.com/device/list"
-GC_URL = "https://vnet.command.verkada.com/devices/list"
-SV_URL = "https://vsensor.command.verkada.com/devices/list"
-BZ_URL = "https://vbroadcast.command.verkada.com/management/speaker/list"
-DESK_URL = f"https://api.command.verkada.com/vinter/v1/user/organization/\
-{ORG_ID}/device"
-IPAD_URL = f"https://vdoorman.command.verkada.com/site/settings/v2/org/\
-{ORG_ID}/site/"
-SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"
-ACCESS_LEVELS = f"https://vcerberus.command.verkada.com/organizations/\
-{ORG_ID}/schedules"
-
-# Set up the logger
-log = logging.getLogger()
-log.setLevel(logging.INFO)
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+urls = set_org_id(ORG_ID)
+DESK_URL = urls["DESK_URL"]
+IPAD_URL = urls["IPAD_URL"]
+ACCESS_LEVELS = urls["ACCESS_LEVELS"]
 
 devices_serials = []
 ARRAY_LOCK = threading.Lock()
@@ -86,7 +82,7 @@ def get_audit_log(audit_session, audit_start, audit_end):
         "x-api-key": getenv("LAB_KEY"),
         "Content-Type": "application/json",
     }
-    url = f"{AUDIT_URL}?start_time={audit_start}&end_time={audit_end}"
+    url = f"{GET_AUDIT_LOGS}?start_time={audit_start}&end_time={audit_end}"
     log.debug("Requesting logs.")
 
     try:
@@ -120,7 +116,7 @@ def list_cameras(api_key, camera_session):
     log.debug("Requesting camera data")
 
     try:
-        response = camera_session.get(CAMERA_URL, headers=headers)
+        response = camera_session.get(GET_CAMERA_DATA, headers=headers)
         response.raise_for_status()
         log.debug("-------")
         log.debug("Camera data retrieved.")
@@ -144,39 +140,28 @@ def list_cameras(api_key, camera_session):
         ) from e
 
 
-def get_sites(
-    x_verkada_token, x_verkada_auth, usr, site_session, org_id=ORG_ID
-):
+def get_sites(params: SharedParams):
     """
     Lists all Verkada Guest sites.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param site_session: The user session to use when making API calls.
-    :type site_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: An array of all Verkada sites.
     :rtype: list
     """
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
-    url = SITES + org_id
-
+    url = GET_SITES + params.org_id if GET_SITES and params.org_id else ""
     try:
         # Request the JSON archive library
         log.debug("Requesting sites.")
         # log.debug(url)
-        response = site_session.get(url, headers=headers)
+        response = params.session.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Sites JSON retrieved. Parsing and logging.")
 
@@ -199,36 +184,28 @@ def get_sites(
         ) from e
 
 
-def list_ac(x_verkada_token, x_verkada_auth, usr, ac_session, org_id=ORG_ID):
+def list_ac(params: SharedParams):
     """
     Lists all access control devices.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param ac_session: The user session to use when making API calls.
-    :type ac_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: An array of door controller device IDs.
     :rtype: list
     """
-    body = {"organizationId": org_id}
+    body = {"organizationId": params.org_id}
 
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting access control devices.")
-        response = ac_session.post(AC_URL, json=body, headers=headers)
+        response = params.session.post(AC_URL, json=body, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Access control JSON retrieved. Parsing and logging.")
 
@@ -279,38 +256,28 @@ def build_device(device_name, device_type, serial, key, devices):
             build_db(dev[serial], key)
 
 
-def list_alarms(
-    x_verkada_token, x_verkada_auth, usr, alarms_session, org_id=ORG_ID
-):
+def list_alarms(params: SharedParams):
     """
     Lists all alarm devices.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param alarms_session: The user session to use when making API calls.
-    :type alarms_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: Arrays of each wireless alarm sensor type device IDs.
     :rtype: lists
     """
-    body = {"organizationId": org_id}
+    body = {"organizationId": params.org_id}
 
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting alarm devices.")
-        response = alarms_session.post(ALARM_URL, json=body, headers=headers)
+        response = params.session.post(ALARM_URL, json=body, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Alarm JSON retrieved. Parsing and logging.")
 
@@ -381,38 +348,28 @@ def list_alarms(
         ) from e
 
 
-def list_viewing_stations(
-    x_verkada_token, x_verkada_auth, usr, vx_session, org_id=ORG_ID
-):
+def list_viewing_stations(params: SharedParams):
     """
     Lists all viewing stations.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param vx_session: The user session to use when making API calls.
-    :type vx_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: An array of archived viewing station device IDs.
     :rtype: list
     """
-    body = {"organizationId": org_id}
+    body = {"organizationId": params.org_id}
 
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting viewing stations.")
-        response = vx_session.post(VX_URL, json=body, headers=headers)
+        response = params.session.post(VX_URL, json=body, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Viewing station JSON retrieved. Parsing and logging.")
 
@@ -435,38 +392,28 @@ def list_viewing_stations(
         ) from e
 
 
-def list_gateways(
-    x_verkada_token, x_verkada_auth, usr, gc_session, org_id=ORG_ID
-):
+def list_gateways(params: SharedParams):
     """
     Lists all cellular gateways.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param gc_session: The user session to use when making API calls.
-    :type gc_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: An array of gateway device IDs.
     :rtype: list
     """
-    body = {"organizationId": org_id}
+    body = {"organizationId": params.org_id}
 
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting cellular gateways.")
-        response = gc_session.post(GC_URL, json=body, headers=headers)
+        response = params.session.post(GC_URL, json=body, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Cellular gateways JSON retrieved. Parsing and logging.")
 
@@ -489,38 +436,28 @@ def list_gateways(
         ) from e
 
 
-def list_sensors(
-    x_verkada_token, x_verkada_auth, usr, sv_session, org_id=ORG_ID
-):
+def list_sensors(params: SharedParams):
     """
     Lists all environmental sensors.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param sv_session: The user session to use when making API calls.
-    :type sv_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: An array of environmental sensor device IDs.
     :rtype: list
     """
-    body = {"organizationId": org_id}
+    body = {"organizationId": params.org_id}
 
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting environmental sensors.")
-        response = sv_session.post(SV_URL, json=body, headers=headers)
+        response = params.session.post(SV_URL, json=body, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Environmental Sensor JSON retrieved. Parsing and logging.")
 
@@ -543,38 +480,28 @@ def list_sensors(
         ) from e
 
 
-def list_horns(
-    x_verkada_token, x_verkada_auth, usr, bz_session, org_id=ORG_ID
-):
+def list_horns(params: SharedParams):
     """
     Lists all BZ horn speakers.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param bz_session: The user session to use when making API calls.
-    :type bz_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: An array of BZ11 device IDs.
     :rtype: list
     """
-    body = {"organizationId": org_id}
+    body = {"organizationId": params.org_id}
 
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
     try:
         # Request the JSON archive library
         log.debug("Requesting horn speakers.")
-        response = bz_session.post(BZ_URL, json=body, headers=headers)
+        response = params.session.post(BZ_URL, json=body, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Horn speakers JSON retrieved. Parsing and logging.")
 
@@ -597,33 +524,28 @@ def list_horns(
         ) from e
 
 
-def list_desk_stations(x_verkada_token, usr, ds_session, org_id=ORG_ID):
+def list_desk_stations(params: SharedParams):
     """
     Lists all desk stations.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param ds_session: The user session to use when making API calls.
-    :type ads_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :return: An array of registered desk station apps on iPads.
     :rtype: list
     """
     headers = {
-        "x-verkada-organization-id": org_id,
-        "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr,
+        "x-verkada-organization-id": params.org_id,
+        "x-verkada-token": params.x_verkada_token,
+        "x-verkada-user-id": params.usr,
     }
 
-    desk_ids = []
+    desk_ids: List[str] = []
 
     try:
         # Request the JSON archive library
         log.debug("Requesting desk stations.")
-        response = ds_session.get(DESK_URL, headers=headers)
+        response = params.session.get(DESK_URL, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Desk station JSON retrieved. Parsing and logging.")
 
@@ -648,27 +570,15 @@ def list_desk_stations(x_verkada_token, usr, ds_session, org_id=ORG_ID):
 
 
 def list_guest(
-    x_verkada_token,
-    x_verkada_auth,
-    usr,
-    guest_session,
-    org_id=ORG_ID,
+    params: SharedParams,
     sites=None,
 ):
     """
     Lists all guest printers and iPads.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param guest_session: The user session to use when making API calls.
-    :type guest_session: requests.Session
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
+    :param params: A class with frequently used variable when making
+        requests.
+    :type params: SharedParams
     :param sites: The list of site IDs to check in.
     :type sites: list, optional
     :return: An array of registered iPads with Verkada Guest software and
@@ -677,24 +587,23 @@ def list_guest(
     :rtype: list
     """
     headers = {
-        "x-verkada-organization-id": org_id,
-        "x-verkada-token": x_verkada_token,
-        "x-verkada-user-id": usr,
+        "x-verkada-organization-id": params.org_id,
+        "x-verkada-token": params.x_verkada_token,
+        "x-verkada-user-id": params.usr,
     }
 
-    ipad_ids, printer_ids = [], []
+    ipad_ids: List[str] = []
+    printer_ids: List[str] = []
 
     if not sites:
-        sites = get_sites(
-            x_verkada_token, x_verkada_auth, usr, guest_session, org_id
-        )
+        sites = get_sites(params)
 
     try:
         # Request the JSON archive library
         log.debug("Requesting guest information.")
         for site in sites:
             url = IPAD_URL + site
-            response = guest_session.get(url, headers=headers)
+            response = params.session.get(url, headers=headers)
             response.raise_for_status()  # Raise an exception for HTTP errors
             log.debug("Guest JSON retrieved. Parsing and logging.")
 
@@ -838,8 +747,8 @@ def get_device_removed_user(serial, audit_log_events):
         if device_details["serial"] == serial:
             user_email = event["user_email"]
             return user_email
-        else:
-            return None
+
+        return None
 
     log.info("--------------------")  # Aesthetic dividing line
     log.info("Finding who removed %s.", {serial})
@@ -873,13 +782,14 @@ def get_device_removed_user(serial, audit_log_events):
 if __name__ == "__main__":
     TIME_FRAME = 3600
 
-    with requests.Session() as session:
+    with requests.Session() as gather_session:
         start_run_time = time.time()  # Start timing the script
         try:
             # Initialize the user session.
+            csrf_token, user_token, user_id = None, None, None  # Initialize
             if USERNAME and PASSWORD and ORG_ID:
                 csrf_token, user_token, user_id = login_and_get_tokens(
-                    session, USERNAME, PASSWORD, ORG_ID, TOTP
+                    gather_session, USERNAME, PASSWORD, ORG_ID, TOTP
                 )
             timestamp = int(time.time())
             # Starting time frame is an hour ago because the script runs hourly
@@ -891,11 +801,13 @@ if __name__ == "__main__":
                 if timestamp + TIME_FRAME < int(time.time())
                 else int(time.time())
             )
-            audit_log = get_audit_log(session, start_time, end_time)
+            audit_log = get_audit_log(gather_session, start_time, end_time)
 
             # Continue if the required information has been received
             if csrf_token and user_token and user_id and audit_log:
-
+                runtime_params = SharedParams(
+                    gather_session, csrf_token, user_token, user_id, ORG_ID
+                )
                 log.debug("Retrieving cameras.")
                 c_thread = threading.Thread(target=list_cameras)
                 log.debug("Cameras retrieved")
@@ -903,78 +815,42 @@ if __name__ == "__main__":
                 log.debug("Retrieving Access controllers.")
                 ac_thread = threading.Thread(
                     target=list_ac,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                        ORG_ID,
-                    ),
+                    args=(runtime_params,),
                 )
                 log.debug("Controllers retrieved.")
 
                 log.debug("Retrieving Alarm devices.")
                 br_thread = threading.Thread(
                     target=list_alarms,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                        ORG_ID,
-                    ),
+                    args=(runtime_params,),
                 )
                 log.debug("Alarm devices retrieved.")
 
                 log.debug("Retrieving viewing stations.")
                 vx_thread = threading.Thread(
                     target=list_viewing_stations,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                        ORG_ID,
-                    ),
+                    args=(runtime_params,),
                 )
                 log.debug("Viewing stations retrieved.")
 
                 log.debug("Retrieving cellular gateways.")
                 gc_thread = threading.Thread(
                     target=list_gateways,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                        ORG_ID,
-                    ),
+                    args=(runtime_params,),
                 )
                 log.debug("Cellular gateways retrieved.")
 
                 log.debug("Retrieving environmental sensors.")
                 sv_thread = threading.Thread(
                     target=list_sensors,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                        ORG_ID,
-                    ),
+                    args=(runtime_params,),
                 )
                 log.debug("Environmental sensors retrieved.")
 
                 log.debug("Retrieving horn speakers.")
                 bz_thread = threading.Thread(
                     target=list_horns,
-                    args=(
-                        csrf_token,
-                        user_token,
-                        user_id,
-                        session,
-                        ORG_ID,
-                    ),
+                    args=(runtime_params,),
                 )
                 log.debug("Horn speakers retrieved.")
 
@@ -1042,7 +918,7 @@ if __name__ == "__main__":
             if csrf_token and user_token:
                 log.debug("Logging out.")
                 if ORG_ID:
-                    logout(session, csrf_token, user_token, ORG_ID)
+                    logout(gather_session, csrf_token, user_token, ORG_ID)
 
-            session.close()
+            gather_session.close()
             log.debug("Session closed.\nExiting...")

@@ -4,20 +4,12 @@ Purpose: This is a module that may be imported for improved verbosity on
     compute resources.
 """
 
-import logging
 from gc import collect
 from typing import Optional
 
 import psutil
 
-log = logging.getLogger()
-LOG_LEVEL = logging.DEBUG
-log.setLevel(LOG_LEVEL)
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format=("(%(asctime)s.%(msecs)03d) %(levelname)s: %(message)s"),
-    datefmt="%H:%M:%S",
-)
+from .log import log
 
 
 def memory_usage(process_id: int) -> float:
@@ -55,3 +47,20 @@ def cpu_usage(process_id: int, interval: Optional[int] = 1) -> float:
     log.debug("Getting process CPU usage")
 
     return psutil.Process(process_id).cpu_percent(interval=interval)
+
+
+def calculate_memory(start_mem: float, end_mem: float) -> float:
+    """Calculate the difference in memory usage.
+
+    This function computes the amount of memory used by subtracting the
+    starting memory value from the ending memory value.
+
+    Args:
+        start_mem (float): The initial memory usage.
+        end_mem (float): The final memory usage.
+
+    Returns:
+        float: The difference in memory usage.
+    """
+
+    return end_mem - start_mem

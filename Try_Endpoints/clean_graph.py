@@ -20,12 +20,13 @@ def parse_entry(entry):
     :rtype: datetime
     """
     if time_match := re.search(r"(\d{2}/\d{2} \d{2}:\d{2}:\d{2})", entry):
-        time_str = time_match.group(1)
+        time_str = time_match[1]
         # Set the year to the current year
         current_year = datetime.now().year
         return datetime.strptime(
             f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S"
         )
+    return None
 
 
 def filter_entries(unfiltered_entries):
@@ -43,8 +44,7 @@ def filter_entries(unfiltered_entries):
     include_entry = False
 
     for entry in unfiltered_entries:
-        execution_time = parse_entry(entry)
-        if execution_time:
+        if execution_time := parse_entry(entry):
             time_difference = current_time - execution_time
 
             # Check if the entry is within the last 24 hours

@@ -11,7 +11,7 @@ from os import getenv, environ
 import requests
 from dotenv import load_dotenv
 
-from QoL.api_endpoints import DASHBOARD_URL, LOGIN
+from tools.api_endpoints import DASHBOARD_URL, LOGIN
 
 environ.clear()
 load_dotenv()  # Load credentials file

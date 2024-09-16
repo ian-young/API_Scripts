@@ -35,19 +35,20 @@ GET_CB = f"{BASE_URL}{CAM}cloud_backup/settings"
 UPDATE_CB = f"{BASE_URL}{CAM}cloud_backup/settings"
 GET_CAMERA_DATA = f"{BASE_URL}{CAM}devices"
 GET_FOOTAGE_LINK = f"{BASE_URL}{CAM}footage/link"
-GET_THUMB_IMG = f"{BASE_URL}{CAM}footage/thumbnails?resolution=low-res"
-GET_THUMB_LINK = f"{BASE_URL}{CAM}footage/thumbnails/link?expiry=86400"
+GET_THUMB_IMG = f"{BASE_URL}{CAM}footage/thumbnails"
+GET_THUMB_LINK = f"{BASE_URL}{CAM}footage/thumbnails/link"
 GET_STREAM_TOKEN = f"{BASE_URL}{CAM}footage/token"
-STREAM_FOOTAGE = f"{BASE_URL}stream/{CAM}footage/stream/key?transcode=false"
+STREAM_FOOTAGE = f"{BASE_URL}stream/{CAM}footage/stream/key"
+STREAM_URL = (
+    "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
+)
 DELETE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 GET_ALL_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 UPDATE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 CREATE_POI = f"{BASE_URL}{CAM}people/person_of_interest"
 GET_ALL_LPOI = f"{BASE_URL}{CAM}analytics/lpr/license_plate_of_interest"
-GET_TREND_DATA = f"{BASE_URL}{CAM}analytics/occupancy_trends?interval=1_hour"
-GET_LATEST_THUMB_IMG = (
-    f"{BASE_URL}{CAM}footage/thumbnails/latest?resolution=low-res"
-)
+GET_TREND_DATA = f"{BASE_URL}{CAM}analytics/occupancy_trends"
+GET_LATEST_THUMB_IMG = f"{BASE_URL}{CAM}footage/thumbnails/latest"
 
 ## Core API
 GET_AUDIT_LOGS = f"{BASE_URL}{CORE}audit_log"
@@ -148,6 +149,16 @@ def get_url(name, org_id):
 
     Returns:
         The URL associated with the provided name.
+
+    Example:
+        >>> org_id = "your_organization_id"
+        >>> urls = set_org_id(org_id)
+        >>> ipad_url = urls["IPAD_URL"]
+        >>> print(ipad_url)
+        'https://vdoorman.command.verkada.com/site/settings/v2/org/your_organization_id/site/'
+
+    Note:
+        - Replace "your_organization_id" with the actual organization ID you want to use.
     """
     return set_org_id(org_id).get(name)
 
@@ -184,3 +195,4 @@ PROMOTE_ORG_ADMIN = (
 # Misc
 DASHBOARD_URL = "https://command.verkada.com/dashboard"
 DEVICE_DATA = "https://vappinit.command.verkada.com/app/v2/init"
+GET_SITES = "https://vdoorman.command.verkada.com/user/valid_sites/org/"

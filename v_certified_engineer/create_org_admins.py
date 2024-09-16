@@ -1,31 +1,19 @@
 """
-Author: Ian Young
+Authors: Ian Young, Elmar Aliyev
 Purpose: Will take a person's email, first name and last name from a csv
 and create a Command account for them with org admin privileges.
 """
 
-import csv
-import logging
 from datetime import datetime
 from os import getenv
 
+import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-from QoL import login_and_get_tokens, logout
-from QoL.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
-from QoL.custom_exceptions import APIExceptionHandler
-
-log = logging.getLogger()
-LOG_LEVEL = logging.INFO
-log.setLevel(LOG_LEVEL)
-logging.basicConfig(
-    level=LOG_LEVEL, format="%(asctime)s - %(levelname)s: %(message)s"
-)
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+from tools import log, login_and_get_tokens, logout
+from tools.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
+from tools.custom_exceptions import APIExceptionHandler
 
 load_dotenv()  # Import credentials file
 
@@ -50,39 +38,58 @@ def read_csv(file_name):
     Returns:
         list of dict: A list of dictionaries containing 'first_name', 'last_name', and 'email'.
     """
-    data = []
+    try:
+        return extract_data(file_name)
+    except FileNotFoundError:
+        log.error("The specified CSV file was not found: %s", file_name)
+    except pd.errors.EmptyDataError:
+        log.error("The CSV file is empty: %s", file_name)
+    except pd.errors.ParserError:
+        log.error("Error parsing the CSV file: %s", file_name)
+    except KeyError as e:
+        log.error("Missing expected column in the CSV file: %s", e)
+    except AttributeError:
+        log.error("The 'Guest Name' column does not contain string values.")
+    except TypeError as e:
+        log.error("Type error occurred: %s", e)
 
-    # Open file
-    with open(file_name, mode="r", newline="", encoding="UTF-8") as file:
-        # Set reader
-        csv_reader = csv.DictReader(file)
+    return []
 
-        log.debug("Parsing csv")
-        # Extract useful columns
-        for row in csv_reader:
-            try:
-                name_parts = row["Guest Name"].split()
-                data.append(
-                    {
-                        "First Name": name_parts[0],
-                        "Last Name": name_parts[-1],
-                        "Guest Email": row["Guest Email"],
-                    }
-                )
 
-            except IndexError:
-                data.append(
-                    {
-                        "First Name": "",
-                        "Last Name": "",
-                        "Guest Email": row["Guest Email"],
-                    }
-                )
-                log.error(
-                    "%s: Either first name or last name was provided.",
-                    str(row),
-                )
-                continue
+def extract_data(file_name):
+    """Extracts user data from a CSV file.
+
+    This function reads a CSV file to retrieve user information,
+    specifically extracting the first name, last name, and email from the
+    "Guest Name" and "Guest Email" columns. It processes the data to ensure
+    that names are split correctly and returns a structured list of
+    dictionaries containing the relevant information.
+
+    Args:
+        file_name (str): The path to the CSV file to read.
+
+    Returns:
+        list of dict: A list of dictionaries containing 'First Name',
+            'Last Name', and 'Guest Email'.
+    """
+
+    # Read the CSV file using Pandas
+    df = pd.read_csv(file_name)
+
+    log.debug("Parsing csv")
+
+    # Split the 'Guest Name' into 'First Name' and 'Last Name'
+    df[["First Name", "Last Name"]] = df["Guest Name"].str.split(
+        n=1, expand=True
+    )
+
+    # Fill empty 'Last Name' fields with an empty string
+    df["Last Name"] = df["Last Name"].fillna("")
+
+    # Create a list of dictionaries containing the needed information
+    data = df[["First Name", "Last Name", "Guest Email"]].to_dict(
+        orient="records"
+    )
 
     log.info("Data retrieved")
     return data
@@ -219,8 +226,6 @@ def create_vce_user(user_info_list, api_key=API_KEY):
                         csrf_token, user_id, data["user_id"], session
                     )
 
-                return emails
-
             # Handles when the required credentials were not received
             else:
                 log.critical(
@@ -228,6 +233,8 @@ def create_vce_user(user_info_list, api_key=API_KEY):
                     "the authentication process or audit log "
                     "could not be retrieved."
                 )
+
+            return emails
 
         except requests.exceptions.RequestException as e:
             raise APIExceptionHandler(e, response, "Create user") from e

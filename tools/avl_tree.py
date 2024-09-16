@@ -5,9 +5,13 @@ AVL trees for code optimization.
 """
 
 # Import essential libraries
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
 from anytree import Node, RenderTree
 
 
+@dataclass
 class TreeNode:
     """
     Represents a node in an AVL tree.
@@ -19,18 +23,13 @@ class TreeNode:
     * height: The height of the current node in the AVL tree.
     """
 
-    def __init__(self, key):
-        """
-        Initializes a new tree node with the given key.
-
-        :param key: The value of the node.
-        :type key: Any
-        """
-        self.left = None
-        self.right = None
-        self.value = key
-        self.height = 1  # Initialize the height to 1 for a new node
-        self.balance_factor = 0
+    value: Any
+    left: Optional["TreeNode"] = field(default=None)
+    right: Optional["TreeNode"] = field(default=None)
+    height: int = field(
+        default=1, init=False
+    )  # Initialize the height to 1 for a new node
+    balance_factor: int = field(default=0, init=False)
 
 
 def insert_avl(current_node, key):
@@ -85,6 +84,39 @@ def insert_avl(current_node, key):
     return current_node
 
 
+def handle_balance(current_node, key_value, key):
+    """
+    Adjusts the AVL tree to maintain balance after an insertion.
+
+    :param current_node: The current node in the AVL tree that needs to be balanced.
+    :type current_node: TreeNode
+    :param key_value: The value associated with the key that was inserted, used to
+    determine if rotations are needed.
+    :type key_value: Any
+    :param key: The key value that is used for sorting and comparison.
+    :type key: Any
+    :return: The new root node of the subtree after balancing.
+    :rtype: TreeNode
+    """
+    balance = balance_factor(current_node)
+
+    if balance > 1:
+        if key_value < current_node.left.value[key]:
+            return rotate_right(current_node)
+        if key_value > current_node.left.value[key]:
+            current_node.left = rotate_left(current_node.left)
+            return rotate_right(current_node)
+
+    if balance < -1:
+        if key_value > current_node.right.value[key]:
+            return rotate_left(current_node)
+        if key_value < current_node.right.value[key]:
+            current_node.right = rotate_right(current_node.right)
+            return rotate_left(current_node)
+
+    return current_node
+
+
 def insert_avl_from_dict(current_node, data, key):
     """
     Inserts data from a dictionary into the AVL tree rooted at 'current_node'.
@@ -102,6 +134,7 @@ def insert_avl_from_dict(current_node, data, key):
         return current_node
 
     key_value = data[key]
+
     if current_node is None:
         return TreeNode(data)
 
@@ -112,37 +145,11 @@ def insert_avl_from_dict(current_node, data, key):
             current_node.right, data, key
         )
 
-    # Update the height of the current node
     current_node.height = 1 + max(
         height(current_node.left), height(current_node.right)
     )
 
-    # Perform AVL tree rotations to maintain balance
-    balance = balance_factor(current_node)
-
-    # Left Heavy
-    if balance > 1:
-        # Right Heavy
-        if key_value < current_node.left.value[key]:
-            return rotate_right(current_node)
-
-        # Left-Right Heavy
-        if key_value > current_node.left.value[key]:
-            current_node.left = rotate_left(current_node.left)
-            return rotate_right(current_node)
-
-    # Right Heavy
-    if balance < -1:
-        # Left Heavy
-        if key_value > current_node.right.value[key]:
-            return rotate_left(current_node)
-
-        # Right-Left Heavy
-        if key_value < current_node.right.value[key]:
-            current_node.right = rotate_right(current_node.right)
-            return rotate_left(current_node)
-
-    return current_node
+    return handle_balance(current_node, key_value, key)
 
 
 def build_avl_tree(arr):
@@ -214,7 +221,7 @@ def search_in_avl_tree_dict(root, key, target_value):
         current_key_value = current_node.value.get(key)
         if target_value == current_key_value:
             return current_node
-        elif target_value < current_key_value:
+        if target_value < current_key_value:
             current_node = current_node.left
         else:
             current_node = current_node.right
@@ -290,13 +297,9 @@ def remove_nodes_array(tree1, common_nodes):
 
     # Check if the current node is present in common_nodes
     if tree1.value in common_nodes:
-        if tree1.left is None and tree1.right is None:
-            return None  # Node found in common_nodes and has no children, remove it from tree1
-        elif tree1.left is None:
-            return (
-                tree1.right
-            )  # Node found in common_nodes and has only a right child
-        elif tree1.right is None:
+        if tree1.left is None:
+            return None if tree1.right is None else tree1.right
+        if tree1.right is None:
             return (
                 tree1.left
             )  # Node found in common_nodes and has only a left child
@@ -313,9 +316,6 @@ def remove_nodes_array(tree1, common_nodes):
     tree1.balance_factor = balance_factor(tree1)
 
     return tree1
-
-
-#! Stop
 
 
 def remove_common_nodes_dict(tree1, tree2, key):
@@ -392,29 +392,45 @@ def remove_nodes_dict(tree1, common_nodes, key):
 
     # Check if the current node is present in common_nodes
     if tree1.value.get(key) in common_nodes:
-        if tree1.left is None and tree1.right is None:
-            return None  # Node found in common_nodes and has no children, remove it from tree1
-        elif tree1.left is None:
-            return (
-                tree1.right
-            )  # Node found in common_nodes and has only a right child
-        elif tree1.right is None:
-            return (
-                tree1.left
-            )  # Node found in common_nodes and has only a left child
-
-        # Node found in common_nodes and has both left and right children
-        # Replace the node with the maximum node in the left subtree
-        max_left = find_max(tree1.left)
-        tree1.value = max_left.value
-        # Remove the node that was moved
-        tree1.left = remove_nodes_dict(tree1.left, common_nodes, key)
-        return tree1
-
+        return balance_dict(tree1, common_nodes, key)
     # Update the height and balance factor
     update_height(tree1)
     tree1.balance_factor = balance_factor(tree1)
 
+    return tree1
+
+
+def balance_dict(tree1, common_nodes, key):
+    """Balances the AVL tree by removing a specified node and
+    restructuring the tree.
+
+    This function ensures that the AVL tree remains balanced after a node
+    is removed. It handles cases where the node to be removed has no
+    children, one child, or two children.
+
+    Args:
+        tree1: The root node of the AVL tree.
+        common_nodes: A collection of nodes that are common and may need
+            to be removed.
+        key: The key associated with the node to be removed.
+
+    Returns:
+        The new root of the balanced AVL tree after the specified node has
+            been removed.
+    """
+    if tree1.left is None:
+        return None if tree1.right is None else tree1.right
+    if tree1.right is None:
+        return (
+            tree1.left
+        )  # Node found in common_nodes and has only a left child
+
+    # Node found in common_nodes and has both left and right children
+    # Replace the node with the maximum node in the left subtree
+    max_left = find_max(tree1.left)
+    tree1.value = max_left.value
+    # Remove the node that was moved
+    tree1.left = remove_nodes_dict(tree1.left, common_nodes, key)
     return tree1
 
 

@@ -5,153 +5,18 @@ These names will be "persistent" which are to remain in Command.
 Anything not marked thusly will be deleted from the org.
 """
 
-import datetime
-import logging
 import threading
-import time
-from os import getenv
+from time import time
 
-from dotenv import load_dotenv
+from app import run_people, run_plates
+from app.users import run_users
 
-import reset_poi as poi
-import reset_lpoi as lpoi
-import reset_users as account
-
-load_dotenv()  # Load credentials file
-
-ORG_ID = getenv("")
-API_KEY = getenv("")
-
-# Set timeout for a 429
-MAX_RETRIES = 10
-DEFAULT_RETRY_DELAY = 0.25
-BACKOFF = 0.25
-
-# Set logger
-log = logging.getLogger()
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
-
-# Set the full name for which plates are to be persistent
-PERSISTENT_PLATES = sorted([""])  # Label of plate #!Not plate number!#
-PERSISTENT_PERSONS = sorted(["Parkour"])  # PoI label
-PERSISTENT_USERS = sorted(
-    [
-        "Ian Young",
-        "Bruce Banner",
-        "Jane Doe",
-        "Tony Stark",
-        "Ray Raymond",
-        "John Doe",
-    ]
-)  # Must use full name
-PERSISTENT_PID = sorted(["751e9607-4617-43e1-9e8c-1bd439c116b6"])  # PoI ID
-PERSISTENT_LID = sorted([""])  # LPoI ID
-
-# Set API endpoint URLs
-PLATE_URL = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate_of_interest"
-PERSON_URL = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-USER_INFO_URL = "https://api.verkada.com/access/v1/access_users"
-USER_CONTROL_URL = "https://api.verkada.com/core/v1/user"
+from tools import log
 
 
 ##############################################################################
 ##################################  Misc  ####################################
 ##############################################################################
-
-
-class RateLimiter:
-    """
-    The purpose of this class is to limit how fast multi-threaded actions are
-    created to prevent hitting the API limit.
-    """
-
-    def __init__(self, rate_limit, max_events_per_sec=5, pacing=1):
-        """
-        Initialization of the rate limiter.
-
-        :param rate_limit: The value of how many threads may be made each sec.
-        :type rate_limit: int
-        :param max_events_per_sec: Maximum events allowed per second.
-        :type: int, optional
-        :param pacing: Sets the interval of the clock in seconds.
-        :type pacing: int, optional
-        :return: None
-        :rtype: None
-        """
-        self.rate_limit = rate_limit
-        self.lock = threading.Lock()  # Local lock to prevent race conditions
-        self.max_events_per_sec = max_events_per_sec
-        self.pacing = pacing
-        self.start_time = 0
-        self.event_count = 0
-
-    def acquire(self):
-        """
-        States whether or not the program may create new threads or not.
-
-        :return: Boolean value stating whether new threads may be made or not.
-        :rtype: bool
-        """
-        with self.lock:
-            current_time = time.time()  # Define current time
-
-            if not hasattr(self, "start_time"):
-                # Check if attribute 'start_time' exists, if not, make it.
-                self.start_time = current_time
-                self.event_count = self.pacing
-                return True
-
-            # How much time has passed since starting
-            elapsed_since_start = current_time - self.start_time
-
-            # Check if it's been less than 1sec and less than 10 events have
-            # been made.
-            if (
-                elapsed_since_start < self.pacing / self.rate_limit
-                and self.event_count < self.max_events_per_sec
-            ):
-                self.event_count += 1
-            elif elapsed_since_start >= self.pacing / self.rate_limit:
-                self.start_time = current_time
-                self.event_count = 2
-            else:
-                # Calculate the time left before next wave
-                remaining_time = self.pacing - (current_time - self.start_time)
-                time.sleep(remaining_time)  # Wait before next wave
-
-            return True
-
-
-def run_thread_with_rate_limit(threads, rate_limit=5):
-    """
-    Run a thread with rate limiting.
-
-    :param target: The target function to be executed in the thread:
-    :type targe: function:
-    :return: The thread that was created and ran
-    :rtype: thread
-    """
-    limiter = RateLimiter(rate_limit=rate_limit)
-
-    def run_thread(thread):
-        limiter.acquire()
-        log.debug(
-            "Starting thread %s at time %s",
-            thread.name,
-            datetime.datetime.now().strftime("%H:%M:%S"),
-        )
-        thread.start()
-
-    for thread in threads:
-        run_thread(thread)
-
-    for thread in threads:
-        thread.join()
 
 
 def warn():
@@ -168,198 +33,6 @@ def warn():
         cont = str(input("Press enter to continue")).strip()
 
 
-def clean_list(messy_list):
-    """Removes any None values from error codes"""
-    return [value for value in messy_list if value is not None]
-
-
-##############################################################################
-############################  All things people  #############################
-##############################################################################
-
-
-def run_people():
-    """
-    Allows the program to be ran if being imported as a module.
-
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
-    log.info("Retrieving persons")
-    persons = poi.get_people()
-    log.info("persons retrieved.")
-
-    if persons := sorted(persons, key=lambda x: x["person_id"]):
-        handle_people(persons)
-    else:
-        log.warning("No persons were found.")
-
-    return 1  # Completed
-
-
-def handle_people(persons):
-    """
-    Handle the processing of people by gathering IDs, searching for
-    safe people, and deleting people if needed.
-
-    Args:
-        persons: The list of people to handle.
-
-    Returns:
-        None
-    """
-    log.info("Person - Gather IDs")
-    all_person_ids = poi.get_people_ids(persons)
-    all_person_ids = clean_list(all_person_ids)
-    log.info("Person - IDs acquired.")
-
-    log.info("Searching for safe persons.")
-    safe_person_ids = [
-        poi.get_person_id(person, persons) for person in PERSISTENT_PERSONS
-    ]
-    safe_person_ids = clean_list(safe_person_ids)
-
-    if PERSISTENT_PID:
-        for person in PERSISTENT_PID:
-            safe_person_ids.append(person)
-    log.info("Safe persons found.")
-
-    if persons_to_delete := [
-        person for person in all_person_ids if person not in safe_person_ids
-    ]:
-        poi.check(safe_person_ids, persons_to_delete, persons)
-    else:
-        log.info(
-            "Person - The organization has already been purged.\
-There are no more persons to delete."
-        )
-
-
-##############################################################################
-############################  All things plates  #############################
-##############################################################################
-
-
-def run_plates():
-    """
-    Allows the program to be ran if being imported as a module.
-
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
-    log.info("Retrieving plates")
-    plates = lpoi.get_plates()
-    log.info("Plates retrieved.")
-
-    if plates := sorted(plates, key=lambda x: x["license_plate"]):
-        handle_plates(plates)
-    else:
-        log.info("No plates were found.")
-
-    return 1  # Completed
-
-
-def handle_plates(plates):
-    """
-    Handle the processing of plates by gathering IDs, searching for safe
-    plates, and deleting plates if needed.
-
-    Args:
-        plates: The list of plates to handle.
-
-    Returns:
-        None
-    """
-    log.info("Plate - Gather IDs")
-    all_plate_ids = lpoi.get_plate_ids(plates)
-    all_plate_ids = clean_list(all_plate_ids)
-    log.info("Plate - IDs acquired.")
-
-    log.info("Searching for safe plates.")
-    safe_plate_ids = [
-        lpoi.get_plate_id(plate, plates) for plate in PERSISTENT_PLATES
-    ]
-    safe_plate_ids = clean_list(safe_plate_ids)
-
-    if PERSISTENT_LID:
-        for plate in PERSISTENT_LID:
-            safe_plate_ids.append(plate)
-    log.info("Safe plates found.")
-
-    if plates_to_delete := [
-        plate for plate in all_plate_ids if plate not in safe_plate_ids
-    ]:
-        lpoi.check(safe_plate_ids, plates_to_delete, plates)
-    else:
-        log.info(
-            "The organization has already been purged.\
-There are no more plates to delete."
-        )
-
-
-##############################################################################
-############################  All things users  ##############################
-##############################################################################
-
-
-def run_users():
-    """
-    Allows the program to be ran if being imported as a module
-
-    :return: Returns the value 1 if the program completed successfully.
-    :rtype: int
-    """
-    log.info("Retrieving users")
-    users = account.get_users()
-    log.info("Users retrieved.\n")
-
-    # Run if users were found
-    if users:
-        handle_users(users)
-    else:
-        log.warning("No users were found.")
-
-    return 1  # Completed
-
-
-def handle_users(users):
-    """
-    Handle the processing of users by gathering IDs, searching for safe
-    users, and deleting users if needed.
-
-    Args:
-        users: The list of users to handle.
-
-    Returns:
-        None
-    """
-    log.info("Gather IDs")
-    all_user_ids = account.get_ids(users)
-    all_user_ids = clean_list(all_user_ids)
-    log.info("IDs acquired.\n")
-
-    # Create the list of safe users
-    log.info("Searching for safe users.")
-    safe_user_ids = [
-        account.get_user_id(user, users) for user in PERSISTENT_USERS
-    ]
-    safe_user_ids = clean_list(safe_user_ids)
-    log.info("Safe users found.\n")
-
-    if users_to_delete := [
-        user for user in all_user_ids if user not in safe_user_ids
-    ]:
-        purge_manager = account.PurgeManager(call_count_limit=300)
-        account.check(safe_user_ids, users_to_delete, users, purge_manager)
-    else:
-        log.info("-------------------------------")
-        log.info(
-            "The organization has already been purged."
-            "There are no more users to delete."
-        )
-        log.info("-------------------------------")
-
-
 ##############################################################################
 ##################################  Main  ####################################
 ##############################################################################
@@ -374,6 +47,8 @@ if __name__ == "__main__":
     user_thread = threading.Thread(target=run_users)
 
     ANSWER = None
+    RUN_USER, RUN_POI, RUN_LPOI = False, False, False
+
     while ANSWER not in ["y", "n"]:
         ANSWER = (
             str(input("Would you like to run for users?(y/n) "))
@@ -403,7 +78,7 @@ if __name__ == "__main__":
             RUN_LPOI = True
 
     # Time the runtime
-    start_time = time.time()
+    start_time = time()
 
     # Start threads
     if RUN_USER:
@@ -422,5 +97,5 @@ if __name__ == "__main__":
         lpoi_thread.join()
 
     # Wrap up in a bow and complete
-    log.info("Time to complete: %.2fs.", time.time() - start_time)
+    log.info("Time to complete: %.2fs.", time() - start_time)
     print("Exiting...")

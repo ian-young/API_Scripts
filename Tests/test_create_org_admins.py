@@ -1,19 +1,17 @@
 """
-Author: Ian Young
-Purpose: Will take a person's email, first name and last name from a csv
-and create a Command account for them with org admin privileges.
-"""
+Authors: Ian Young, Elmar Aliyev
+Purpose: Test the creation of org admins inside of Command"""
 
-import csv
 import logging
 from os import getenv
 
 import requests
+import pandas as pd
 from dotenv import load_dotenv
 
-from QoL.authentication import login_and_get_tokens, logout
-from QoL.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
-from QoL.custom_exceptions import APIExceptionHandler
+from tools.authentication import login_and_get_tokens, logout
+from tools.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
+from tools.custom_exceptions import APIExceptionHandler
 
 log = logging.getLogger()
 LOG_LEVEL = logging.INFO
@@ -26,89 +24,66 @@ logging.basicConfig(
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-load_dotenv()  # Import credentials file
+load_dotenv()  # Import credentials
 
 ORG_ID = getenv("boi_id")
 USERNAME = getenv("boi_username")
 PASSWORD = getenv("boi_password")
 TOTP = getenv("boi_totp")
 API_KEY = getenv("boi_key")
-FILE_PATH = "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/VCE_AC_Specialist_Check_ins_GuestLog - 2024-07-16 2.csv"
+FILE_PATH = (
+    "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/VCE_AC_Specialist_Check_ins_GuestLog - 2024-07-16 "
+    "2.csv"
+)
 
 
 def read_csv(file_name):
-    """
-    Reads a CSV file and extracts the first name, last name, and email columns.
+    """Reads a CSV file and extracts guest information.
+
+    This function processes a CSV file to split the "Guest Name" into
+    first and last names, and ensures that the "Guest Email" field is
+    filled with an empty string where it is missing. It returns a list
+    of dictionaries containing the first name, last name, and guest email.
 
     Args:
-        file_path (str): The path to the CSV file.
+        file_name: The name of the CSV file to read.
 
     Returns:
-        list of dict: A list of dictionaries containing 'first_name', 'last_name', and 'email'.
+        List[Dict[str, str]]: A list of dictionaries with extracted guest
+            information.
     """
-    data = []
 
-    # Open file
-    with open(file_name, mode="r", newline="", encoding="UTF-8") as file:
-        # Set reader
-        csv_reader = csv.DictReader(file)
+    df = pd.read_csv(file_name)
+    df[["First Name", "Last Name"]] = df["Guest Name"].str.split(expand=True)
+    df["Guest Email"] = df["Guest Email"].fillna("")
 
-        log.debug("Parsing csv")
-        # Extract useful columns
-        for row in csv_reader:
-            try:
-                name_parts = row["Guest Name"].split()
-                data.append(
-                    {
-                        "First Name": name_parts[0],
-                        "Last Name": name_parts[-1],
-                        "Guest Email": row["Guest Email"],
-                    }
-                )
-
-            except IndexError:
-                data.append(
-                    {
-                        "First Name": "",
-                        "Last Name": "",
-                        "Guest Email": row["Guest Email"],
-                    }
-                )
-                log.error(
-                    "%s: Either first name or last name was provided.",
-                    str(row),
-                )
-                continue
-
-    log.info("Data retrieved")
-    return data
+    return df[["First Name", "Last Name", "Guest Email"]].to_dict(
+        orient="records"
+    )
 
 
 def grant_org_admin(
     x_verkada_token, usr_id, target_id, management_session, org_id=ORG_ID
 ):
-    """
-    Grant organization admin permissions to a user within a specified organization.
+    """Grants organization admin privileges to a specified user.
+
+    This function sends a request to promote a user to organization admin
+    by providing the necessary headers and body parameters. It handles
+    the request and raises an exception if the promotion fails.
 
     Args:
-        x_verkada_token (str): The Verkada token for authentication.
-        usr_id (str): The user ID performing the action.
-        target_id (str): The ID of the user to grant admin permissions to.
-        org_id (str, optional): The ID of the organization. Defaults to ORG_ID.
-
-    Returns:
-        None
+        x_verkada_token: The token used for authentication with the
+            Verkada API.
+        usr_id: The user ID of the requester.
+        target_id: The user ID of the target user to be promoted.
+        management_session: The session object used to make the API
+            request.
+        org_id: The organization ID (default is set to ORG_ID).
 
     Raises:
-        APIExceptionHandler: If an error occurs during the API request.
-
-    Examples:
-        grant_org_admin(
-            "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-            "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyy",
-            "zzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
-        )
+        APIExceptionHandler: If the request to promote the user fails.
     """
+
     headers = {
         "x-verkada-token": x_verkada_token,
         "x-verkada-user_id": usr_id,
@@ -142,21 +117,24 @@ def grant_org_admin(
 
 
 def create_vce_user(user_info_list, api_key=API_KEY):
-    """
-    Create VCE user using the provided user information list.
+    """Creates users in the VCE system based on provided user information.
+
+    This function logs in to the VCE system, iterates through a list of
+    user information, and attempts to create each user. If a user already
+    exists, it skips the creation for that user and logs a warning. After
+    processing all users, it ensures the session is properly closed.
 
     Args:
-        user_info_list (list): A list of dictionaries containing user
-            information including "First Name", "Last Name", and "Email".
-        api_key (str): The API key to authenticate the request. Defaults
-            to API_KEY.
-
-    Returns:
-        None
+        user_info_list: A list of dictionaries containing user
+            information, including first name, last name, and email.
+        api_key: The API key used for authentication
+            (default is set to API_KEY).
 
     Raises:
-        APIExceptionHandler: If an error occurs during the API request.
+        APIExceptionHandler: If there is an error during the user creation
+            process.
     """
+
     log.debug("User list:\n%s", user_info_list)
     csrf_token, user_token, user_id = None, None, None
 
@@ -173,30 +151,25 @@ def create_vce_user(user_info_list, api_key=API_KEY):
             )
 
             for result in user_info_list:
-                log.debug("Loading result info into JSON body.")
                 body = {
                     "first_name": result["First Name"],
                     "last_name": result["Last Name"],
                     "email": result["Guest Email"],
                 }
-                log.debug(body)
 
-                log.debug("Posting request to create user.")
                 response = session.post(
                     CREATE_USER, headers=headers, json=body, timeout=3
                 )
 
                 if response.status_code != 500:
                     response.raise_for_status()
-
                 else:
                     log.warning("User already exists. Skipping.")
                     continue
 
                 data = response.json()
                 log.info(
-                    "User %s %s has been successfully created. An email has been "
-                    "sent to %s.",
+                    "User %s %s has been successfully created. An email has been sent to %s.",
                     result["First Name"],
                     result["Last Name"],
                     result["Guest Email"],
@@ -209,7 +182,6 @@ def create_vce_user(user_info_list, api_key=API_KEY):
 
         finally:
             if user_id and user_token:
-                log.debug("Logging out.")
                 logout(session, csrf_token, user_id, ORG_ID)
             session.close()
             log.info("Session closed.\nExiting...")

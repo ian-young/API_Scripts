@@ -7,7 +7,7 @@ Purpose: Test the cpu_usage script's ability to print CPU utilization
 import time
 import multiprocessing
 
-from QoL.verbose_compute import cpu_usage
+from tools.verbose_compute import cpu_usage
 
 
 def cpu_intensive_task(duration: int):

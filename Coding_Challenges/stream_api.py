@@ -5,7 +5,6 @@ Purpose: Save and print/open a screenshot from a given camera at a given time.
 
 # Import essential libraries
 import datetime
-import logging
 import subprocess
 from os import getenv
 
@@ -13,24 +12,13 @@ import requests
 from dotenv import load_dotenv
 from PIL import Image
 
-load_dotenv()  # Load credentials file
+from tools.api_endpoints import GET_STREAM_TOKEN, STREAM_URL
 
-TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
-STREAM_URL = (
-    "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
-)
+load_dotenv()  # Load credentials file
 
 API_KEY = getenv("")
 ORG_ID = getenv("")
 CAMERA = ""  # Can be a list or single String
-
-log = logging.getLogger()
-log.setLevel(logging.WARNING)
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 def get_token(org_id=ORG_ID, api_key=API_KEY):
@@ -53,7 +41,7 @@ def get_token(org_id=ORG_ID, api_key=API_KEY):
 
     # Send GET request to get the JWT
     response = requests.get(
-        TOKEN_URL, headers=headers, params=params, timeout=5
+        GET_STREAM_TOKEN, headers=headers, params=params, timeout=5
     )
 
     if response.status_code == 200:
@@ -61,10 +49,10 @@ def get_token(org_id=ORG_ID, api_key=API_KEY):
         data = response.json()
 
         return data.get("jwt")
-    else:
-        # In case the GET was not successful
-        print(f"Failed to retrieve token. Status code: {response.status_code}")
-        return None
+
+    # In case the GET was not successful
+    print(f"Failed to retrieve token. Status code: {response.status_code}")
+    return None
 
 
 def load_stream(jwt, camera_id, stream_start_time, org_id=ORG_ID):
@@ -86,7 +74,8 @@ def load_stream(jwt, camera_id, stream_start_time, org_id=ORG_ID):
 
     # Format the links
     live_link = (
-        "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8?camera_id="
+        STREAM_URL
+        + "?camera_id="
         + camera_id
         + "&org_id="
         + org_id

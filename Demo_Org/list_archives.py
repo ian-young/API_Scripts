@@ -7,9 +7,8 @@ once made.
 """
 
 # Import essential libraries
-import logging
-import time
 from datetime import datetime
+from time import time
 from os import getenv
 
 import pytz
@@ -17,7 +16,8 @@ import requests
 from dotenv import load_dotenv
 from tzlocal import get_localzone
 
-from QoL import login_and_get_tokens, logout, custom_exceptions
+from tools import custom_exceptions, log, login_and_get_tokens, logout
+from tools.api_endpoints import GET_ARCHIVE
 
 load_dotenv()  # Load credentials file
 
@@ -25,19 +25,6 @@ load_dotenv()  # Load credentials file
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
-
-# Set final, global URLs
-LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
-LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
-ARCHIVE_URL = "https://vsubmit.command.verkada.com/library/export/list"
-
-# Set up the logger
-log = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 def read_verkada_camera_archives(
@@ -74,7 +61,7 @@ def read_verkada_camera_archives(
     try:
         log.debug("Requesting archives.")
         response = archive_session.post(
-            ARCHIVE_URL, json=body, headers=headers
+            GET_ARCHIVE, json=body, headers=headers
         )
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Archive IDs retrieved. Returning values.")
@@ -140,7 +127,7 @@ def name_verkada_camera_archives(archive_library):
 # Check if the script is being imported or ran directly
 if __name__ == "__main__":
     try:
-        start_time = time.time()
+        start_time = time()
 
         # Start the user session
         with requests.Session() as session:
@@ -164,7 +151,7 @@ if __name__ == "__main__":
                         "authentication process."
                     )
 
-        elapsed_time = time.time() - start_time
+        elapsed_time = time() - start_time
         log.info("Total time to complete %.2fs.", elapsed_time)
     except KeyboardInterrupt:
         print("\nKeyboard interrupt detected. Aborting...")

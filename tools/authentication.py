@@ -4,21 +4,16 @@ Purpose: This script is used to log in and log out of a Command account.
 """
 
 # Import essential libraries
-import logging
 from typing import Optional
 
+# Third-party imports
 import requests
 
 # Import custom exceptions to save space
-import QoL.custom_exceptions as custom_exceptions
-from QoL.api_endpoints import LOGIN, LOGOUT
-from QoL.verkada_totp import generate_totp
-
-# Set up the logger
-log = logging.getLogger()
-LOG_LEVEL = logging.ERROR
-log.setLevel(LOG_LEVEL)
-logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
+from tools.api_endpoints import LOGIN, LOGOUT
+from tools.custom_exceptions import APIExceptionHandler
+from tools.log import log
+from tools.verkada_totp import generate_totp
 
 
 def login_and_get_tokens(
@@ -45,7 +40,7 @@ def login_and_get_tokens(
         after successful login.
 
     Raises:
-        custom_exceptions.APIExceptionHandler: If an error occurs during
+        APIExceptionHandler: If an error occurs during
         the login process.
     """
 
@@ -83,9 +78,7 @@ def login_and_get_tokens(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Log in"
-        ) from e
+        raise APIExceptionHandler(e, response, "Log in") from e
 
 
 def logout(
@@ -109,7 +102,7 @@ def logout(
         None
 
     Raises:
-        custom_exceptions.APIExceptionHandler: If an error occurs during
+        APIExceptionHandler: If an error occurs during
         the logout process.
     """
 
@@ -129,9 +122,7 @@ def logout(
 
     # Handle exceptions
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Logout"
-        ) from e
+        raise APIExceptionHandler(e, response, "Logout") from e
 
     finally:
         logout_session.close()

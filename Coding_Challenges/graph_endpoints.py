@@ -6,20 +6,12 @@ track how many 429s we receive to track endpoint load, too.
 
 # Import essential libraries
 import datetime
-import logging
 import re
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
-# Set logger
-log = logging.getLogger()
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-logging.getLogger("matplotlib").setLevel(logging.CRITICAL)
+from tools import log
 
 # Update with your log file path
 LOG_FILE_PATH = "/Users/ian.young/Documents/.scripts/Python/API_Scripts/\

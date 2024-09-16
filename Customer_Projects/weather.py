@@ -16,7 +16,6 @@ unless you are testing email functionality specifically.
 """
 
 # Import essential libraries
-import logging
 import os
 import subprocess
 import time
@@ -35,22 +34,13 @@ from sendgrid.helpers.mail import (
     Mail,
 )
 
+from tools import log
+from tools.api_endpoints import GET_STREAM_TOKEN, STREAM_URL
+
 load_dotenv()  # Load credentials file
 
-# Set the logger
-log = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
 # Set environment variables
-TOKEN_URL = "https://api.verkada.com/cameras/v1/footage/token"
-STREAM_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/\
-stream.m3u8"
-FOOTAGE_URL = "https://api.verkada.com/stream/cameras/v1/footage/stream/\
-stream.m3u8?camera_id="
+FOOTAGE_URL = f"{STREAM_URL}?camera_id="
 SENDGRID_API_KEY = getenv("")
 VERKADA_API_KEY = getenv("")
 ORG_ID = getenv("")
@@ -141,9 +131,6 @@ def send_snow(
     :param image_name: The name/path of the image file that is to be sent out.
     :type image_name: str
     """
-    subject = "Snowfall Expected Today"
-    body = f"Expected snowfall today: {snow} inches."
-
     try:
         for recipient_email in recipient_list:
             for _ in range(MAX_RETRIES):
@@ -151,8 +138,8 @@ def send_snow(
                 message = Mail(
                     from_email=f"{sender_name} <{sender_email}>",
                     to_emails=recipient_email,
-                    subject=subject,
-                    plain_text_content=body,
+                    subject="Snowfall Expected Today",
+                    plain_text_content=f"Expected snowfall today: {snow} inches.",
                 )
 
                 # Attach the image to the email
@@ -279,9 +266,8 @@ def get_snowfall(data):
         )
         return int(snowfall_today)
 
-    else:
-        log.info("No forecast data available for today.")
-        return 0
+    log.info("No forecast data available for today.")
+    return 0
 
 
 ##############################################################################
@@ -305,7 +291,7 @@ def get_token():
 
     # Send GET request to get the JWT
     response = requests.get(
-        TOKEN_URL, headers=headers, params=params, timeout=5
+        GET_STREAM_TOKEN, headers=headers, params=params, timeout=5
     )
 
     if response.status_code == 200:
@@ -313,10 +299,10 @@ def get_token():
         data = response.json()
 
         return data.get("jwt")
-    else:
-        # In case the GET was not successful
-        print(f"Failed to retrieve token. Status code: {response.status_code}")
-        return None
+
+    # In case the GET was not successful
+    print(f"Failed to retrieve token. Status code: {response.status_code}")
+    return None
 
 
 def load_stream(image_name: str, jwt: str, camera_id: str):

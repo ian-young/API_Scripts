@@ -5,10 +5,9 @@ Purpose: Import into other files to use custom exceptions and save space.
 
 # Import essential libraries
 import requests
-import colorama
-from colorama import Fore, Style
+from colorama import Fore, Style, init
 
-colorama.init(autoreset=True)  # Initialize colorized output
+init(autoreset=True)  # Initialize colorized output
 
 
 class APIThrottleException(Exception):

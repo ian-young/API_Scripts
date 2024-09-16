@@ -6,12 +6,18 @@ to speed up the process of searching for footage.
 
 # Import essential libraries
 import datetime
+import sys
+from os import getenv
 
 import requests
+from dotenv import load_dotenv
 
-ORG_ID = ""
-API_KEY = ""
-URL = "https://api.verkada.com/cameras/v1/footage/link"
+from tools.api_endpoints import GET_FOOTAGE_LINK
+
+load_dotenv()  # Load secrets
+
+ORG_ID = getenv("")
+API_KEY = getenv("")
 
 
 def month_to_text(month):
@@ -48,42 +54,42 @@ def ask_time():
     :return: Epoch timestamp of a prompted date.
     :rtype: int
     """
+
+    def ask_for_value(date, text):
+        answer = None
+        while answer not in ["y", "n"]:
+            print(f"Is the footage from {text}?")
+            answer = input("(y/n) ").strip().lower()
+
+        if answer == "y":
+            value = date
+            return value, answer
+        return None, None
+
     # Pre-define variables that may be auto-filled
     year = None
     month = None
     day = None
     hour = None
-    minute = None
-    answer = None
 
     # Load current values
     current_year = int(datetime.datetime.now().date().strftime("%Y"))
     current_month = int(datetime.datetime.now().date().strftime("%m"))
-    month_text = month_to_text(current_month)
 
-    while answer not in ["y", "n"]:
-        print(f"Is the footage from {current_year}?")
-        answer = input("(y/n) ").strip().lower()
-
+    year, answer = ask_for_value(current_year, current_year)
     if answer == "y":
-        year = current_year
         answer = None  # reset
-
-        while answer not in ["y", "n"]:
-            print(f"Is the footage from {month_text}?")
-            answer = input("(y/n) ").strip().lower()
-
-        if answer == "y":
-            month = current_month
-
-        else:
+        month, answer = ask_for_value(
+            current_month, month_to_text(current_month)
+        )
+        if answer == "n":
             try:
                 print("\nExample input: 10")
                 month = int(input("Month: "))
 
             except ValueError:
                 print("Invalid input. Please enter an integer.")
-                exit()
+                sys.exit()
 
     else:
         try:
@@ -95,7 +101,7 @@ def ask_time():
 
         except ValueError:
             print("Invalid input. Please enter an integer.")
-            exit()
+            sys.exit()
 
     try:
         max_day = check_month_days(month, year)
@@ -116,17 +122,13 @@ def ask_time():
         time = input("Enter the time: ")
 
         time = time.split(":")  # Creates an array
-        hour = int(time[0])  # Isolate the hour
-        minute = int(time[1][:2])
-        time_of_day = str(time[1][2:4])  # Grab time of day
-
-        hour = mil_time(hour, time_of_day)  # Convert to 24-hour
+        hour = mil_time(int(time[0]), str(time[1][2:4]))  # Convert to 24-hour
 
     except ValueError:
         print("Invalid input. Please enter an integer")
-        exit()
+        sys.exit()
 
-    return time_to_epoch(year, month, day, hour, minute)
+    return time_to_epoch(year, month, day, hour, str(time[1][2:4]))
 
 
 def check_month_days(month, year):
@@ -140,19 +142,13 @@ def check_month_days(month, year):
     :return: Returns how many days are in the month.
     :rtype: int
     """
-    if (month == 2) and (
-        (year % 4 == 0) or ((year % 100 == 0) and (year % 400 == 0))
-    ):
-        return 29
-
-    elif month == 2:
-        return 28
-
-    elif month in [1, 3, 5, 7, 8, 10]:
-        return 31
-
-    else:
-        return 30
+    if month == 2:
+        return (
+            29
+            if ((year % 4 == 0) or ((year % 100 == 0) and (year % 400 == 0)))
+            else 28
+        )
+    return 31 if month in [1, 3, 5, 7, 8, 10] else 30
 
 
 def mil_time(hour, time_of_day):
@@ -216,7 +212,9 @@ def get_link(timestamp, camera_id, org_id=ORG_ID, api_key=API_KEY):
         "x-api-key": api_key,
     }
 
-    response = requests.get(URL, headers=headers, params=params, timeout=5)
+    response = requests.get(
+        GET_FOOTAGE_LINK, headers=headers, params=params, timeout=5
+    )
 
     print(response)
 

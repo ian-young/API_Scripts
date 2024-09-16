@@ -3,28 +3,21 @@ Author: Ian Young
 Purpose: Opens doors both literally and figuratively
 """
 
-import logging
 from datetime import datetime, timedelta
 from os import getenv
 
 import requests
 from dotenv import load_dotenv
 
-from QoL import login_and_get_tokens, logout, custom_exceptions
+from tools import (
+    log,
+    login_and_get_tokens,
+    logout,
+    custom_exceptions,
+    SharedParams,
+)
 
 load_dotenv()
-
-log = logging.getLogger()
-log.setLevel(logging.WARNING)
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
-# Static URLs
-LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
-LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
 # User logging credentials
 USERNAME = getenv("")
@@ -35,33 +28,24 @@ UNLOCK_PERIOD = 5  # Change this integer to change override time (minutes).
 VIRTUAL_DEVICE = "5eff4677-974d-44ca-a6ba-fb7595265e0a"  # String or list
 
 
-def schedule_override(
-    schedule_session, x_verkada_token, x_verkada_auth, usr, org_id, door, time
-):
+def schedule_override(params: SharedParams, door, time):
     """
     Sets a schedule override for the given door(s) inside of Verkada Command
     with a valid Command user session. The schedule override event will
     appear in the audit logs.
 
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param usr: The user ID for a valid user in the Verkada organization.
-    :type usr: str
-    :param org_id: The Verkada organization ID of the target org.
-    :type org_id: str
+    :param params: Class with commonly used variables
+    :type params: SharedParams
     :param door: The target door ID
     :type: str, list[str]
     :param time: The length of the override in minutes
     :type time: int
     """
-    url = f"https://vcerberus.command.verkada.com/organizations/{org_id}/schedules"
+    url = f"https://vcerberus.command.verkada.com/organizations/{params.org_id}/schedules"
     headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "User": usr,
+        "X-CSRF-Token": params.x_verkada_token,
+        "X-Verkada-Auth": params.x_verkada_auth,
+        "User": params.usr,
     }
 
     current_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
@@ -98,9 +82,7 @@ def schedule_override(
                 }
 
                 log.debug("Unlocking virtual devices: %s.", door)
-                response = schedule_session.post(
-                    url, headers=headers, json=data
-                )
+                response = params.session.post(url, headers=headers, json=data)
                 response.raise_for_status()
 
             else:
@@ -125,7 +107,7 @@ def schedule_override(
                 ],
             }
             log.debug("Unlocking %s.", door)
-            response = schedule_session.post(url, headers=headers, json=data)
+            response = params.session.post(url, headers=headers, json=data)
             response.raise_for_status()
 
     # Handle exceptions
@@ -136,22 +118,25 @@ def schedule_override(
 
 
 if __name__ == "__main__":
-    with requests.Session() as session:
+    with requests.Session() as override_session:
         try:
             log.debug("Retrieving credentials.")
             if USERNAME and PASSWORD and ORG_ID:
                 csrf_token, user_token, user_id = login_and_get_tokens(
-                    session, USERNAME, PASSWORD, ORG_ID
+                    override_session, USERNAME, PASSWORD, ORG_ID
                 )
 
                 if csrf_token and user_token and user_id:
                     log.debug("Credentials retrieved.")
-                    schedule_override(
-                        session,
+                    runtime_params = SharedParams(
+                        override_session,
                         csrf_token,
                         user_token,
                         user_id,
                         ORG_ID,
+                    )
+                    schedule_override(
+                        runtime_params,
                         VIRTUAL_DEVICE,
                         UNLOCK_PERIOD,
                     )
@@ -165,5 +150,5 @@ if __name__ == "__main__":
 
         finally:
             if ORG_ID and "csrf_token" in locals():
-                logout(session, csrf_token, user_token, ORG_ID)
-            session.close()
+                logout(override_session, csrf_token, user_token, ORG_ID)
+            override_session.close()

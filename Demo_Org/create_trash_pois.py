@@ -5,41 +5,23 @@ This script will create a POI when given a name and uri to image
 
 # Import essential libraries
 import base64
-import logging
 import threading
 import time
 from os import getenv
-from typing import Any, List
 
 import requests
+from app import PurgeManager
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from QoL.custom_exceptions import APIThrottleException
+from tools import log
+from tools.api_endpoints import CREATE_POI, CREATE_LPOI
+from tools.custom_exceptions import APIThrottleException
 
 load_dotenv()  # Load credentials file
 
-# Globally-defined Verkada PoI URL
-URL_POI = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-URL_LPR = "https://api.verkada.com/cameras/v1/\
-analytics/lpr/license_plate_of_interest"
-
 ORG_ID = getenv("")
 API_KEY = getenv("")
-
-# Set logger
-log = logging.getLogger()
-LOG_LEVEL = logging.ERROR
-log.setLevel(LOG_LEVEL)
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format="(%(asctime)s.%(msecs)03d) %(levelname)s: %(message)s",
-    datefmt="%H:%M:%S",
-)
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Define header and parameters for API requests
 HEADERS = {
@@ -49,75 +31,6 @@ HEADERS = {
 }
 
 PARAMS = {"org_id": ORG_ID}
-
-
-##############################################################################
-##################################  Misc  ####################################
-##############################################################################
-
-
-class PurgeManager:
-    """
-    Manages the state of API call count and provides thread-safe methods
-    to control and monitor the call limit.
-
-    Attributes:
-        call_count (int): The current number of API calls made.
-        call_count_lock (threading.Lock): A lock to ensure thread-safe access to call_count.
-        call_count_limit (int): The maximum number of API calls allowed.
-    """
-
-    def __init__(self, call_count_limit=300):
-        """
-        Initializes the PurgeManager with a specified call count limit.
-
-        Args:
-            call_count_limit (int): The maximum number of API calls allowed.
-                                    Defaults to 300.
-        """
-        self.call_count = 0
-        self.call_count_lock = threading.Lock()
-        self.call_count_limit = call_count_limit
-
-    def increment_call_count(self):
-        """
-        Increments the call count by one in a thread-safe manner.
-
-        Returns:
-            int: The updated call count after incrementing.
-        """
-        with self.call_count_lock:
-            self.call_count += 1
-            return self.call_count
-
-    def should_stop(self):
-        """
-        Checks if the current call count has reached or exceeded the limit.
-
-        Returns:
-            bool: True if the call count has reached or exceeded the limit, False otherwise.
-        """
-        with self.call_count_lock:
-            return self.call_count >= self.call_count_limit
-
-    def reset_call_count(self):
-        """
-        Resets the call count to zero in a thread-safe manner.
-        """
-        with self.call_count_lock:
-            self.call_count = 0
-
-
-def clean_list(messy_list: List[Any]) -> List[Any]:
-    """
-    Removes any None values from error codes
-
-    :param list: The list to be cleaned.
-    :type list: list
-    :return: A new list with None values removed.
-    :rtype: list
-    """
-    return [value for value in messy_list if value is not None]
 
 
 ##############################################################################
@@ -141,7 +54,7 @@ def create_poi(
     :param manager: The API Throttle manager to prevent hitting the API limit.
     :type manager: PurgeManager
     """
-    file_content = None  # Pre-define
+    file_content, base64_image = None, None  # Pre-define
 
     while manager.should_stop():
         log.info("Call limit reached., waiting 1 second.")
@@ -170,13 +83,13 @@ def create_poi(
 
     try:
         response = requests.post(
-            URL_POI, json=payload, headers=HEADERS, params=PARAMS, timeout=5
+            CREATE_POI, json=payload, headers=HEADERS, params=PARAMS, timeout=5
         )
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
 
-        elif response.status_code != 200:
+        if response.status_code != 200:
             log.warning(
                 "%s: Could not create %s.", response.status_code, poi_name
             )
@@ -205,12 +118,17 @@ def create_plate(lpoi_name: str, plate_number: str, manager: PurgeManager):
 
     try:
         response = requests.post(
-            URL_LPR, json=payload, headers=HEADERS, params=PARAMS, timeout=5
+            CREATE_LPOI,
+            json=payload,
+            headers=HEADERS,
+            params=PARAMS,
+            timeout=5,
         )
 
         if response.status_code == 429:
             raise APIThrottleException("API throttled")
-        elif response.status_code != 200:
+
+        if response.status_code != 200:
             log.warning(
                 "%s Could not create %s.", response.status_code, lpoi_name
             )
