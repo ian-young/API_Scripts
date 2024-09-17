@@ -7,15 +7,14 @@ once made.
 """
 
 # Import essential libraries
-import logging
 import time
 from os import getenv
 
 import requests
 from dotenv import load_dotenv
 
-import QoL.custom_exceptions as custom_exceptions
-from QoL.verkada_totp import generate_totp
+from tools import APIExceptionHandler, log, login_and_get_tokens, logout
+from tools.api_endpoints import GET_ARCHIVE
 
 load_dotenv()  # Load credentials file
 
@@ -23,97 +22,6 @@ load_dotenv()  # Load credentials file
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
-
-# Set final, global URLs
-LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
-LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
-ARCHIVE_URL = "https://vsubmit.command.verkada.com/library/export/list"
-
-# Set up the logger
-log = logging.getLogger()
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
-
-def login_and_get_tokens(login_session, username, password, org_id):
-    """
-    Initiates a Command session with the given user credentials and Verkada
-    organization ID.
-
-    :param username: A Verkada user's username to be used during the login.
-    :type username: str, optional
-    :param password: A Verkada user's password used during the login process.
-    :type password: str, optional
-    :param org_id: The Verkada Org ID that is being logged into.
-    :type org_id: str, optional
-    :return: Will return the csrf_token of the session that has been initiated
-    along with the user token for the session and the user's id.
-    :rtype: String, String, String
-    """
-    # Prepare login data
-    login_data = {
-        "email": username,
-        "password": password,
-        "otp": generate_totp(getenv("lab_totp")),
-        "org_id": org_id,
-    }
-
-    try:
-        # Request the user session
-        response = login_session.post(LOGIN_URL, json=login_data)
-        response.raise_for_status()
-
-        # Extract relevant information from the JSON response
-        json_response = response.json()
-        session_csrf_token = json_response.get("csrfToken")
-        session_user_token = json_response.get("userToken")
-        session_user_id = json_response.get("userId")
-
-        return session_csrf_token, session_user_token, session_user_id
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Log in"
-        ) from e
-
-
-def logout(logout_session, x_verkada_token, x_verkada_auth, org_id=ORG_ID):
-    """
-    Logs the Python script out of Command to prevent orphaned sessions.
-
-    :param x_verkada_token: The csrf token for a valid, authenticated session.
-    :type x_verkada_token: str
-    :param x_verkada_auth: The authenticated user token for a valid Verkada
-    session.
-    :type x_verkada_auth: str
-    :param org_id: The organization ID for the targeted Verkada org.
-    :type org_id: str, optional
-    """
-    headers = {
-        "X-CSRF-Token": x_verkada_token,
-        "X-Verkada-Auth": x_verkada_auth,
-        "x-verkada-organization": org_id,
-    }
-
-    body = {"logoutCurrentEmailOnly": True}
-    try:
-        response = logout_session.post(LOGOUT_URL, headers=headers, json=body)
-        response.raise_for_status()
-
-        log.info("Logging out.")
-
-    # Handle exceptions
-    except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(
-            e, response, "Logout"
-        ) from e
-
-    finally:
-        logout_session.close()
 
 
 def read_verkada_camera_archives(
@@ -150,7 +58,7 @@ def read_verkada_camera_archives(
     try:
         log.debug("Requesting archives.")
         response = archive_session.post(
-            ARCHIVE_URL, json=body, headers=headers
+            GET_ARCHIVE, json=body, headers=headers
         )
         response.raise_for_status()  # Raise an exception for HTTP errors
         log.debug("Archive IDs retrieved. Returning values.")
@@ -160,7 +68,7 @@ def read_verkada_camera_archives(
     # Handle exceptions
     except requests.exceptions.RequestException as e:
         text = "Reading archives"
-        raise custom_exceptions.APIExceptionHandler(e, response, text) from e
+        raise APIExceptionHandler(e, response, text) from e
 
 
 def count_archives(archive_library):
@@ -181,24 +89,31 @@ if __name__ == "__main__":
 
         # Start the user session
         with requests.Session() as session:
-            csrf_token, user_token, user_id = login_and_get_tokens(
-                session, USERNAME, PASSWORD, ORG_ID
-            )
-
-            if csrf_token and user_token and user_id:
-                log.debug("Entering remove archives method.")
-                count_archives(
-                    read_verkada_camera_archives(
-                        session, csrf_token, user_token, user_id
+            if ORG_ID:
+                csrf_token, user_token, user_id = None, None, None
+                if USERNAME and PASSWORD:
+                    csrf_token, user_token, user_id = login_and_get_tokens(
+                        session, USERNAME, PASSWORD, ORG_ID
                     )
-                )
-                log.debug("Program completed successfully.")
 
+                if csrf_token and user_token and user_id:
+                    log.debug("Entering remove archives method.")
+                    count_archives(
+                        read_verkada_camera_archives(
+                            session, csrf_token, user_token, user_id
+                        )
+                    )
+                    log.debug("Program completed successfully.")
+
+                    logout(session, csrf_token, user_token, ORG_ID)
+
+                else:
+                    log.critical(
+                        "No credentials were provided during the \
+    authentication process."
+                    )
             else:
-                log.critical(
-                    "No credentials were provided during the \
-authentication process."
-                )
+                log.critical("Missing org id.")
 
         elapsed_time = time.time() - start_time
         log.info("Total time to complete %.2f", elapsed_time)

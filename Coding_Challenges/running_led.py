@@ -4,17 +4,11 @@ Purpose: Flash an LED on a Raspberry Pi when work is being done.
 """
 
 import time
-import logging
 
-log = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+from tools import log
 
 try:
-    import RPi.GPIO as GPIO  # type: ignore
+    from RPi import GPIO  # type: ignore
 
     GPIO_PIN = 15
 

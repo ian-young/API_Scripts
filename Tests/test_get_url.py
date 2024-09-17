@@ -7,7 +7,7 @@ retrieved.
 """
 
 import pytest
-from QoL.api_endpoints import set_org_id, get_url
+from tools.api_endpoints import set_org_id, get_url
 
 
 @pytest.mark.parametrize(

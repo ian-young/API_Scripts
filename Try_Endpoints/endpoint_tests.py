@@ -13,13 +13,31 @@ import re
 import shutil
 import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from os import getenv
+from typing import List
 
-import colorama
 import requests
-from colorama import Fore, Style
+from colorama import Fore, Style, init
 from dotenv import load_dotenv
+
+from tools.rate_limit import run_thread_with_rate_limit
+from tools.api_endpoints import (
+    GET_ALL_POI,
+    GET_ALL_LPOI,
+    GET_CB,
+    GET_PEP_VEH_COUNTS,
+    GET_TREND_DATA,
+    GET_LATEST_THUMB_IMG,
+    GET_STREAM_TOKEN,
+    GET_AUDIT_LOGS,
+    GET_USER,
+    GET_ALL_AC_GROUPS,
+    GET_ALL_AC_USRS,
+    ADD_CARD_TO_AC_USR,
+    ADD_AC_USR_PLATE,
+)
 
 # Set log file path & working directory
 WORKING_DIRECTORY = "/usr/src/app/data"
@@ -39,7 +57,7 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 try:
-    import RPi.GPIO as GPIO  # type: ignore
+    from RPi import GPIO  # type: ignore
 
     RETRY_PIN = 11
     FAIL_PIN = 13
@@ -61,25 +79,7 @@ except ImportError:
     GPIO = None
     log.debug("RPi.GPIO is not available. Running on a non-Pi platform")
 
-colorama.init(autoreset=True)
-
-# Set URLs
-URL_PEOPLE = "https://api.verkada.com/cameras/v1/people/person_of_interest"
-URL_PLATE = "https://api.verkada.com/cameras/v1/analytics/lpr/license_plate\
-_of_interest"
-URL_CLOUD = "https://api.verkada.com/cameras/v1/cloud_backup/settings"
-URL_OBJ = "https://api.verkada.com/cameras/v1/analytics/object_counts"
-URL_MQTT = "https://api.verkada.com/cameras/v1/analytics/object_position_mqtt"
-URL_OCCUPANCY = "https://api.verkada.com/cameras/v1/analytics/occupancy_trends"
-URL_DEVICES = "https://api.verkada.com/cameras/v1/devices"
-URL_FOOTAGE = "https://api.verkada.com/cameras/v1/footage/thumbnails/latest"
-URL_AUDIT = "https://api.verkada.com/core/v1/audit_log"
-URL_CORE = "https://api.verkada.com/core/v1/user"
-URL_AC_GROUPS = "https://api.verkada.com/access/v1/access_groups"
-URL_AC_USERS = "https://api.verkada.com/access/v1/access_users"
-URL_AC_CRED = "https://api.verkada.com/access/v1/credentials/card"
-URL_AC_PLATE = "https://api.verkada.com/access/v1/credentials/license_plate"
-URL_TOKEN = "https://api.verkada.com/cameras/v1/footage/token"
+init(autoreset=True)  # Initialize colorama
 
 load_dotenv()
 
@@ -97,11 +97,9 @@ PLATE = getenv("slc_plate")  # AC plate cred to manipulate
 
 GENERAL_HEADER = {"accept": "application/json", "x-api-key": API_KEY}
 
-FAILED_ENDPOINTS = []
 FAILED_ENDPOINTS_LOCK = threading.Lock()
 MAX_RETRIES = 5  # How many times the program should retry on 429
 RETRY_DELAY = 0.25  # Seconds to wait
-RETRY_COUNT = 0
 RETRY_COUNT_LOCK = threading.Lock()
 
 
@@ -110,113 +108,53 @@ RETRY_COUNT_LOCK = threading.Lock()
 ##############################################################################
 
 
-class RateLimiter:
+@dataclass
+class EndpointData:
     """
-    The purpose of this class is to limit how fast multi-threaded actions are
-    created to prevent hitting the API limit.
+    Dataclass representing the data related to API endpoint testing.
+
+    This class holds information about failed API endpoints and the number
+    of retry attempts made for those endpoints.
+
+    Attributes:
+        failed_endpoints (List[str]): A list of endpoints that have
+            failed during testing.
+        retry_count (int): The number of retry attempts made for the
+            failed endpoints.
     """
 
-    def __init__(self, rate_limit, max_events_per_sec=5, pacing=1):
-        """
-        Initialization of the rate limiter.
-
-        :param rate_limit: The value of how many threads may be made each sec.
-        :type rate_limit: int
-        :param max_events_per_sec: Maximum events allowed per second.
-        :type: int, optional
-        :param pacing: Sets the interval of the clock in seconds.
-        :type pacing: int, optional
-        :return: None
-        :rtype: None
-        """
-        self.rate_limit = rate_limit
-        self.lock = threading.Lock()  # Local lock to prevent race conditions
-        self.max_events_per_sec = max_events_per_sec
-        self.pacing = pacing
-        self.start_time = 0
-        self.event_count = 0
-
-    def acquire(self):
-        """
-        States whether or not the program may create new threads or not.
-
-        :return: Boolean value stating whether new threads may be made or not.
-        :rtype: bool
-        """
-        with self.lock:
-            current_time = time.time()  # Define current time
-
-            if not hasattr(self, "start_time"):
-                # Check if attribute 'start_time' exists, if not, make it.
-                self.start_time = current_time
-                self.event_count = self.pacing
-                return True
-
-            # How much time has passed since starting
-            elapsed_since_start = current_time - self.start_time
-
-            # Check if it's been less than 1sec and less than 10 events have
-            # been made.
-            if (
-                elapsed_since_start < self.pacing / self.rate_limit
-                and self.event_count < self.max_events_per_sec
-            ):
-                self.event_count += 1
-            elif elapsed_since_start >= self.pacing / self.rate_limit:
-                self.start_time = current_time
-                self.event_count = 2
-            else:
-                # Calculate the time left before next wave
-                remaining_time = self.pacing - (current_time - self.start_time)
-                time.sleep(remaining_time)  # Wait before next wave
-
-            return True
+    failed_endpoints: List[str]
+    retry_count: int
 
 
-def run_thread_with_rate_limit(new_threads, rate_limit=5):
-    """
-    Run a thread with rate limiting.
-
-    :param target: The target function to be executed in the thread:
-    :type targe: function:
-    :return: The thread that was created and ran
-    :rtype: thread
-    """
-    limiter = RateLimiter(rate_limit=rate_limit)
-
-    def run_thread(thread):
-        limiter.acquire()
-        log.debug(
-            "Starting thread %s at time %s",
-            thread.name,
-            datetime.now().strftime("%H:%M:%S"),
-        )
-        thread.start()
-
-    for thread in new_threads:
-        run_thread(thread)
-
-    for thread in new_threads:
-        thread.join()
-
-
-def print_colored_centered(runtime, tests_passed, failed, failed_modules):
+def print_colored_centered(
+    runtime: float,
+    tests_passed: int,
+    failed: int,
+    failed_modules: List[str],
+    data: EndpointData,
+):
     """
     Formats and prints what modules failed and how long it took for the
     program to complete all the tests.
 
     :param runtime: The time it took for the program to complete.
-    :type runtime: int
+    :type runtime: float
     :param passed: How many modules passed their tests.
     :type passed: int
     :param failed: How many modules failed their tests.
     :type failed: int
     :param failed_modules: The name of the modules that failed their tests.
     :type failed_modules: list
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    rthread = threading.Thread(target=flash_led, args=(RETRY_PIN, RETRY_COUNT))
+    rthread = threading.Thread(
+        target=flash_led, args=(RETRY_PIN, data.retry_count)
+    )
     fthread = threading.Thread(target=flash_led, args=(FAIL_PIN, failed))
     sthread = threading.Thread(
         target=flash_led, args=(SUCCESS_PIN, tests_passed)
@@ -226,15 +164,20 @@ def print_colored_centered(runtime, tests_passed, failed, failed_modules):
     short_time = round(runtime, 2)
 
     # text1 = f"{Fore.CYAN} short test summary info "
-    text2_fail = f"{Fore.RED} {failed} failed, {Fore.GREEN}{tests_passed} \
-passed{Fore.RED} in {short_time}s "
-    text2_pass = f"{Fore.GREEN} {tests_passed} passed in \
-{short_time}s "
-    text2_fail_retry = f"{Fore.RED} {failed} failed, {Fore.GREEN}\
-{tests_passed}passed{Fore.RED},{Fore.YELLOW} {RETRY_COUNT} retries\
-{Fore.RED} in {short_time}s "
-    text2_pass_retry = f"{Fore.GREEN} {tests_passed} passed,{Fore.YELLOW} \
-{RETRY_COUNT} retries{Fore.GREEN} in {short_time}s "
+    text2_fail = (
+        f"{Fore.RED} {failed} failed, {Fore.GREEN}{tests_passed} "
+        f"passed{Fore.RED} in {short_time}s "
+    )
+    text2_pass = f"{Fore.GREEN} {tests_passed} passed in " f"{short_time}s "
+    text2_fail_retry = (
+        f"{Fore.RED} {failed} failed, {Fore.GREEN}"
+        f"{tests_passed}passed{Fore.RED},{Fore.YELLOW} {data.retry_count} "
+        f"retries {Fore.RED} in {short_time}s "
+    )
+    text2_pass_retry = (
+        f"{Fore.GREEN} {tests_passed} passed,{Fore.YELLOW} "
+        f"{data.retry_count} retries{Fore.GREEN} in {short_time}s "
+    )
 
     # Print the padded and colored text with "=" characters on both sides
     # An extra line that can be printed if running in live terminal
@@ -244,7 +187,7 @@ passed{Fore.RED} in {short_time}s "
         for module in failed_modules:
             print(f"{Fore.RED}FAILED {Style.RESET_ALL}{module}")
 
-        if RETRY_COUNT > 0:
+        if data.retry_count > 0:
             print(f"{Fore.RED}{text2_fail_retry:=^{terminal_width+25}}")
             rthread.start()
             fthread.start()
@@ -258,7 +201,7 @@ passed{Fore.RED} in {short_time}s "
             sthread.join()
         fthread.join()
     else:
-        if RETRY_COUNT > 0:
+        if data.retry_count > 0:
             print(f"{Fore.GREEN}{text2_pass_retry:=^{terminal_width+15}}")
             rthread.start()
             sthread.start()
@@ -270,7 +213,7 @@ passed{Fore.RED} in {short_time}s "
         sthread.join()
 
 
-def flash_led(pin, count, speed):
+def flash_led(pin: int, count: int, speed: float):
     """
     Flashes an LED that is wired into the GPIO board of a raspberry pi
 
@@ -279,7 +222,7 @@ def flash_led(pin, count, speed):
     :param count: How many times the LED should flash.
     :type passed: int
     :param speed: How long each flash should last in seconds.
-    :type failed: int
+    :type failed: float
     :return: None
     :rtype: None
     """
@@ -290,7 +233,7 @@ def flash_led(pin, count, speed):
         time.sleep(speed)
 
 
-def work_led(pin, stop_event, speed):
+def work_led(pin: int, stop_event: threading.Event, speed: float):
     """
     Flashes an LED that is wired into the GPIO board of a raspberry pi for
     the duration of work.
@@ -299,9 +242,9 @@ def work_led(pin, stop_event, speed):
     :type pin: int
     :param local_stop_event: Thread-local event to indicate when the program's
     work is done and the LED can stop flashing.
-    :type local_stop_event: Bool
+    :type local_stop_event: threading.Event
     :param speed: How long each flash should last in seconds.
-    :type failed: int
+    :type failed: float
     :return: None
     :rtype: None
     """
@@ -312,10 +255,14 @@ def work_led(pin, stop_event, speed):
         time.sleep(speed * 2)
 
 
-def log_execution():
+def log_execution(data: EndpointData):
     """
     Writes the final output from running the program into a file to ingest
     later to plot the results.
+
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     """
     # Save all current entries in the file before changing
     with open(log_file_path, "r", encoding="utf-8") as log_file:
@@ -334,8 +281,8 @@ def log_execution():
             f"Time of execution: "
             f"{datetime.now().strftime('%m/%d %H:%M:%S')}\n"
         )
-        log_file.write(f"Failed endpoints: {len(FAILED_ENDPOINTS)}\n")
-        log_file.write(f"Retries: {RETRY_COUNT}\n")
+        log_file.write(f"Failed endpoints: {len(data.failed_endpoints)}\n")
+        log_file.write(f"Retries: {data.retry_count}\n")
 
 
 def parse_entry(entry):
@@ -354,6 +301,7 @@ def parse_entry(entry):
         return datetime.strptime(
             f"{current_year} {time_str}", "%Y %m/%d %H:%M:%S"
         )
+    return ""
 
 
 def filter_entries(entries):
@@ -392,12 +340,12 @@ def filter_entries(entries):
 ##############################################################################
 
 
-def test_poi():
+def test_poi(data: EndpointData):
     """Serves as a driver function for all POI tests."""
-    create_poi()
-    get_poi()
-    update_poi()
-    delete_poi()
+    create_poi(data)
+    get_poi(data)
+    update_poi(data)
+    delete_poi(data)
 
 
 def get_person_id():
@@ -413,7 +361,7 @@ def get_person_id():
 
     # Send a GET request to search for persons of interest
     response = requests.get(
-        URL_PEOPLE, headers=GENERAL_HEADER, params=params, timeout=5
+        GET_ALL_POI, headers=GENERAL_HEADER, params=params, timeout=5
     )
 
     # Check if the request was successful (status code 200)
@@ -422,24 +370,25 @@ def get_person_id():
         data = response.json()
 
         if persons_of_interest := data.get("persons_of_interest", []):
-            return persons_of_interest[0].get("person_id")
-        else:
-            log.warning("No person was found with the label 'test'.")
+            return persons_of_interest[0].get("person_id", "")
+
+        log.warning("No person was found with the label 'test'.")
+
+    return ""
 
 
-def create_poi():
+def create_poi(data: EndpointData):
     """
     Creates a PoI to test the responsiveness of the API endpoint.
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s create_poi", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
-
-    file_content = None  # Pre-define
 
     # Download the JPG file from the URL
     img_response = requests.get(
@@ -451,11 +400,38 @@ feca744209047e57&ipo=images",
     )
 
     if img_response.status_code == 200:
-        # File was successfully downloaded
-        file_content = img_response.content
+        run_creation(img_response, data)
     else:
         # Handle the case where the file download failed
         log.critical("Failed to download the image")
+
+
+def run_creation(img_response, data):
+    """
+    Sends a POST request to create a point of interest using an image.
+
+    This function takes an image response and a data object, converts the
+    image to base64, and attempts to send a request to create a point of
+    interest. It handles retries in case of rate limiting and logs the
+    response status.
+
+    Args:
+        img_response: The response object containing the image data.
+        data: An object to store information about failed endpoints and
+            retry counts.
+
+    Returns:
+        None
+
+    Raises:
+        None
+
+    Examples:
+        run_creation(image_response, endpoint_data)
+    """
+
+    # File was successfully downloaded
+    file_content = img_response.content
 
     # Convert the binary content to base64
     base64_image = base64.b64encode(file_content).decode("utf-8")
@@ -472,7 +448,11 @@ feca744209047e57&ipo=images",
 
     for _ in range(MAX_RETRIES):
         response = requests.post(
-            URL_PEOPLE, json=payload, headers=headers, params=params, timeout=5
+            GET_ALL_POI,
+            json=payload,
+            headers=headers,
+            params=params,
+            timeout=5,
         )
 
         if response.status_code != 429:
@@ -481,7 +461,7 @@ feca744209047e57&ipo=images",
         log.info("create_poi retrying in %ss. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -489,18 +469,19 @@ feca744209047e57&ipo=images",
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append("create_poi: %d", response.status_code)
+            data.failed_endpoints.append(f"create_poi: {response.status_code}")
 
 
-def get_poi():
+def get_poi(data: EndpointData):
     """
     Looks to see if it can get a list of PoIs
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s get_poi", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -508,16 +489,16 @@ def get_poi():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_PEOPLE, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_ALL_POI, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
             break
 
-        log.info("get_poi retrying in %ds. Response: 429", RETRY_COUNT)
+        log.info("get_poi retrying in %ds. Response: 429", data.retry_count)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -525,18 +506,19 @@ def get_poi():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_poi: {response.status_code}")
+            data.failed_endpoints.append(f"get_poi: {response.status_code}")
 
 
-def update_poi():
+def update_poi(data: EndpointData):
     """
     Tests the patch requests for the people endpoint
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s update_poi", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -552,7 +534,11 @@ def update_poi():
 
     for _ in range(MAX_RETRIES):
         response = requests.patch(
-            URL_PEOPLE, json=payload, headers=headers, params=params, timeout=5
+            GET_ALL_POI,
+            json=payload,
+            headers=headers,
+            params=params,
+            timeout=5,
         )
 
         if response.status_code != 429:
@@ -561,7 +547,7 @@ def update_poi():
         log.info("update_poi retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -569,21 +555,24 @@ def update_poi():
 
     if response.status_code == 400:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_person_id: {response.status_code}")
+            data.failed_endpoints.append(
+                f"get_person_id: {response.status_code}"
+            )
     elif response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"update_poi: {response.status_code}")
+            data.failed_endpoints.append(f"update_poi: {response.status_code}")
 
 
-def delete_poi():
+def delete_poi(data: EndpointData):
     """
     Tests the delete request for the people endpoint
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s delete_poi", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -593,7 +582,7 @@ def delete_poi():
 
     for _ in range(MAX_RETRIES):
         response = requests.delete(
-            URL_PEOPLE, headers=headers, params=params, timeout=5
+            GET_ALL_POI, headers=headers, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -602,7 +591,7 @@ def delete_poi():
         log.info("delete_poi retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -610,7 +599,7 @@ def delete_poi():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"delete_poi: {response.status_code}")
+            data.failed_endpoints.append(f"delete_poi: {response.status_code}")
 
 
 ##############################################################################
@@ -618,23 +607,24 @@ def delete_poi():
 ##############################################################################
 
 
-def test_plates():
+def test_plates(data: EndpointData):
     """Serves as a driver function for all LPOI tests."""
-    create_plate()
-    get_plate()
-    update_plate()
-    delete_plate()
+    create_plate(data)
+    get_plate(data)
+    update_plate(data)
+    delete_plate(data)
 
 
-def create_plate():
+def create_plate(data: EndpointData):
     """
     Creates a Plate to test the API endpoint
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s create_plate", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -651,7 +641,11 @@ def create_plate():
 
     for _ in range(MAX_RETRIES):
         response = requests.post(
-            URL_PLATE, json=payload, headers=headers, params=params, timeout=5
+            GET_ALL_LPOI,
+            json=payload,
+            headers=headers,
+            params=params,
+            timeout=5,
         )
 
         if response.status_code != 429:
@@ -660,7 +654,7 @@ def create_plate():
         log.info("create_plate retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -668,18 +662,21 @@ def create_plate():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"create_plate: {response.status_code}")
+            data.failed_endpoints.append(
+                f"create_plate: {response.status_code}"
+            )
 
 
-def get_plate():
+def get_plate(data: EndpointData):
     """
     Looks to see if it can get Plates
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s get_plate", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -689,7 +686,7 @@ def get_plate():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_PLATE, headers=headers, params=params, timeout=5
+            GET_ALL_LPOI, headers=headers, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -698,7 +695,7 @@ def get_plate():
         log.info("get_plate retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -706,18 +703,19 @@ def get_plate():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_plate: {response.status_code}")
+            data.failed_endpoints.append(f"get_plate: {response.status_code}")
 
 
-def update_plate():
+def update_plate(data: EndpointData):
     """
     Tests the patch requests for the Plate endpoint
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s update_plate", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -733,7 +731,11 @@ def update_plate():
 
     for _ in range(MAX_RETRIES):
         response = requests.patch(
-            URL_PLATE, json=payload, headers=headers, params=params, timeout=5
+            GET_ALL_LPOI,
+            json=payload,
+            headers=headers,
+            params=params,
+            timeout=5,
         )
 
         if response.status_code != 429:
@@ -742,7 +744,7 @@ def update_plate():
         log.info("update_plate retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -750,18 +752,21 @@ def update_plate():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"update_plate: {response.status_code}")
+            data.failed_endpoints.append(
+                f"update_plate: {response.status_code}"
+            )
 
 
-def delete_plate():
+def delete_plate(data: EndpointData):
     """
     Tests the delete request for the Plate endpoint
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s delete_plate", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -769,7 +774,7 @@ def delete_plate():
 
     for _ in range(MAX_RETRIES):
         response = requests.delete(
-            URL_PLATE, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_ALL_LPOI, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -778,7 +783,7 @@ def delete_plate():
         log.info("delete_plate retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -786,7 +791,9 @@ def delete_plate():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"delete_plate: {response.status_code}")
+            data.failed_endpoints.append(
+                f"delete_plate: {response.status_code}"
+            )
 
 
 ##############################################################################
@@ -794,15 +801,16 @@ def delete_plate():
 ##############################################################################
 
 
-def get_cloud_settings():
+def get_cloud_settings(data: EndpointData):
     """
     Tests to see if it can retrieve cloud backup settings for a camera
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info(
         "%sRunning%s get_cloud_settings", Fore.LIGHTBLACK_EX, Style.RESET_ALL
@@ -812,20 +820,19 @@ def get_cloud_settings():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_CLOUD, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_CB, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
             break
 
         log.info(
-            "get_cloud_settings retrying in %ds.\
- Response: 429",
+            "get_cloud_settings retrying in %ds. Response: 429",
             RETRY_DELAY,
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -833,28 +840,32 @@ def get_cloud_settings():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"get_cloud_settings: \
 {response.status_code}"
             )
 
 
-def get_counts():
+def get_counts(data: EndpointData):
     """
     Tests if it can get object counts from a camera
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s get_counts", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
     params = {"org_id": ORG_ID, "camera_id": CAMERA_ID}
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_OBJ, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_PEP_VEH_COUNTS,
+            headers=GENERAL_HEADER,
+            params=params,
+            timeout=5,
         )
 
         if response.status_code != 429:
@@ -863,7 +874,7 @@ def get_counts():
         log.info("get_counts retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -871,18 +882,19 @@ def get_counts():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_counts: {response.status_code}")
+            data.failed_endpoints.append(f"get_counts: {response.status_code}")
 
 
-def get_trendline_data():
+def get_trendline_data(data: EndpointData):
     """
     Tests if it can get trend counts from a camera
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info(
         "%sRunning%s get_trendline_data", Fore.LIGHTBLACK_EX, Style.RESET_ALL
@@ -892,20 +904,19 @@ def get_trendline_data():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_OCCUPANCY, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_TREND_DATA, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
             break
 
         log.info(
-            "get_trend_line_data retrying in %ds.\
- Response: 429",
+            "get_trend_line_data retrying in %ds. Response: 429",
             RETRY_DELAY,
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -913,20 +924,21 @@ def get_trendline_data():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"get_trendline_data: {response.status_code}"
             )
 
 
-def get_camera_data():
+def get_camera_data(data: EndpointData):
     """
     Tests if it can get camera data on a given camera
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info(
         "%sRunning%s get_camera_data", Fore.LIGHTBLACK_EX, Style.RESET_ALL
@@ -936,7 +948,7 @@ def get_camera_data():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_OCCUPANCY, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_TREND_DATA, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -949,7 +961,7 @@ def get_camera_data():
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -957,18 +969,21 @@ def get_camera_data():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_camera_data: {response.status_code}")
+            data.failed_endpoints.append(
+                f"get_camera_data: {response.status_code}"
+            )
 
 
-def get_thumbed():
+def get_thumbed(data: EndpointData):
     """
     Tests if it can get a thumbnail from a camera
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s get_thumbnail", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -980,20 +995,22 @@ def get_thumbed():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_FOOTAGE, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_LATEST_THUMB_IMG,
+            headers=GENERAL_HEADER,
+            params=params,
+            timeout=5,
         )
 
         if response.status_code != 429:
             break
 
         log.info(
-            "getThumbnail retrying in %ds.\
- Response: 429",
+            "getThumbnail retrying in %ds. Response: 429",
             RETRY_DELAY,
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1001,7 +1018,9 @@ def get_thumbed():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"getThumbnail: {response.status_code}")
+            data.failed_endpoints.append(
+                f"getThumbnail: {response.status_code}"
+            )
 
 
 ##############################################################################
@@ -1009,15 +1028,16 @@ def get_thumbed():
 ##############################################################################
 
 
-def get_audit_logs():
+def get_audit_logs(data: EndpointData):
     """
     Tests the ability to retrieve audit logs
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s get_audit_logs", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -1025,20 +1045,19 @@ def get_audit_logs():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_AUDIT, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_AUDIT_LOGS, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
             break
 
         log.info(
-            "get_audit_logs retrying in %ds.\
- Response: 429",
+            "get_audit_logs retrying in %ds. Response: 429",
             RETRY_DELAY,
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1048,18 +1067,21 @@ def get_audit_logs():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_audit_logs: {response.status_code}")
+            data.failed_endpoints.append(
+                f"get_audit_logs: {response.status_code}"
+            )
 
 
-def update_user():
+def update_user(data: EndpointData):
     """
     Tests the ability to update a user
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s update_user", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -1075,7 +1097,7 @@ def update_user():
 
     for _ in range(MAX_RETRIES):
         response = requests.put(
-            URL_CORE, json=payload, headers=headers, params=params, timeout=5
+            GET_USER, json=payload, headers=headers, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -1084,7 +1106,7 @@ def update_user():
         log.info("update_user retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1092,18 +1114,21 @@ def update_user():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"update_user: {response.status_code}")
+            data.failed_endpoints.append(
+                f"update_user: {response.status_code}"
+            )
 
 
-def get_user():
+def get_user(data: EndpointData):
     """
     Tests the ability to retrieve information on a user
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info("%sRunning%s get_user", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -1111,7 +1136,7 @@ def get_user():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_CORE, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_USER, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -1120,7 +1145,7 @@ def get_user():
         log.info("get_user retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1128,22 +1153,24 @@ def get_user():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_user: {response.status_code}")
+            data.failed_endpoints.append(f"get_user: {response.status_code}")
 
 
-def get_jwt(org_id=ORG_ID, api_key=STREAM_API_KEY):
+def get_jwt(data: EndpointData, org_id=ORG_ID, api_key=STREAM_API_KEY):
     """
-        Generates a JWT token for the streaming API. This token will be integrated
+    Generates a JWT token for the streaming API. This token will be integrated
     inside of a link to grant access to footage.
 
-        :param org_id: Organization ID. Defaults to ORG_ID.
-        :type org_id: str, optional
-        :param api_key: API key for authentication. Defaults to API_KEY.
-        :type api_key: str, optional
-        :return: Returns the JWT token to allow access via a link to footage.
-        :rtype: str
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
+    :param org_id: Organization ID. Defaults to ORG_ID.
+    :type org_id: str, optional
+    :param api_key: API key for authentication. Defaults to API_KEY.
+    :type api_key: str, optional
+    :return: Returns the JWT token to allow access via a link to footage.
+    :rtype: str
     """
-    global RETRY_COUNT
 
     log.info("%sRunning%s get_jwt", Fore.LIGHTBLACK_EX, Style.RESET_ALL)
 
@@ -1157,7 +1184,7 @@ def get_jwt(org_id=ORG_ID, api_key=STREAM_API_KEY):
 
         # Send GET request to get the JWT
         response = requests.get(
-            URL_TOKEN, headers=headers, params=params, timeout=5
+            GET_STREAM_TOKEN, headers=headers, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -1166,7 +1193,7 @@ def get_jwt(org_id=ORG_ID, api_key=STREAM_API_KEY):
         log.info("get_jwt retrying in %ds. Response: 429", RETRY_DELAY)
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1174,7 +1201,7 @@ def get_jwt(org_id=ORG_ID, api_key=STREAM_API_KEY):
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(f"get_jwt: {response.status_code}")
+            data.failed_endpoints.append(f"get_jwt: {response.status_code}")
 
 
 ##############################################################################
@@ -1182,15 +1209,16 @@ def get_jwt(org_id=ORG_ID, api_key=STREAM_API_KEY):
 ##############################################################################
 
 
-def get_access_groups():
+def get_access_groups(data: EndpointData):
     """
     Tests the ability to get AC Groups
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info(
         "%sRunning%s get_access_groups", Fore.LIGHTBLACK_EX, Style.RESET_ALL
@@ -1200,7 +1228,7 @@ def get_access_groups():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_AC_GROUPS, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_ALL_AC_GROUPS, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -1211,7 +1239,7 @@ def get_access_groups():
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1219,20 +1247,21 @@ def get_access_groups():
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"get_access_groups: {response.status_code}"
             )
 
 
-def get_access_users():
+def get_access_users(data: EndpointData):
     """
     Tests the ability to get AC users
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info(
         "%sRunning%s get_access_users", Fore.LIGHTBLACK_EX, Style.RESET_ALL
@@ -1242,7 +1271,7 @@ def get_access_users():
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            URL_AC_USERS, headers=GENERAL_HEADER, params=params, timeout=5
+            GET_ALL_AC_USRS, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
         if response.status_code != 429:
@@ -1255,7 +1284,7 @@ Response: 429",
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1263,20 +1292,21 @@ Response: 429",
 
     if response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"get_access_users: {response.status_code}"
             )
 
 
-def change_cards():
+def change_cards(data: EndpointData):
     """
     Tests the ability to change credentials
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info(
         "%sRunning%s activate_card \
@@ -1287,8 +1317,8 @@ def change_cards():
 
     params = {"org_id": ORG_ID, "user_id": TEST_USER_CRED, "card_id": CARD_ID}
 
-    activate_url = f"{URL_AC_CRED}/activate"
-    deactivate_url = f"{URL_AC_CRED}/deactivate"
+    activate_url = f"{ADD_CARD_TO_AC_USR}/activate"
+    deactivate_url = f"{ADD_CARD_TO_AC_USR}/deactivate"
 
     for _ in range(MAX_RETRIES):
         active_response = requests.put(
@@ -1305,7 +1335,7 @@ Response: 429",
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1314,11 +1344,11 @@ Response: 429",
     )
 
     for _ in range(MAX_RETRIES):
-        deactive_response = requests.put(
+        deactivate_response = requests.put(
             deactivate_url, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
-        if deactive_response.status_code != 429:
+        if deactivate_response.status_code != 429:
             break
 
         log.info(
@@ -1328,38 +1358,40 @@ Response: 429",
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
     log.info(
-        "deactivate_card response received: %d", deactive_response.status_code
+        "deactivate_card response received: %d",
+        deactivate_response.status_code,
     )
 
     if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"activate_card: \
 {active_response.status_code}"
             )
 
-    elif deactive_response.status_code != 200:
+    elif deactivate_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"deactivate_card: \
-{deactive_response.status_code}"
+{deactivate_response.status_code}"
             )
 
 
-def change_plates():
+def change_plates(data: EndpointData):
     """
     Tests the ability to change access plates
 
+    :param data: An instance of EndpointData containing the
+        necessary parameters for the reporting process.
+    :type data: EndpointData
     :return: None
     :rtype: None
     """
-    global FAILED_ENDPOINTS
-    global RETRY_COUNT
 
     log.info(
         "%sRunning%s activatePlate & deactivatePlate",
@@ -1373,8 +1405,8 @@ def change_plates():
         "license_plate_number": PLATE,
     }
 
-    activate_url = f"{URL_AC_PLATE}/activate"
-    deactivate_url = f"{URL_AC_PLATE}/deactivate"
+    activate_url = f"{ADD_AC_USR_PLATE}/activate"
+    deactivate_url = f"{ADD_AC_USR_PLATE}/deactivate"
 
     for _ in range(MAX_RETRIES):
         active_response = requests.put(
@@ -1391,7 +1423,7 @@ Response: 429",
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
@@ -1400,11 +1432,11 @@ Response: 429",
     )
 
     for _ in range(MAX_RETRIES):
-        deactive_response = requests.put(
+        deactivate_response = requests.put(
             deactivate_url, headers=GENERAL_HEADER, params=params, timeout=5
         )
 
-        if deactive_response.status_code != 429:
+        if deactivate_response.status_code != 429:
             break
 
         log.info(
@@ -1414,26 +1446,27 @@ Response: 429",
         )
 
         with RETRY_COUNT_LOCK:
-            RETRY_COUNT += 1
+            data.retry_count += 1
 
         time.sleep(RETRY_DELAY)  # Wait for throttle refresh
 
     log.info(
-        "deactivatePlate response received: %d", deactive_response.status_code
+        "deactivatePlate response received: %d",
+        deactivate_response.status_code,
     )
 
     if active_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"activatePlate: \
 {active_response.status_code}"
             )
 
-    elif deactive_response.status_code != 200:
+    elif deactivate_response.status_code != 200:
         with FAILED_ENDPOINTS_LOCK:
-            FAILED_ENDPOINTS.append(
+            data.failed_endpoints.append(
                 f"deactivatePlate: \
-{deactive_response.status_code}"
+{deactivate_response.status_code}"
             )
 
 
@@ -1446,21 +1479,39 @@ if __name__ == "__main__":
         f"Time of execution: " f"{datetime.now().strftime('%m/%d %H:%M:%S')}"
     )
 
-    t_POI = threading.Thread(target=test_poi)
-    t_LPOI = threading.Thread(target=test_plates)
-    t_get_cloud_settings = threading.Thread(target=get_cloud_settings)
-    t_get_counts = threading.Thread(target=get_counts)
-    t_get_trendline_data = threading.Thread(target=get_trendline_data)
-    t_get_camera_data = threading.Thread(target=get_camera_data)
-    t_get_thumbed = threading.Thread(target=get_thumbed)
-    t_get_audit_logs = threading.Thread(target=get_audit_logs)
-    t_update_user = threading.Thread(target=update_user)
-    t_get_user = threading.Thread(target=get_user)
-    t_get_access_groups = threading.Thread(target=get_access_groups)
-    t_get_access_users = threading.Thread(target=get_access_users)
-    t_change_cards = threading.Thread(target=change_cards)
-    t_change_plates = threading.Thread(target=change_plates)
-    t_jwt = threading.Thread(target=get_jwt)
+    runtime_data = EndpointData([], 0)
+
+    t_POI = threading.Thread(target=test_poi, args=(runtime_data,))
+    t_LPOI = threading.Thread(target=test_plates, args=(runtime_data,))
+    t_get_cloud_settings = threading.Thread(
+        target=get_cloud_settings, args=(runtime_data,)
+    )
+    t_get_counts = threading.Thread(target=get_counts, args=(runtime_data,))
+    t_get_trendline_data = threading.Thread(
+        target=get_trendline_data, args=(runtime_data,)
+    )
+    t_get_camera_data = threading.Thread(
+        target=get_camera_data, args=(runtime_data,)
+    )
+    t_get_thumbed = threading.Thread(target=get_thumbed, args=(runtime_data,))
+    t_get_audit_logs = threading.Thread(
+        target=get_audit_logs, args=(runtime_data,)
+    )
+    t_update_user = threading.Thread(target=update_user, args=(runtime_data,))
+    t_get_user = threading.Thread(target=get_user, args=(runtime_data,))
+    t_get_access_groups = threading.Thread(
+        target=get_access_groups, args=(runtime_data,)
+    )
+    t_get_access_users = threading.Thread(
+        target=get_access_users, args=(runtime_data,)
+    )
+    t_change_cards = threading.Thread(
+        target=change_cards, args=(runtime_data,)
+    )
+    t_change_plates = threading.Thread(
+        target=change_plates, args=(runtime_data,)
+    )
+    t_jwt = threading.Thread(target=get_jwt, args=(runtime_data,))
 
     threads = [
         t_get_cloud_settings,
@@ -1508,21 +1559,25 @@ if __name__ == "__main__":
     )
     time.sleep(1)
 
-    run_thread_with_rate_limit(threads)
+    run_thread_with_rate_limit(threads, "Reaching out to endpoints")
     t_POI.join()
     t_LPOI.join()
     # get_user()
     end_time = time.time()
     elapsed = end_time - start_time
 
-    log_execution()
+    log_execution(runtime_data)
 
     if GPIO:
         GPIO.output(RUN_PIN, False)
 
-    PASSED = 24 - len(FAILED_ENDPOINTS)
+    PASSED = 24 - len(runtime_data.failed_endpoints)
     print_colored_centered(
-        elapsed, PASSED, len(FAILED_ENDPOINTS), FAILED_ENDPOINTS
+        elapsed,
+        PASSED,
+        len(runtime_data.failed_endpoints),
+        runtime_data.failed_endpoints,
+        runtime_data,
     )
 
     if GPIO:

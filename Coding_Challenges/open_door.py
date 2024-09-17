@@ -4,27 +4,14 @@ Purpose: Opens doors both literally and figuratively.
 """
 
 # Import essential libraries
-import logging
 from os import getenv
 
 import requests
 from dotenv import load_dotenv
 
-from QoL import login_and_get_tokens, logout, custom_exceptions
+from tools import log, login_and_get_tokens, logout, custom_exceptions
 
 load_dotenv()  # Load credentials file
-
-log = logging.getLogger()
-log.setLevel(logging.WARNING)
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
-# Static URLs
-LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
-LOGOUT_URL = "https://vprovision.command.verkada.com/user/logout"
 
 # User logging credentials
 USERNAME = getenv("")

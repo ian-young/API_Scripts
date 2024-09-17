@@ -7,11 +7,10 @@ Purpose:
     based on a specified number of days to keep.
 
 Raises:
-    custom_exceptions.APIExceptionHandler: If there is an issue with the
+    APIExceptionHandler: If there is an issue with the
     API request.
 """
 
-import logging
 from datetime import datetime, timedelta
 from os import environ, getenv
 from typing import Dict, List, Union
@@ -20,23 +19,15 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-import QoL.custom_exceptions as custom_exceptions
+from tools import APIExceptionHandler
 
 environ.clear()  # Clear any previously loaded variables
 load_dotenv()  # Import credentials
 
-# Set logger
-log = logging.getLogger()
-log.setLevel(logging.ERROR)
-logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
 # Constants
-DEVICE_ID = getenv("lab_sensor")
-if API_KEY := getenv("lab_key"):
+DEVICE_ID = getenv("")
+HEADERS = {}  # Initialize
+if API_KEY := getenv(""):
     HEADERS = {
         "accept": "application/json",
         "x-api-key": API_KEY,
@@ -108,7 +99,7 @@ def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
 {data['next_page_token']}&page_size={PAGE_SIZE}&fields={FIELDS}&interval={INTERVAL}"
 
     except requests.exceptions.RequestException as e:
-        raise custom_exceptions.APIExceptionHandler(e, response, "sv") from e
+        raise APIExceptionHandler(e, response, "sv") from e
 
     return filtered_data
 

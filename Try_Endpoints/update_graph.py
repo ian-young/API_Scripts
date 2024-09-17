@@ -73,6 +73,8 @@ def parse_log_file(log_path):
     except FileNotFoundError:
         log.error("The file was not found")
 
+    return None
+
 
 def create_line_graph(data):
     """

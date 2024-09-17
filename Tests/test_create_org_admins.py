@@ -9,9 +9,9 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 
-from QoL.authentication import login_and_get_tokens, logout
-from QoL.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
-from QoL.custom_exceptions import APIExceptionHandler
+from tools.authentication import login_and_get_tokens, logout
+from tools.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
+from tools.custom_exceptions import APIExceptionHandler
 
 log = logging.getLogger()
 LOG_LEVEL = logging.INFO

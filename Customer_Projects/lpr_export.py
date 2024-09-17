@@ -4,7 +4,6 @@ Purpose: Will retrieve all seen plates in the past 24 hours and save
     the data in a csv. This is meant to be used for scheduled exports.
 """
 
-import logging
 from datetime import datetime, timedelta
 from os import getenv
 from typing import List, Dict, Union
@@ -13,19 +12,9 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 
-from QoL.custom_exceptions import APIExceptionHandler
-from QoL.api_endpoints import GET_SEEN_PLATES, GET_CAMERA_DATA
-
-log = logging.getLogger()
-LOG_LEVEL = logging.DEBUG
-log.setLevel(LOG_LEVEL)
-logging.basicConfig(
-    level=LOG_LEVEL, format="%(asctime)s - %(levelname)s: %(message)s"
-)
-
-# Mute non-essential logging from requests library
-logging.getLogger("requests").setLevel(logging.CRITICAL)
-logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+from tools import log
+from tools.custom_exceptions import APIExceptionHandler
+from tools.api_endpoints import GET_SEEN_PLATES, GET_CAMERA_DATA
 
 load_dotenv()  # Load credentials
 
@@ -36,6 +25,7 @@ CSV_OUTPUT = f"lpr_info-{datetime.now().date()}.csv"
 CSV_CAMERAS = "cameras.csv"
 START_TIME = int((CURRENT_TIME - timedelta(days=1)).timestamp())
 
+HEADERS = {}  # Initialize
 if API_KEY := getenv(""):
     HEADERS = {
         "accept": "application/json",
@@ -70,26 +60,31 @@ def parse_cameras() -> List[Dict[str, str]]:
     Returns:
         list of dict: A list of device IDs and their assigned sites.
     """
-    lpr_cameras = ["CB52-E", "CB62-E", "CB52-TE", "CB62-TE"]
     device_ids: List[Dict[str, str]] = []
 
-    try:
-        log.info("Request cameras list.")
-        response = requests.get(GET_CAMERA_DATA, headers=HEADERS, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        device_ids.extend(
-            {
-                "ID": device["camera_id"],
-                "Site": device["site"],
-                "Camera": device["name"],
-            }
-            for device in data["cameras"]
-            if device["model"] in lpr_cameras
-        )
+    if HEADERS:
+        lpr_cameras = {"CB52-E", "CB62-E", "CB52-TE", "CB62-TE"}
+        try:
+            log.info("Request cameras list.")
+            response = requests.get(
+                GET_CAMERA_DATA, headers=HEADERS, timeout=5
+            )
+            response.raise_for_status()
+            data = response.json()
+            device_ids.extend(
+                {
+                    "ID": device["camera_id"],
+                    "Site": device["site"],
+                    "Camera": device["name"],
+                }
+                for device in data["cameras"]
+                if device["model"] in lpr_cameras
+            )
 
-    except APIExceptionHandler as e:
-        raise APIExceptionHandler(e, response, "Get Camera Data") from e
+        except APIExceptionHandler as e:
+            raise APIExceptionHandler(e, response, "Get Camera Data") from e
+
+    log.debug("Returning %s", device_ids)
 
     log.debug("Returning %s", device_ids)
 

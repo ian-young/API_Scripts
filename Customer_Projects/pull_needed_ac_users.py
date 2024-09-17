@@ -6,17 +6,18 @@ Purpose: This script will compare three csvs and generate a fourth with
 
 import concurrent.futures
 import gc
-import logging
 import re
 import threading
-from sys import stdout
 from os import getpid
-from typing import Dict, List, Optional, Hashable, Union
+from sys import stdout
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
+from _collections_abc import Hashable
 from tqdm import tqdm
 
-from QoL.verbose_compute import memory_usage
+from tools import log
+from tools.verbose_compute import memory_usage, calculate_memory
 
 PID = getpid()
 IS_INTERACTIVE = stdout.isatty()
@@ -36,21 +37,6 @@ SCHOOL_ID_MAPPING = {
     "110": "(ESS)",
     "112": "(ESSS)",
 }
-
-calculate_memory = lambda start_mem, end_mem: end_mem - start_mem
-
-# Clear all handlers associated with the root logger object
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
-
-log = logging.getLogger()
-LOG_LEVEL = logging.ERROR
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format="%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s",
-    datefmt="%H:%M%S",
-)
-log.setLevel(LOG_LEVEL)
 
 
 def read_csv(
@@ -300,42 +286,31 @@ def process_sis_users(sis_users_list: List[Dict[str, str]]) -> Dict[str, str]:
     return user_groups
 
 
-def compile_data_for_csv(
-    third_party_csv: str, sis_csv: str, current_csv: str
-) -> List[Dict[str, str]]:
-    """
-    Will take two dictionaries and prepare the data to be written to a
-        csv.
+def format_data(
+    sis_users_list, current_users_list, ac_users_list, user_groups
+):
+    """Format user data for processing.
+
+    This function compiles a list of user data by matching users from a
+    given list against current and active users. It creates a structured
+    output for users who meet specific criteria, including their names,
+    email addresses, and associated card information.
 
     Args:
-        command_csv (list of dict): The imported data from the csv
-            imported by Command.
-        third_party_csv (list of dict): The imported data from the csv
-            imported by the third-party Access Control provider.
+        sis_users_list (list): A list of users from the SIS system.
+        current_users_list (list): A list of current users with their
+            details.
+        ac_users_list (list): A list of active users with card
+            information.
+        user_groups (dict): A dictionary mapping user full names to
+            their groups.
 
     Returns:
-        list of dict: Returns all matching values between the two csvs.
+        list: A list of formatted user data dictionaries.
+
+    Raises:
+        KeyError: If a required field is missing in the user data.
     """
-    start_mem = memory_usage(PID)
-    compiled_data = []
-
-    log.info("Reading csv files")
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_ac_users = executor.submit(read_ac_csv, third_party_csv)
-        future_sis_users = executor.submit(read_sis_csv, sis_csv)
-        future_current_users = executor.submit(read_command_csv, current_csv)
-
-        ac_users_list = future_ac_users.result()
-        sis_users_list = future_sis_users.result()
-        current_users_list = future_current_users.result()
-    log.info("CSV files read successfully")
-
-    email_thread = threading.Thread(
-        target=add_to_domain,
-        args=(current_users_list,),
-    )
-    email_thread.start()
-
     # Creating a lookup dictionary
     current_users_lookup = {
         user["Email"]: user for user in current_users_list if user["Email"]
@@ -345,30 +320,7 @@ def compile_data_for_csv(
         for user in ac_users_list
     }
 
-    # Process SIS users to collect groups
-    user_groups = process_sis_users(convert_list_of_dicts(sis_users_list))
-
-    # NOTE: Uncomment for updated_users to have only groups added
-    # update_users_thread = threading.Thread(
-    #     target=update_current_users_with_groups,
-    #     args=(
-    #         CSV_CURRENT_USERS,
-    #         user_groups,
-    #     ),
-    # )
-    # update_users_thread.start()
-
-    # NOTE: Uncomment for updated_users.csv to have groups and emails added
-    groups_and_emails_thread = threading.Thread(
-        target=update_current_users_with_groups_and_emails,
-        args=(
-            CSV_CURRENT_USERS,
-            user_groups,
-            current_users_list,
-        ),
-    )
-    groups_and_emails_thread.start()
-
+    compiled_data = []
     for sis_user in sis_users_list:
         try:
             email = sis_user["Email"]
@@ -404,6 +356,70 @@ def compile_data_for_csv(
             log.warning("A field was found empty in %s", sis_user)
             log.error(e)
             continue
+
+    return compiled_data
+
+
+def compile_data_for_csv(
+    third_party_csv: str, sis_csv: str, current_csv: str
+) -> List[Dict[str, str]]:
+    """
+    Will take two dictionaries and prepare the data to be written to a
+        csv.
+
+    Args:
+        command_csv (list of dict): The imported data from the csv
+            imported by Command.
+        third_party_csv (list of dict): The imported data from the csv
+            imported by the third-party Access Control provider.
+
+    Returns:
+        list of dict: Returns all matching values between the two csvs.
+    """
+    start_mem = memory_usage(PID)
+    compiled_data = []
+
+    log.info("Reading csv files")
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        ac_users_list = executor.submit(read_ac_csv, third_party_csv).result()
+        sis_users_list = executor.submit(read_sis_csv, sis_csv).result()
+        current_users_list = executor.submit(
+            read_command_csv, current_csv
+        ).result()
+    log.info("CSV files read successfully")
+
+    email_thread = threading.Thread(
+        target=add_to_domain,
+        args=(current_users_list,),
+    )
+    email_thread.start()
+
+    # Process SIS users to collect groups
+    user_groups = process_sis_users(convert_list_of_dicts(sis_users_list))
+
+    # NOTE: Uncomment for updated_users to have only groups added
+    # update_users_thread = threading.Thread(
+    #     target=update_current_users_with_groups,
+    #     args=(
+    #         CSV_CURRENT_USERS,
+    #         user_groups,
+    #     ),
+    # )
+    # update_users_thread.start()
+
+    # NOTE: Uncomment for updated_users.csv to have groups and emails added
+    groups_and_emails_thread = threading.Thread(
+        target=update_current_users_with_groups_and_emails,
+        args=(
+            CSV_CURRENT_USERS,
+            user_groups,
+            current_users_list,
+        ),
+    )
+    groups_and_emails_thread.start()
+    compiled_data = format_data(
+        sis_users_list, current_users_list, ac_users_list, user_groups
+    )
 
     log.info("Finished compiling csv files.")
     log.debug(
@@ -485,6 +501,48 @@ def update_current_users_with_groups_and_emails(
                 else new_groups
             )
 
+    def write_to_csv():
+        """Writes output to a csv file."""
+        with (
+            open(file_name, "r", newline="", encoding="UTF-8") as current_file,
+            open(
+                "updated_users.csv", "w", newline="", encoding="UTF-8"
+            ) as group_file,
+        ):
+
+            csv_reader = pd.read_csv(current_file)
+            group_fieldnames = csv_reader.columns.tolist()
+            pd.DataFrame(columns=group_fieldnames).to_csv(
+                group_file, index=False
+            )
+
+            total_count = len(csv_reader)
+            csv_iterator = (
+                tqdm(
+                    csv_reader.iterrows(),
+                    total=total_count,
+                    desc="Writing Groups & Emails",
+                )
+                if IS_INTERACTIVE
+                else csv_reader.iterrows()
+            )
+
+            if not hasattr(csv_iterator, "__iter__"):
+                raise ValueError(
+                    "update_current_users_with_groups_and_emails csv_iterator is "
+                    "not iterable."
+                )
+
+            rows = []
+            for _, user in csv_iterator:
+                full_name = f"{user['firstName']} {user['lastName']}"
+                update_groups(user, full_name)
+                rows.append(user)
+
+            group_writer = pd.DataFrame(rows, columns=group_fieldnames)
+
+        group_writer.to_csv(group_file, index=False)
+
     # Typing the iterator as Union ensures compatibility
     iterator: Union[List[Dict[str, str]], tqdm] = user_list
 
@@ -497,56 +555,17 @@ def update_current_users_with_groups_and_emails(
 
     if not hasattr(iterator, "__iter__"):
         raise ValueError(
-            "update_current_users_with_groups_and_emails iterator is not "
-            "iterable."
+            "update_current_users_with_groups_and_emails iterator is not iterable."
         )
 
     # Process user list to ensure emails are correctly formatted
     for user in iterator:
         process_user(user)
 
-    with (
-        open(file_name, "r", newline="", encoding="UTF-8") as current_file,
-        open(
-            "updated_users.csv", "w", newline="", encoding="UTF-8"
-        ) as group_file,
-    ):
-
-        csv_reader = pd.read_csv(current_file)
-        group_fieldnames = csv_reader.columns.tolist()
-        group_writer = pd.DataFrame(columns=group_fieldnames)
-        group_writer.to_csv(group_file, index=False)
-
-        total_count = len(csv_reader)
-        csv_iterator = (
-            tqdm(
-                csv_reader.iterrows(),
-                total=total_count,
-                desc="Writing Groups & Emails",
-            )
-            if IS_INTERACTIVE
-            else csv_reader.iterrows()
-        )
-
-        if not hasattr(csv_iterator, "__iter__"):
-            raise ValueError(
-                "update_current_users_with_groups_and_emails csv_iterator is "
-                "not iterable."
-            )
-
-        rows = []
-        for _, user in csv_iterator:
-            full_name = f"{user['firstName']} {user['lastName']}"
-            update_groups(user, full_name)
-            rows.append(user)
-
-        group_writer = pd.DataFrame(rows, columns=group_fieldnames)
-
-    group_writer.to_csv(group_file, index=False)
+    write_to_csv()
 
     log.info(
-        "Data updated and written to updated_users.csv and "
-        "need_email_domain.csv"
+        "Data updated and written to updated_users.csv and need_email_domain.csv"
     )
     log.debug(
         "Total memory used: %iKiB",
