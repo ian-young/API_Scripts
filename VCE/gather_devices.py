@@ -15,16 +15,18 @@ import requests
 from dotenv import load_dotenv
 
 from QoL import login_and_get_tokens, logout
+from QoL.get_key import get_api_token
 from QoL.custom_exceptions import APIExceptionHandler
 
 load_dotenv()  # Load credentials file
 
 # Set final, global credential variables
-API_KEY = getenv("")
-USERNAME = getenv("")
-PASSWORD = getenv("")
-ORG_ID = getenv("")
-TOTP = getenv("")
+API_KEY = getenv("denver_key")
+USERNAME = getenv("denver_user")
+PASSWORD = getenv("denver_pass")
+ORG_ID = getenv("denver_id")
+TOTP = getenv("denver_secret")
+TOKEN = get_api_token(API_KEY)
 
 # Set final, global URLs
 LOGIN_URL = "https://vprovision.command.verkada.com/user/login"
@@ -105,7 +107,9 @@ def create_thread_with_args(target: Callable, args: Any) -> ResultThread:
 ##############################################################################
 
 
-def list_cameras(api_key: str, camera_session: requests.Session) -> List[str]:
+def list_cameras(
+    api_token: str, camera_session: requests.Session
+) -> List[str]:
     """
     Will list all cameras inside of a Verkada organization.
 
@@ -117,7 +121,7 @@ def list_cameras(api_key: str, camera_session: requests.Session) -> List[str]:
     organization.
     :rtype: list
     """
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
+    headers = {"x-verkada-auth": api_token, "Content-Type": "application/json"}
 
     camera_ids = []
     log.debug("Requesting camera data")
@@ -854,7 +858,7 @@ if __name__ == "__main__":
                 if csrf_token and user_token and user_id:
                     # Define the threads with arguments
                     c_thread = create_thread_with_args(
-                        list_cameras, [API_KEY, session]
+                        list_cameras, [TOKEN, session]
                     )
                     ac_thread = create_thread_with_args(
                         list_ac, [csrf_token, user_token, user_id, session]

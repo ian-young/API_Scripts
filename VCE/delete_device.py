@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 
 import VCE.gather_devices as gather_devices
 from QoL import login_and_get_tokens, logout, custom_exceptions
+from QoL.get_key import get_api_token
 
 colorama.init(autoreset=True)  # Initialize colorized output
 
@@ -39,6 +40,7 @@ API_KEY = getenv("")
 USERNAME = getenv("")
 PASSWORD = getenv("")
 ORG_ID = getenv("")
+TOKEN = get_api_token(API_KEY)
 
 # Root API URL
 ROOT = "https://api.command.verkada.com/vinter/v1/user/async"
@@ -218,8 +220,8 @@ def delete_cameras(
     try:
         # Request the JSON archive library
         log.debug("Requesting cameras.")
-        if API_KEY is not None:
-            if cameras := gather_devices.list_cameras(API_KEY, camera_session):
+        if TOKEN is not None:
+            if cameras := gather_devices.list_cameras(TOKEN, camera_session):
                 for camera in cameras:
                     body = {"cameraId": camera}
 

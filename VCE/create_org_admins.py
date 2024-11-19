@@ -5,6 +5,7 @@ and create a Command account for them with org admin privileges.
 """
 
 import logging
+import sys
 from datetime import datetime
 from os import getenv
 
@@ -12,7 +13,9 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+sys.path.append("/Users/ianyoung/Documents/.scripts/API_Scripts")
 from QoL import login_and_get_tokens, logout
+from QoL.get_key import get_api_token
 from QoL.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
 from QoL.custom_exceptions import APIExceptionHandler
 
@@ -29,15 +32,16 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 load_dotenv()  # Import credentials file
 
-ORG_ID = getenv("")
-USERNAME = getenv("")
-PASSWORD = getenv("")
-TOTP = getenv("")  # Leave blank if you don't have one on the account
-API_KEY = getenv("")
+API_KEY = getenv("denver_key")
+USERNAME = getenv("denver_user")
+PASSWORD = getenv("denver_pass")
+ORG_ID = getenv("denver_id")
+TOTP = getenv("denver_secret")
 FILE_PATH = (
-    "/Users/ian.young/Documents/.scripts/API_Scripts/VCE/"
-    "VCE_AC_Specialist_Check_ins_GuestLog - 2024-07-17.csv"
+    "/Users/ianyoung/Documents/.scripts/API_Scripts/VCE/guest_csvs/"
+    "VCE_AC_Specialist_Check_ins_GuestLog - 2024-11-19.csv"
 )
+TOKEN = get_api_token(API_KEY)
 
 
 def read_csv(file_name):
@@ -168,7 +172,7 @@ def grant_org_admin(
         raise APIExceptionHandler(e, response, "Promote org admin") from e
 
 
-def create_vce_user(user_info_list, api_key=API_KEY):
+def create_vce_user(user_info_list, api_token=TOKEN):
     """
     Create VCE user using the provided user information list.
 
@@ -192,7 +196,7 @@ def create_vce_user(user_info_list, api_key=API_KEY):
         headers = {
             "accept": "application/json",
             "content-type": "application/json",
-            "x-api-key": api_key,
+            "x-verkada-auth": api_token,
         }
         csrf_token, user_token, user_id = None, None, None
 
@@ -206,7 +210,6 @@ def create_vce_user(user_info_list, api_key=API_KEY):
                     ORG_ID,
                     TOTP,
                 )
-
                 for result in user_info_list:
                     log.debug("Loading result info into JSON body.")
                     body = {
