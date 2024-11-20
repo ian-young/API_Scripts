@@ -8,12 +8,14 @@ This is to be imported as a module and not ran directly.
 import logging
 import threading
 import time
+import sys
 from os import getenv
 from typing import Callable, Optional, Any, List
 
 import requests
 from dotenv import load_dotenv
 
+sys.path.append("/path/to/modules")
 from QoL import login_and_get_tokens, logout
 from QoL.get_key import get_api_token
 from QoL.custom_exceptions import APIExceptionHandler

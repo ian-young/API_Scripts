@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-sys.path.append("/Users/ianyoung/Documents/.scripts/API_Scripts")
+sys.path.append("/path/to/modules")
 from QoL import login_and_get_tokens, logout
 from QoL.get_key import get_api_token
 from QoL.api_endpoints import PROMOTE_ORG_ADMIN, CREATE_USER
@@ -38,8 +38,8 @@ PASSWORD = getenv("denver_pass")
 ORG_ID = getenv("denver_id")
 TOTP = getenv("denver_secret")
 FILE_PATH = (
-    "/Users/ianyoung/Documents/.scripts/API_Scripts/VCE/guest_csvs/"
-    "VCE_AC_Specialist_Check_ins_GuestLog - 2024-11-19.csv"
+    "path/to/file/directory/"
+    "VCE_AC_Specialist_Check_ins_GuestLog - 2024-11-20.csv"
 )
 TOKEN = get_api_token(API_KEY)
 
@@ -62,8 +62,8 @@ def read_csv(file_name):
     except pd.errors.EmptyDataError:
         log.error("The CSV file is empty: %s", file_name)
         return []
-    except pd.errors.ParserError:
-        log.error("Error parsing the CSV file: %s", file_name)
+    except pd.errors.ParserError as e:
+        log.error("Error parsing the CSV file: %s\n %s", file_name, e)
         return []
     except KeyError as e:
         log.error("Missing expected column in the CSV file: %s", e)
@@ -74,6 +74,48 @@ def read_csv(file_name):
     except TypeError as e:
         log.error("Type error occurred: %s", e)
         return []
+
+
+def reset_password(
+    x_verkada_token, usr_id, target_id, management_session, org_id=ORG_ID
+):
+    """Resets the user's password to send an invite
+
+    Args:
+        x_verkada_token (str): The Verkada token for authentication.
+        usr_id (str): The user ID performing the action.
+        target_id (str): The ID of the user to grant admin permissions to.
+        org_id (str, optional): The ID of the organization. Defaults to ORG_ID.
+
+    Returns:
+        None
+    """
+    headers = {
+        "x-verkada-token": x_verkada_token,
+        "x-verkada-user_id": usr_id,
+        "x-verkada-organization-id": org_id,
+    }
+    body = {
+        "organization-id": org_id,
+        "user_id": target_id,
+    }
+    try:
+        log.info("Sending password reset email.")
+        response = management_session.post(
+            "https://vauth.command.verkada.com/auth/org/passwd/reset",
+            headers=headers,
+            json=body,
+            timeout=5,
+        )
+        response.raise_for_status()
+        log.info("Email sent!")
+
+    except requests.exceptions.RequestException as e:
+        raise APIExceptionHandler(e, response, "Reset Password") from e
+    except requests.exceptions.Timeout as e:
+        raise APIExceptionHandler(
+            e, response, "Reset Password - TIMEOUT"
+        ) from e
 
 
 def extract_data(file_name):
@@ -242,6 +284,9 @@ def create_vce_user(user_info_list, api_token=TOKEN):
                     )
 
                     grant_org_admin(
+                        csrf_token, user_id, data["user_id"], session
+                    )
+                    reset_password(
                         csrf_token, user_id, data["user_id"], session
                     )
 

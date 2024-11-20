@@ -10,6 +10,7 @@ without any additional warnings.
 import logging
 import threading
 import time
+import sys
 from datetime import datetime
 from os import getenv
 from typing import Optional, Dict, List, Any
@@ -19,6 +20,7 @@ import requests
 from colorama import Fore, Style
 from dotenv import load_dotenv
 
+sys.path.append("/path/to/modules")
 import VCE.gather_devices as gather_devices
 from QoL import login_and_get_tokens, logout, custom_exceptions
 from QoL.get_key import get_api_token
@@ -36,10 +38,11 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Set final, global credential variables
-API_KEY = getenv("")
-USERNAME = getenv("")
-PASSWORD = getenv("")
-ORG_ID = getenv("")
+API_KEY = getenv("denver_key")
+USERNAME = getenv("denver_user")
+PASSWORD = getenv("denver_pass")
+ORG_ID = getenv("denver_id")
+TOTP = getenv("denver_secret")
 TOKEN = get_api_token(API_KEY)
 
 # Root API URL
@@ -873,7 +876,7 @@ if __name__ == "__main__":
             # Initialize the user session.
             if USERNAME and PASSWORD and ORG_ID:
                 csrf_token, user_token, user_id = login_and_get_tokens(
-                    session, USERNAME, PASSWORD, ORG_ID
+                    session, USERNAME, PASSWORD, ORG_ID, TOTP
                 )
 
                 # Continue if the required information has been received
