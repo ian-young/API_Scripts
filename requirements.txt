@@ -51,7 +51,7 @@ tinydb==4.8.2
 tomli==2.2.1
 types-colorama==0.4.15.20240311
 types-psutil==6.1.0.20241221
-types-pytz==2024.2.0.20241221
+types-pytz==2025.1.0.20250204
 types-requests==2.32.0.20241016
 typing==3.7.4.3
 typing_extensions==4.12.2
