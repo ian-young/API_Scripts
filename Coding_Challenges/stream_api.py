@@ -20,8 +20,8 @@ STREAM_URL = (
     "https://api.verkada.com/stream/cameras/v1/footage/stream/stream.m3u8"
 )
 
-API_KEY = getenv("")
-ORG_ID = getenv("")
+API_KEY = getenv("home_key")
+ORG_ID = getenv("home_id")
 CAMERA = ""  # Can be a list or single String
 
 log = logging.getLogger()
@@ -81,7 +81,7 @@ def load_stream(jwt, camera_id, stream_start_time, org_id=ORG_ID):
     :type org_id: str, optional
     """
 
-    # Bring the end time to one second ahead of the start time
+    # Bring the end time to one second ahead of the start time (time must match frames)
     stream_end_time = stream_start_time + 1
 
     # Format the links
@@ -121,6 +121,21 @@ def load_stream(jwt, camera_id, stream_start_time, org_id=ORG_ID):
         "-loglevel",
         "quiet",
     ]
+
+    # Save an mp4 (will need to update the end time)
+    # his_still_image = [
+    # "ffmpeg",
+    # "-y",
+    # "-i",
+    # historical_link,
+    # "-c:v",  # Specify video codec
+    # "libx264",  # Use H.264 for good compression
+    # "-t",  # Duration in seconds
+    # "60", 
+    # "./historical_stream.mp4", 
+    # "-loglevel",
+    # "quiet",
+    # ]
     try:
         # Output the file
         subprocess.run(still_image_live, check=True)
