@@ -181,8 +181,7 @@ def get_sites(
         "X-Verkada-Auth": x_verkada_auth,
         "User": usr,
     }
-    if org_id is not None:
-        url = SITES + org_id
+    url = SITES + org_id if org_id is not None else ""
     site_ids = []
 
     try:

@@ -110,12 +110,12 @@ def reset_password(
         response.raise_for_status()
         log.info("Email sent!")
 
-    except requests.exceptions.RequestException as e:
-        raise APIExceptionHandler(e, response, "Reset Password") from e
     except requests.exceptions.Timeout as e:
         raise APIExceptionHandler(
             e, response, "Reset Password - TIMEOUT"
         ) from e
+    except requests.exceptions.RequestException as e:
+        raise APIExceptionHandler(e, response, "Reset Password") from e
 
 
 def extract_data(file_name):
