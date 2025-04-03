@@ -54,7 +54,7 @@ types-psutil==7.0.0.20250218
 types-pytz==2025.1.0.20250204
 types-requests==2.32.0.20250301
 typing==3.7.4.3
-typing_extensions==4.12.2
+typing_extensions==4.13.1
 tzdata==2025.1
 tzlocal==5.3
 urllib3==2.3.0
