@@ -1,5 +1,5 @@
 anytree==2.13.0
-beautifulsoup4==4.13.3
+beautifulsoup4==4.13.4
 black==25.1.0
 blinker==1.9.0
 bs4==0.0.2
