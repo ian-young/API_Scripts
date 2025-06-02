@@ -36,7 +36,7 @@ pluggy==1.5.0
 psutil==7.0.0
 pyotp==2.9.0
 pyparsing==3.2.3
-pytest==8.3.5
+pytest==8.4.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 python-http-client==3.3.7
