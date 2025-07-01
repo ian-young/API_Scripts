@@ -12,7 +12,7 @@ cycler==0.12.1
 DateTime==5.5
 exceptiongroup==1.2.2
 Flask==3.1.0
-fonttools==4.57.0
+fonttools==4.58.4
 idna==3.10
 importlib_metadata==8.6.1
 importlib_resources==6.5.2
