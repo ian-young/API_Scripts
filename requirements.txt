@@ -53,7 +53,7 @@ tomli==2.2.1
 types-colorama==0.4.15.20240311
 types-pytz==2025.2.0.20250516
 types-psutil==7.0.0.20250601
-types-requests==2.32.4.20250611
+types-requests==2.32.4.20250809
 typing==3.7.4.3
 typing_extensions==4.14.0
 tzdata==2025.2
