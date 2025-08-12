@@ -51,7 +51,7 @@ starkbank-ecdsa==2.2.0
 tinydb==4.8.2
 tomli==2.2.1
 types-colorama==0.4.15.20240311
-types-pytz==2025.2.0.20250516
+types-pytz==2025.2.0.20250809
 types-psutil==7.0.0.20250601
 types-requests==2.32.4.20250611
 typing==3.7.4.3
