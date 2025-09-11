@@ -24,7 +24,7 @@ logging==0.4.9.6
 MarkupSafe==3.0.2
 matplotlib==3.10.1
 mypy-extensions==1.1.0
-mypy==1.16.1
+mypy==1.17.1
 numpy==2.2.3
 packaging==25.0
 pandas==2.3.2
