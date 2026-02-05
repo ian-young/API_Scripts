@@ -36,6 +36,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 # Constants
 DEVICE_ID = getenv("lab_sensor")
+HEADERS = {} # Initialize
 if API_KEY := getenv("lab_key"):
     HEADERS = {
         "accept": "application/json",
@@ -51,6 +52,8 @@ INTERVAL = "5m"
 BASE_URL = "https://api.verkada.com/environment/v1/data"
 CSV_FILE = "temperature_data.csv"
 DAYS_TO_KEEP = 7
+# Read existing CSV data and filter out old data
+cutoff_time = CURRENT_TIME - timedelta(days=DAYS_TO_KEEP)
 
 
 def celsius_to_fahrenheit(temp_value: float) -> float:
@@ -112,25 +115,22 @@ def fetch_all_data() -> List[Dict[str, Union[str, int]]]:
 
     return filtered_data
 
+if __name__ == "__main__":
+    # Read existing CSV data and filter out old data
+    try:
+        df = pd.read_csv(CSV_FILE, parse_dates=["Time"])
+        df = df[df["Time"] >= cutoff_time.isoformat()]
+    except FileNotFoundError:
+        df = pd.DataFrame(columns=["Time", "Temperature", "Device Name"])
 
-# Read existing CSV data and filter out old data
-cutoff_time = CURRENT_TIME - timedelta(days=DAYS_TO_KEEP)
+    # Fetch new data from the API
+    new_data = fetch_all_data()
+    new_df = pd.DataFrame(new_data)
 
-# Read existing CSV data and filter out old data
-try:
-    df = pd.read_csv(CSV_FILE, parse_dates=["Time"])
-    df = df[df["Time"] >= cutoff_time.isoformat()]
-except FileNotFoundError:
-    df = pd.DataFrame(columns=["Time", "Temperature", "Device Name"])
+    # Combine old and new data
+    combined_df = pd.concat([df, new_df]).drop_duplicates(subset=["Time"])
 
-# Fetch new data from the API
-new_data = fetch_all_data()
-new_df = pd.DataFrame(new_data)
+    # Write the updated data back to the CSV
+    combined_df.to_csv(CSV_FILE, index=False)
 
-# Combine old and new data
-combined_df = pd.concat([df, new_df]).drop_duplicates(subset=["Time"])
-
-# Write the updated data back to the CSV
-combined_df.to_csv(CSV_FILE, index=False)
-
-print("Temperature data updated.")
+    print("Temperature data updated.")

@@ -3,6 +3,7 @@ Author: Ian Young
 Purpose: Will return all devices in a Verkada Command organization.
 This is to be imported as a module and not ran directly.
 """
+# pylint: disable=wrong-import-position
 
 # Import essential libraries
 import logging
@@ -181,8 +182,7 @@ def get_sites(
         "X-Verkada-Auth": x_verkada_auth,
         "User": usr,
     }
-    if org_id is not None:
-        url = SITES + org_id
+    url = SITES + org_id
     site_ids = []
 
     try:

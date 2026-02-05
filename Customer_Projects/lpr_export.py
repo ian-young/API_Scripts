@@ -5,6 +5,7 @@ Purpose: Will retrieve all seen plates in the past 24 hours and save
 """
 
 import logging
+import sys
 from datetime import datetime, timedelta
 from os import getenv
 from typing import List, Dict, Union
@@ -42,6 +43,9 @@ if API_KEY := getenv(""):
         "content-type": "application/json",
         "x-api-key": API_KEY,
     }
+else:
+    log.critical("API Key not found. Exiting script.")
+    sys.exit(1)
 
 
 def convert_epoch_to_time(epoch_time: float) -> str:
